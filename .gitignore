@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Rust
+target/
+Cargo.lock
+
+# Python
+*.so
+.DS_Store
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.ruff_cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build
+packages/
+bundles/*/
+!bundles/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# Data (user's data shouldn't be tracked)
+.djamp/
+djamp-projects/
+djamp-venvs/
+
+# Temporary
+*.tmp
+*.temp
+.cache/

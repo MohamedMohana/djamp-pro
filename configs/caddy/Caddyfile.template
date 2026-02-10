@@ -1,0 +1,37 @@
+# DJANGOForge - Auto-generated Caddy configuration
+# Do not edit manually - it will be overwritten
+
+{% for site in sites %}
+{{ site.domain }} {
+    reverse_proxy {{ site.host }}:{{ site.port }}
+    
+    {% if site.https_enabled %}
+    tls {{ site.certificate_path }} {{ site.key_path }}
+    {% endif %}
+    
+    {% if site.static_path %}
+    handle /static/* {
+        root * {{ site.project_path }}/{{ site.static_path }}
+        file_server
+    }
+    {% endif %}
+    
+    {% if site.media_path %}
+    handle /media/* {
+        root * {{ site.project_path }}/{{ site.media_path }}
+        file_server
+    }
+    {% endif %}
+}
+
+{% for alias in site.aliases %}
+{{ alias }} {
+    reverse_proxy {{ site.host }}:{{ site.port }}
+    
+    {% if site.https_enabled %}
+    tls {{ site.certificate_path }} {{ site.key_path }}
+    {% endif %}
+}
+
+{% endfor %}
+{% endfor %}
