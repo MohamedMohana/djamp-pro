@@ -97,7 +97,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgments
 
-Inspired by MAMP PRO, Laravel Valet, and Django Girls教程.
+Inspired by MAMP PRO and Laravel Valet.
 
 ---
 
