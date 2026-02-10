@@ -24,8 +24,6 @@
         "readDir": true,
         "createDir": true,
         "removeDir": true,
-        "copyFile": true,
-        "moveFile": true,
         "removeFile": true,
         "exists": true,
         "scope": [
