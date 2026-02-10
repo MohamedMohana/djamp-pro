@@ -1,0 +1,225 @@
+{% extends 'new_template/base.html' %}
+
+{% block title %}إنشاء شهادة{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+        <div class="content-overlay"></div>
+        <div class="header-navbar-shadow"></div>
+        <div class="content-wrapper">
+
+
+
+
+            <div id="loading" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+                <div style="background-color: #fff; padding: 20px; border-radius: 10px; text-align: center;">
+                    <div>الرجاء الانتظار حتى تتم عملية الإرسال. لا تغلق أو تحدث الصفحة</div>
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+            </div>
+            
+            
+
+            <div class="content-header row">
+                <div class="content-header-left col-md-9 col-12 mb-2">
+                    <div class="row breadcrumbs-top">
+                        <div class="col-12">
+                            <h4 class="content-header-title float-left mb-0">إنشاء الشهادات وإرسالها</h4>
+                            <div class="breadcrumb-wrapper">
+                                <ol class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'index' %}">لوحة التحكم</a></li>
+                                    <li class="breadcrumb-item">إنشاء الشهادة</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="content-body">
+                {% if messages %}
+                  {% for message in messages %}
+                    {% if message.tags == 'success' %}
+                      <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <h4 class="alert-heading"><i class="ti ti-check"></i> نجاح</h4>
+                        <p>{{ message }}</p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                      </div>
+                    {% elif message.tags == 'error' %}
+                      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <h4 class="alert-heading"><i class="ti ti-alert-triangle"></i> خطأ</h4>
+                        <p>{{ message }}</p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                      </div>
+                    {% elif message.tags == 'warning' %}
+                      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <h4 class="alert-heading"><i class="ti ti-alert-circle"></i> تنبيه</h4>
+                        <p>{{ message }}</p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                      </div>
+                    {% else %}
+                      <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <p>{{ message }}</p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                      </div>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+                
+                {% if form.non_field_errors %}
+                  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <h4 class="alert-heading"><i class="ti ti-alert-triangle"></i> خطأ في النموذج</h4>
+                    <ul class="mb-0">
+                      {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                      {% endfor %}
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                {% endif %}
+                
+                {% if form.errors %}
+                  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <h4 class="alert-heading"><i class="ti ti-alert-triangle"></i> أخطاء في الحقول</h4>
+                    <ul class="mb-0">
+                      {% for field in form %}
+                        {% for error in field.errors %}
+                          <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                      {% endfor %}
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                {% endif %}
+                
+                {% if error_message %}
+                  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <h4 class="alert-heading"><i class="ti ti-alert-triangle"></i> خطأ</h4>
+                    <p>{{ error_message }}</p>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                {% endif %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header card-header-success colored" style="margin-left: 0px;margin-right: 0px;">
+                                <h3 class="card-title-colored">إنشاء شهادة</h3>
+                            </div>
+                            <div class="card-body">
+                                <form id="form" class="needs-validation" method="POST" enctype="multipart/form-data" novalidate>
+                                    {% csrf_token %}
+                                    <div class="row justify-content-center">
+                                        <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                            <label for="{{ form.template.id_for_label }}" class="form-label">القالب</label>
+                                            {{ form.template }}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row justify-content-center">
+                                        <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                            <label for="{{ form.name.id_for_label }}" class="form-label">الاسم</label>
+                                            <input type="text" class="form-control" placeholder="مثال: أسامة بن محمد" id="id_name" name="{{ form.name.name }}" {% if form.names_file.value %}disabled{% endif %} required>
+                                        </div>
+                                    </div>
+                                    <div class="row justify-content-center">
+                                        <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                            <label for="{{ form.email.id_for_label }}" class="form-label">البريد الإلكتروني</label>
+                                            <input type="email" class="form-control" placeholder="مثال: user@kku.edu.sa" id="id_email" name="{{ form.email.name }}" {% if form.names_file.value %}disabled{% endif %} required>
+                                        </div>
+                                    </div>
+                                    <div class="row justify-content-center">
+                                        <div class="form-group col-lg-6 col-md-6 col-sm-12 text-center mt-3">
+                                            <label class="form-label">أو تحميل الأسماء من الملف</label>
+                                            <div class="input-group">
+                                                <input type="file" id="fileInput" name="{{ form.names_file.name }}" class="form-control" accept=".xls,.xlsx" style="direction: rtl;" />
+                                                <label class="input-group-text" for="fileInput">
+                                                    <i class="ti ti-upload me-1"></i>
+                                                    اختر ملف
+                                                </label>
+                                            </div>
+                                            <small class="text-muted d-block mt-1">يجب أن يكون الملف بصيغة Excel (.xls, .xlsx)</small>
+                                        </div>
+                                    </div>
+                                    <div class="row justify-content-center">
+                                        <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                            <label for="{{ form.names_column.id_for_label }}" class="form-label">عمود الأسماء</label>
+                                            <input type="text" id="namesColumn" class="form-control" name="{{ form.names_column.name }}" placeholder="أدخل اسم العمود الذي يحتوي على أسماء الطلاب" disabled />
+                                        </div>
+                                    </div>
+                                    <div class="row justify-content-center">
+                                        <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                            <label for="{{ form.emails_column.id_for_label }}" class="form-label">عمود البريد الإلكتروني</label>
+                                            <input type="text" id="emailsColumn" class="form-control" name="{{ form.emails_column.name }}" placeholder="أدخل اسم العمود الذي يحتوي على عناوين البريد الإلكتروني" disabled />
+                                        </div>
+                                    </div>
+                                    <div class="row justify-content-center">
+                                        <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                            <label for="{{ form.course_name.id_for_label }}" class="form-label">اسم الدورة</label>
+                                            <input type="text" class="form-control" placeholder=" مثال: الذكاء الاصطناعي" id="id_course_name" name="{{ form.course_name.name }}" oninvalid="this.setCustomValidity('الرجاء ملء هذا الحقل')" oninput="this.setCustomValidity('')" required />
+                                        </div>
+                                    </div>
+                                    <div class="row justify-content-center">
+                                        <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                            <label for="{{ form.duration.id_for_label }}" class="form-label">المدة</label>
+                                            <input type="text" class="form-control" placeholder="مثال: ٣ أيام من تاريخ ٢٠٢٢/١٢/١٩ حتى٢٠٢٢/١٢/٢٢ أو ٣ ساعات في تاريخ ٢٠٢٢/١٢/١٩" oninvalid="this.setCustomValidity('الرجاء ملء هذا الحقل')" oninput="this.setCustomValidity('')" name="{{ form.duration.name }}" id="id_duration" required />
+                                        </div>
+                                    </div>
+                                    <div class="row justify-content-center">
+                                        <div class="action-btns col-lg-2 col-md-2 col-sm-12 mt-3 mb-2 mt-3 ">
+                                            <button type="submit" class="btn btn-primary btn-block">إنشاء و إرسال الشهادة</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% block scripts %}
+<script>
+    // Get elements
+    var fileInput = document.getElementById('fileInput');
+    var namesColumn = document.getElementById('namesColumn');
+    var emailsColumn = document.getElementById('emailsColumn');
+    var nameInput = document.getElementById('id_name');
+    var emailInput = document.getElementById('id_email');
+    var spinner = document.querySelector('.spinner-border');
+
+    // Add event listener for file selection
+    fileInput.addEventListener('change', function () {
+        var fileName = fileInput.value;
+        if (fileName) {
+            // Enable columns and disable individual inputs
+            namesColumn.disabled = false;
+            emailsColumn.disabled = false;
+            nameInput.disabled = true;
+            emailInput.disabled = true;
+        } else {
+            // Reset if no file was selected
+            namesColumn.disabled = true;
+            emailsColumn.disabled = true;
+            nameInput.disabled = false;
+            emailInput.disabled = false;
+        }
+    });
+
+    // Show a warning when submitting the form
+    document.querySelector('form').addEventListener('submit', function (event) {
+        if (nameInput.value.trim() === '' && fileInput.files.length === 0) {
+            alert('الرجاء ملء حقل الاسم أو تحميل ملف الأسماء');
+            event.preventDefault();
+        } else {
+            var loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+        }
+    });
+    
+    
+        
+</script>
+{% endblock %}
+
+{% endblock %}

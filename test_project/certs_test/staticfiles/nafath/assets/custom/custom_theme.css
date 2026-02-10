@@ -1,0 +1,30 @@
+.ck.ck-content.ck-editor__editable.ck-rounded-corners.ck-editor__editable_inline {
+    min-height: 200px;
+    max-height: 300px;
+}
+
+
+
+/* added  */
+.app-content.content {
+    background-color: url(assets/custom/images/bg.svg);
+}
+
+#basic-datatable button.btn.btn-secondary.buttons-print {
+    margin-inline-start: 20px;
+}
+@media (max-width: 720px) {
+   #basic-datatable button.btn.btn-secondary.buttons-print {
+       width: 100%;
+       margin: 0 auto !important;
+} 
+.dt-buttons.btn-group.flex-wrap{
+    margin: 0 auto !important;
+    width: 50%;
+    display: flex;
+}
+}
+
+.align-items-center{
+    align-items: center;
+}

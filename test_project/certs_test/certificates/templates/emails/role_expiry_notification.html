@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إشعار انتهاء الصلاحية المؤقتة</title>
+    <style>
+        body {
+            font-family: 'IBM Plex Sans', 'IBM Plex Sans Arabic', Arial, sans-serif;
+            background-color: gray;
+            margin: 0;
+            padding: 0;
+            direction: rtl;
+            text-align: right;
+        }
+        .container {
+            width: 80%;
+            max-width: 600px;
+            margin: 30px auto;
+            background: #eaeaea;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: right;
+        }
+        .header {
+            background: #d63031;
+            color: #ffffff;
+            padding: 18px;
+            font-size: 22px;
+            font-weight: bold;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            text-align: center;
+        }
+        .header a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+        .header a:hover {
+            text-decoration: underline;
+        }
+        .content {
+            margin: 25px 0;
+            font-size: 18px;
+            color: #333;
+            line-height: 1.8;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .message {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .role-details {
+            background-color: #fff8e7;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .role-details h3 {
+            color: #d63031;
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .detail-row {
+            margin-bottom: 20px;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #d63031;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .detail-value {
+            color: #333;
+            display: block;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .role-highlight {
+            background-color: #e8f5e8;
+            color: #155724;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .expired-role {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .important-note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #856404;
+            font-size: 16px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #d63031;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .btn:hover {
+            background: #c0392b;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="{{ certificate_system_url }}" target="_blank">نظام إدارة الشهادات - إشعار انتهاء صلاحية مؤقتة</a>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                السلام عليكم ورحمة الله وبركاته <strong>{{ name }}</strong>
+            </div>
+            
+            <div class="message">
+                نود إعلامكم أن الصلاحية المؤقتة <span class="expired-role">{{ expired_role }}</span> 
+                التي تم منحها لكم قد انتهت، وتم إرجاع صلاحيتكم إلى <span class="role-highlight">{{ current_role }}</span> تلقائياً
+            </div>
+            
+            <div class="role-details">
+                <h3>📋 تفاصيل التغيير</h3>
+                
+                <div class="detail-row">
+                    <span class="detail-label">الصلاحية المنتهية</span>
+                    <span class="detail-value expired-role">{{ expired_role }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">الصلاحية الحالية</span>
+                    <span class="detail-value role-highlight">{{ current_role }}</span>
+                </div>
+                
+                {% if supervisor_organization %}
+                <div class="detail-row">
+                    <span class="detail-label">جهة الإشراف</span>
+                    <span class="detail-value">{{ supervisor_organization }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="detail-row">
+                    <span class="detail-label">تاريخ الانتهاء</span>
+                    <span class="detail-value">تم تلقائياً</span>
+                </div>
+            </div>
+            
+            <div class="important-note">
+                <strong>ℹ️ معلومات هامة:</strong><br>
+                تم إرجاع صلاحيتكم تلقائياً كما هو مجدول مسبقاً
+                إذا كنتم تحتاجون لتمديد أو تجديد الصلاحية، يرجى التواصل مع مدير النظام
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{ certificate_system_url }}" class="btn">دخول نظام الشهادات</a>
+            </div>
+            
+            <div class="message">
+                شكراً لكم على استخدام نظام إدارة الشهادات، ونتطلع إلى خدمتكم مرة أخرى
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>© 2025 جميع الحقوق محفوظة</strong></p>
+            <p><strong>جامعة الملك خالد - نظام إدارة الشهادات الرقمية</strong></p>
+            <p style="margin-top: 10px; font-size: 12px;">
+                هذا البريد مُرسل تلقائياً، يرجى عدم الرد على هذا البريد
+            </p>
+        </div>
+    </div>
+</body>
+</html>

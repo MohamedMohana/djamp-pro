@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إشعار تغيير الصلاحية</title>
+    <style>
+        body {
+            font-family: 'IBM Plex Sans', 'IBM Plex Sans Arabic', Arial, sans-serif;
+            background-color: gray;
+            margin: 0;
+            padding: 0;
+            direction: rtl;
+            text-align: right;
+        }
+        .container {
+            width: 80%;
+            max-width: 600px;
+            margin: 30px auto;
+            background: #eaeaea;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: right;
+        }
+        .header {
+            background: #002147;
+            color: #ffffff;
+            padding: 18px;
+            font-size: 22px;
+            font-weight: bold;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            text-align: center;
+        }
+        .header a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+        .header a:hover {
+            text-decoration: underline;
+        }
+        .content {
+            margin: 25px 0;
+            font-size: 18px;
+            color: #333;
+            line-height: 1.8;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .message {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .role-details {
+            background-color: #f8f9ff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .role-details h3 {
+            color: #002147;
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .detail-row {
+            margin-bottom: 20px;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #002147;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .detail-value {
+            color: #333;
+            display: block;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .role-highlight {
+            background-color: #e8f5e8;
+            color: #155724;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .date-highlight {
+            background-color: #e8f4fd;
+            color: #0056b3;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .important-note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #856404;
+            font-size: 16px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #002147;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .btn:hover {
+            background: #001122;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="{{ certificate_system_url }}" target="_blank">نظام إدارة الشهادات - إشعار تغيير الصلاحية</a>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                السلام عليكم ورحمة الله وبركاته، <strong>{{ name }}</strong>
+            </div>
+            
+            <div class="message">
+                نتشرف بإبلاغكم أنه تم {% if is_temporary %}منحكم صلاحية مؤقتة{% else %}تغيير صلاحيتكم إلى{% endif %} 
+                <span class="role-highlight">{{ new_role }}</span> في نظام إدارة الشهادات بجامعة الملك خالد
+            </div>
+            
+            <div class="role-details">
+                <h3>📋 تفاصيل الصلاحية</h3>
+                
+                <div class="detail-row">
+                    <span class="detail-label">الصلاحية الجديدة</span>
+                    <span class="detail-value role-highlight">{{ new_role }}</span>
+                </div>
+                
+                {% if previous_role and previous_role != 'غير محدد' %}
+                <div class="detail-row">
+                    <span class="detail-label">الصلاحية السابقة</span>
+                    <span class="detail-value">{{ previous_role }}</span>
+                </div>
+                {% endif %}
+                
+                {% if supervisor_organization %}
+                <div class="detail-row">
+                    <span class="detail-label">جهة الإشراف</span>
+                    <span class="detail-value">{{ supervisor_organization }}</span>
+                </div>
+                {% endif %}
+                
+                {% if is_temporary %}
+                    {% if start_date %}
+                    <div class="detail-row">
+                        <span class="detail-label">تاريخ البداية</span>
+                        <span class="detail-value date-highlight">{{ start_date }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if end_date %}
+                    <div class="detail-row">
+                        <span class="detail-label">تاريخ النهاية</span>
+                        <span class="detail-value date-highlight">{{ end_date }}</span>
+                    </div>
+                    {% endif %}
+                {% endif %}
+                
+                <div class="detail-row">
+                    <span class="detail-label">نوع الصلاحية</span>
+                    <span class="detail-value">{{ duration_text }}</span>
+                </div>
+            </div>
+            
+            {% if is_temporary %}
+            <div class="important-note">
+                <strong>⚠️ ملاحظة هامة:</strong><br>
+                هذه صلاحية مؤقتة وستنتهي تلقائياً في التاريخ المحدد أعلاه. 
+                سيتم إعادة صلاحيتكم إلى الصلاحية السابقة تلقائياً عند انتهاء المدة
+            </div>
+            {% endif %}
+            
+            <div style="text-align: center;">
+                <a href="{{ certificate_system_url }}" class="btn">دخول نظام الشهادات</a>
+            </div>
+            
+            <div class="message">
+                نشكركم على ثقتكم ونتطلع إلى خدمتكم بأفضل ما لدينا
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>© 2025 جميع الحقوق محفوظة</strong></p>
+            <p><strong>جامعة الملك خالد - نظام إدارة الشهادات الرقمية</strong></p>
+            <p style="margin-top: 10px; font-size: 12px;">
+                هذا البريد مُرسل تلقائياً، يرجى عدم الرد على هذا البريد
+            </p>
+        </div>
+    </div>
+</body>
+</html>

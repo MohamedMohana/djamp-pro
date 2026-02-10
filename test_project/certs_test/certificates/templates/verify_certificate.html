@@ -1,0 +1,173 @@
+{% extends 'new_template/base.html' %}
+
+{% block title %}التحقق من الشهادة{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+        <div class="content-overlay"></div>
+        <div class="header-navbar-shadow"></div>
+        <div class="content-wrapper">
+            <div class="content-header row">
+                <div class="content-header-left col-md-9 col-12 mb-2">
+                    <div class="row breadcrumbs-top">
+                        <div class="col-12">
+                            <h4 class="content-header-title float-left mb-0">التحقق عن طريق هاش الشهادة</h4>
+                            <div class="breadcrumb-wrapper">
+                                <ol class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'index' %}">لوحة
+                                            التحكم</a>
+                                    </li>
+                                    <li class="breadcrumb-item">صفحة التحقق من الشهادة</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header card-header-primary colored"
+                                style="margin-left: 0px;margin-right: 0px;">
+                                <h3 class="card-title-colored">التحقق من صحة الشهادة</h3>
+                            </div>
+                            <div class="card-body">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <div class="form-group">
+                                        <div class="col-12">
+                                            <label for="id_certificate_hash">هاش الشهادة:</label>
+                                            <input type="text" class="form-control" name="certificate_hash" maxlength="64" required="" id="id_certificate_hash">
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        <button type="submit" class="btn btn-primary" style="margin-top: 20px;">التحقق من الشهادة</button>
+                                    </div>
+                                </form>
+                                {% if certificate_found %}
+                                    {% if is_transcript %}
+                                        <div class="card mt-3">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <h4 class="my-0 font-weight-normal">سجل المقررات صالح</h4>
+                                            </div>
+                                            <div class="card-body">
+                                                <h5 class="card-title">{{ transcript.get_display_name|default:"ــ" }}</h5>
+                                                <h6 class="card-subtitle mb-2 text-muted">
+                                                    {{ transcript.get_program_name|default:transcript.template.get_display_name }}
+                                                </h6>
+                                                {% if transcript.get_gpa %}
+                                                    <p class="card-text mb-1">المعدل التراكمي: {{ transcript.get_gpa }}</p>
+                                                {% endif %}
+                                                {% if transcript.get_overall_grade %}
+                                                    <p class="card-text mb-1">التقدير العام: {{ transcript.get_overall_grade }}</p>
+                                                {% endif %}
+                                                <p class="card-text">تجزئة/هاش السجل: {{ transcript.certificate_hash }}</p>
+                                                {% if transcript_download_url %}
+                                                    <a href="{{ transcript_download_url }}" class="btn btn-primary" target="_blank">
+                                                        تحميل السجل
+                                                    </a>
+                                                {% endif %}
+                                                {% if transcript_extra_fields %}
+                                                    <hr>
+                                                    <p class="text-muted mb-2">بيانات إضافية:</p>
+                                                    <div class="row">
+                                                        {% for field in transcript_extra_fields %}
+                                                            <div class="col-md-6 mb-2">
+                                                                <small class="text-muted d-block">{{ field.label }}</small>
+                                                                <strong>{{ field.value }}</strong>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                                {% if course_grades %}
+                                                    <hr>
+                                                    <p class="text-muted mb-2">المقررات:</p>
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm table-bordered">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>#</th>
+                                                                    <th>المقرر</th>
+                                                                    <th>النسبة</th>
+                                                                    <th>الدرجة</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {% for course in course_grades %}
+                                                                <tr>
+                                                                    <td>{{ forloop.counter }}</td>
+                                                                    <td>{{ course.name }}</td>
+                                                                    <td>{{ course.percentage|default:"—" }}</td>
+                                                                    <td>{{ course.grade|default:"—" }}</td>
+                                                                </tr>
+                                                                {% endfor %}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% elif is_advanced_certificate %}
+                                        <div class="card mt-3">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <h4 class="my-0 font-weight-normal">الشهادة المتقدمة صالحة</h4>
+                                            </div>
+                                            <div class="card-body">
+                                                <h5 class="card-title">{{ primary_name|default:"ــ" }}</h5>
+                                                <h6 class="card-subtitle mb-2 text-muted">
+                                                    {{ primary_course|default:template_display_name }}
+                                                </h6>
+                                                {% if primary_duration %}
+                                                    <p class="card-text mb-1">المدة: {{ primary_duration }}</p>
+                                                {% endif %}
+                                                <p class="card-text">تجزئة/هاش الشهادة: {{ certificate.certificate_hash }}</p>
+                                                {% if advanced_download_url %}
+                                                    <a href="{{ advanced_download_url }}" class="btn btn-primary" target="_blank">
+                                                        تحميل الشهادة
+                                                    </a>
+                                                {% endif %}
+                                                {% if advanced_extra_fields %}
+                                                    <hr>
+                                                    <p class="text-muted mb-2">بيانات إضافية:</p>
+                                                    <div class="row">
+                                                        {% for field in advanced_extra_fields %}
+                                                            <div class="col-md-6 mb-2">
+                                                                <small class="text-muted d-block">{{ field.label }}</small>
+                                                                <strong>{{ field.value }}</strong>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                    <div class="card mt-3">
+                                        <div class="card-header">
+                                            <h4 class="my-0 font-weight-normal">الشهادة صالحة!</h4>
+                                        </div>
+                                        <div class="card-body">
+                                            <h5 class="card-title">{{ certificate.name }}</h5>
+                                            <h6 class="card-subtitle mb-2 text-muted">{{ certificate.course_name }}</h6>
+                                            <p class="card-text">المدة: {{ certificate.duration }}</p>
+                                            <p class="card-text">تجزئة/هاش الشهادة: {{ certificate.certificate_hash }}</p>
+                                            <a href="{% url 'download_certificate' certificate.certificate_hash %}" class="btn btn-primary" download>تحميل الشهادة</a>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                {% elif certificate_found is not None %}
+                                    <div class="alert alert-danger mt-3" role="alert">
+                                        <h4 class="alert-heading">الشهادة غير موجودة أو غير صالحة.</h4>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

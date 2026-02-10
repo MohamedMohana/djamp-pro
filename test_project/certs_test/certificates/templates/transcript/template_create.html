@@ -1,0 +1,1960 @@
+{% extends 'new_template/base.html' %}
+{% load static permission_tags %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="fw-bold py-3 mb-4">
+        {% if is_edit %}تعديل قالب السجل{% else %}إنشاء قالب سجل جديد{% endif %}
+    </h4>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="bs-stepper wizard-numbered mt-2">
+                <!-- Stepper Header -->
+                <div class="bs-stepper-header">
+                    <div class="step" data-target="#step1">
+                        <button type="button" class="step-trigger">
+                            <span class="bs-stepper-circle">1</span>
+                            <span class="bs-stepper-label">تحميل القالب</span>
+                        </button>
+                    </div>
+                    <div class="line"></div>
+                    <div class="step" data-target="#step2">
+                        <button type="button" class="step-trigger">
+                            <span class="bs-stepper-circle">2</span>
+                            <span class="bs-stepper-label">اختيار الحقول</span>
+                        </button>
+                    </div>
+                    <div class="line"></div>
+                    <div class="step" data-target="#step3">
+                        <button type="button" class="step-trigger">
+                            <span class="bs-stepper-circle">3</span>
+                            <span class="bs-stepper-label">بيانات المثال</span>
+                        </button>
+                    </div>
+                    <div class="line"></div>
+                    <div class="step" data-target="#step4">
+                        <button type="button" class="step-trigger">
+                            <span class="bs-stepper-circle">4</span>
+                            <span class="bs-stepper-label">تخصيص الحقول</span>
+                        </button>
+                    </div>
+                    <div class="line"></div>
+                    <div class="step" data-target="#step5">
+                        <button type="button" class="step-trigger">
+                            <span class="bs-stepper-circle">5</span>
+                            <span class="bs-stepper-label">المعاينة والحفظ</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stepper Content -->
+                <div class="bs-stepper-content p-0 mt-4">
+                    <form id="transcriptTemplateForm" method="post" enctype="multipart/form-data" 
+                          data-is-edit="{{ is_edit|yesno:'true,false' }}"
+                          data-template-id="{% if is_edit %}{{ template.id }}{% else %}null{% endif %}"
+                          data-template-fields='{{ template_active_fields_json|safe }}'
+                          data-field-settings='{{ template_field_settings_json|safe }}'
+                          data-qr-settings='{{ template_qr_settings_json|safe }}'
+                          data-template-pdf-url="{{ template_pdf_url|default:'' }}">
+                        {% csrf_token %}
+                        
+                        <!-- Step 1: Upload Template -->
+                        <div id="step1" class="content dstepper-block">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">تحميل القالب</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row justify-content-center">
+                                        <div class="col-lg-8 col-md-10 col-12">
+                                            <div class="mb-3">
+                                                <label class="form-label">{{ form.name.label }}</label>
+                                                {{ form.name }}
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">{{ form.pdf_file.label }}</label>
+                                                {% if template %}
+                                                    <div class="mb-2">
+                                                        <a href="{{ template.pdf_file.url }}" target="_blank" class="btn btn-sm btn-info">
+                                                            <i class="ti ti-file"></i> عرض الملف الحالي
+                                                        </a>
+                                                    </div>
+                                                    <small class="text-muted d-block mb-2">اختياري: يمكنك تحميل ملف جديد</small>
+                                                {% endif %}
+                                                {{ form.pdf_file }}
+                                                <small class="text-muted d-block mt-1">الحد الأقصى: 500 كيلوبايت</small>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">{{ form.transcript_type.label }}</label>
+                                                {{ form.transcript_type }}
+                                                <small class="text-muted d-block mt-1">اختر اللغة: عربي، إنجليزي، أو ثنائي</small>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">{{ form.active_course_count.label }}</label>
+                                                {{ form.active_course_count }}
+                                                <small class="text-muted d-block mt-1">عدد المقررات التي سيتم عرضها في السجل (1-{{ max_courses }})</small>
+                                            </div>
+                                            <div id="upload-status" class="alert alert-success d-none mt-3 mb-0">
+                                                <i class="ti ti-check me-1"></i> تم تحميل ملف القالب بنجاح، يمكنك المتابعة للخطوة التالية.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-primary" onclick="nextStep(1)">التالي</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Select Fields -->
+                        <div id="step2" class="content" style="display: none;">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">اختيار الحقول النشطة</h5>
+                                    <small class="text-muted">اختر الحقول المناسبة حسب اللغة المختارة</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info">
+                                        <i class="ti ti-info-circle me-2"></i>
+                                        يمكنك تفعيل أو إلغاء تفعيل أي حقل حسب احتياجاتك. حقول المقررات ستتوفر تلقائياً بناءً على عدد المقررات المحدد.
+                                    </div>
+                                    
+                                    <!-- Student Info -->
+                                    <div class="mb-4">
+                                        <h6 class="text-primary border-bottom pb-2">معلومات الطالب</h6>
+                                        <div class="row">
+                                            {% for field_key, field_config in fields.items %}
+                                            {% if field_config.category == 'student_info' %}
+                                            <div class="col-md-4 mb-3 field-option" data-field="{{ field_key }}">
+                                                <div class="form-check form-check-primary">
+                                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                                           name="field_active_{{ field_key }}" 
+                                                           id="field_{{ field_key }}"
+                                                           {% if template and template.active_fields and template.active_fields|lookup:field_key %}checked{% endif %}>
+                                                    <label class="form-check-label" for="field_{{ field_key }}">
+                                                        <strong>{{ field_config.label_ar }}</strong>
+                                                        <br><small class="text-muted">{{ field_config.label_en }}</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Program Info -->
+                                    <div class="mb-4">
+                                        <h6 class="text-primary border-bottom pb-2">معلومات البرنامج</h6>
+                                        <div class="row">
+                                            {% for field_key, field_config in fields.items %}
+                                            {% if field_config.category == 'program_info' %}
+                                            <div class="col-md-4 mb-3 field-option" data-field="{{ field_key }}">
+                                                <div class="form-check form-check-primary">
+                                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                                           name="field_active_{{ field_key }}" 
+                                                           id="field_{{ field_key }}"
+                                                           {% if template and template.active_fields and template.active_fields|lookup:field_key %}checked{% endif %}>
+                                                    <label class="form-check-label" for="field_{{ field_key }}">
+                                                        <strong>{{ field_config.label_ar }}</strong>
+                                                        <br><small class="text-muted">{{ field_config.label_en }}</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Summary -->
+                                    <div class="mb-4">
+                                        <h6 class="text-primary border-bottom pb-2">الملخص</h6>
+                                        <div class="row">
+                                            {% for field_key, field_config in fields.items %}
+                                            {% if field_config.category == 'summary' %}
+                                            <div class="col-md-4 mb-3 field-option" data-field="{{ field_key }}">
+                                                <div class="form-check form-check-primary">
+                                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                                           name="field_active_{{ field_key }}" 
+                                                           id="field_{{ field_key }}"
+                                                           {% if template and template.active_fields and template.active_fields|lookup:field_key %}checked{% endif %}>
+                                                    <label class="form-check-label" for="field_{{ field_key }}">
+                                                        <strong>{{ field_config.label_ar }}</strong>
+                                                        <br><small class="text-muted">{{ field_config.label_en }}</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Course Fields (Dynamic) -->
+                                    <div class="mb-4">
+                                        <h6 class="text-primary border-bottom pb-2">
+                                            المقررات 
+                                            <span class="badge bg-info" id="course-count-badge">8 مقررات</span>
+                                        </h6>
+                                        <div class="alert alert-warning mb-3">
+                                            <i class="ti ti-info-circle me-2"></i>
+                                            يتم توليد حقول المقررات تلقائياً بناءً على عدد المقررات المحدد في الخطوة الأولى.
+                                            لكل مقرر حقلين: <strong>النسبة المئوية</strong> و <strong>الدرجة</strong>
+                                        </div>
+                                        <div id="course-fields-container" class="row">
+                                            <!-- Course fields will be dynamically generated here -->
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="field-count-display" class="mt-3">
+                                        <span class="badge bg-label-success" id="selected-count">0 حقل محدد</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(2)">السابق</button>
+                                <button type="button" class="btn btn-primary" onclick="nextStep(2)">التالي</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Example Data -->
+                        <div id="step3" class="content" style="display: none;">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">بيانات المثال</h5>
+                                    <small class="text-muted">أدخل بيانات تجريبية للمعاينة (للحقول المفعلة فقط)</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info">
+                                        <i class="ti ti-info-circle me-2"></i>
+                                        ستظهر حقول الإدخال فقط للحقول التي قمت بتفعيلها في الخطوة السابقة
+                                    </div>
+                                    
+                                    <!-- Base Fields -->
+                                    <h6 class="text-primary border-bottom pb-2 mb-3">بيانات الطالب والبرنامج</h6>
+                                    <div id="example-fields-container" class="row" data-example='{{ example_data|safe }}' data-fields-config='{{ fields_json|safe }}'>
+                                        {% for field_key, field_config in fields.items %}
+                                        <div class="col-md-6 mb-3 example-field-group" data-field="{{ field_key }}" style="display: none;">
+                                            <label class="form-label">{{ field_config.label_ar }}</label>
+                                            <input type="text" class="form-control example-input" 
+                                                   id="example_{{ field_key }}"
+                                                   placeholder="{{ field_config.placeholder_ar|default:field_config.label_ar }}"
+                                                   dir="{{ field_config.direction|default:'rtl' }}">
+                                        </div>
+                                        {% endfor %}
+                                        
+                                        <!-- Course fields will be appended here dynamically -->
+                                    </div>
+                                    
+                                    <h6 class="text-primary border-bottom pb-2 mb-3 mt-4" id="course-example-header" style="display: none;">
+                                        بيانات المقررات 
+                                        <span class="badge bg-info" id="course-example-count-badge">8 مقررات</span>
+                                    </h6>
+                                    <div id="course-example-fields-container" class="row">
+                                        <!-- Course example fields will be dynamically generated here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(3)">السابق</button>
+                                <button type="button" class="btn btn-primary" onclick="nextStep(3)">التالي</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Customize Fields -->
+                        <div id="step4" class="content" style="display: none;">
+                            <div class="card mb-4 preview-card">
+                                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <h5 class="mb-0">معاينة مرئية تفاعلية</h5>
+                                        <small class="text-muted">اسحب وأفلت الحقول مباشرة على السجل</small>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleEditorMode()">
+                                        <i class="ti ti-edit me-1"></i>
+                                        <span id="editorModeText">تفعيل التحرير</span>
+                                    </button>
+                                </div>
+                                <div class="card-body p-2 position-relative">
+                                    <div id="editorModeHelper" class="editor-mode-helper d-none">
+                                        <i class="ti ti-hand-move"></i>
+                                        <span>يمكنك الآن سحب الحقول وتغيير حجمها مباشرة على السجل</span>
+                                    </div>
+                                    <div id="visualEditorContainer" class="preview-container">
+                                        <canvas id="certificateCanvas" class="preview-canvas"></canvas>
+                                        <div id="canvasLoading" class="text-center p-5" style="display: none;">
+                                            <div class="spinner-border text-primary" role="status"></div>
+                                            <p class="mt-2">جاري تحميل المعاينة...</p>
+                                        </div>
+                                        <div id="canvasError" class="alert alert-warning m-3" style="display: none;">
+                                            يرجى تحميل ملف PDF في الخطوة 1 وتفعيل الحقول في الخطوة 2
+                                        </div>
+                                        <div id="positionIndicator" class="position-indicator">
+                                            <div class="indicator-content">
+                                                <i class="ti ti-target"></i>
+                                                <div id="positionIndicatorText">X=0.00cm, Y=0.00cm</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info mt-2 mb-0">
+                                        <small>
+                                            <i class="ti ti-info-circle me-1"></i>
+                                            <strong>تلميح:</strong> اضغط على زر "تفعيل التحرير" ثم اسحب الحقول بالماوس لتحديد مواضعها.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card mb-4 settings-card">
+                                <div class="card-header py-2">
+                                    <h5 class="mb-0">تخصيص الحقول</h5>
+                                    <small class="text-muted">اضبط المواضع والخطوط لكل حقل</small>
+                                </div>
+                                <div class="card-body p-3" style="max-height: 400px; overflow-y: auto;">
+                                    <input type="hidden" id="designer_page_width_cm" name="designer_page_width_cm" value="{{ designer_width_cm|default:29.7 }}">
+                                    <input type="hidden" id="designer_page_height_cm" name="designer_page_height_cm" value="{{ designer_height_cm|default:21 }}">
+                                    <input type="hidden" id="designer_page_width_px" name="designer_page_width_px" value="{{ designer_width_px|default:'0' }}">
+                                    <input type="hidden" id="designer_page_height_px" name="designer_page_height_px" value="{{ designer_height_px|default:'0' }}">
+                                    <input type="hidden" id="qr_x_px" name="qr_x_px" value="">
+                                    <input type="hidden" id="qr_y_px" name="qr_y_px" value="">
+                                    <input type="hidden" id="qr_size_px" name="qr_size_px" value="">
+                                    <input type="hidden" id="qr_x_ratio" name="qr_x_ratio" value="">
+                                    <input type="hidden" id="qr_y_ratio" name="qr_y_ratio" value="">
+                                    <input type="hidden" id="qr_size_ratio" name="qr_size_ratio" value="">
+
+                                    <div class="settings-group mb-3">
+                                        <h6 class="settings-title">إعدادات QR</h6>
+                                        <div class="row g-2">
+                                            <div class="col-3">
+                                                <label class="form-label small mb-1">X</label>
+                                                <input type="number" name="qr_x" class="form-control form-control-sm" value="6.9" step="0.1">
+                                            </div>
+                                            <div class="col-3">
+                                                <label class="form-label small mb-1">Y</label>
+                                                <input type="number" name="qr_y" class="form-control form-control-sm" value="1.2" step="0.1">
+                                            </div>
+                                            <div class="col-3">
+                                                <label class="form-label small mb-1">حجم</label>
+                                                <input type="number" name="qr_size" class="form-control form-control-sm" value="4" step="0.1">
+                                            </div>
+                                            <div class="col-3">
+                                                <label class="form-label small mb-1">دوران</label>
+                                                <input type="number" name="qr_rotation" class="form-control form-control-sm" value="0" step="1">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <h6 class="text-primary border-bottom pb-2 mb-3">بيانات الطالب والبرنامج</h6>
+                                    <div id="field-settings-container">
+                                        {% for field_key, field_config in fields.items %}
+                                        <div class="settings-group mb-3 field-settings" data-field="{{ field_key }}" style="display: none;">
+                                            <h6 class="settings-title">{{ field_config.label_ar }}</h6>
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small mb-1">الخط</label>
+                                                    <select name="field_font_{{ field_key }}" class="form-select form-select-sm">
+                                                        {% for font_key, font_name in fonts %}
+                                                        <option value="{{ font_key }}">{{ font_name }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small mb-1">اللون</label>
+                                                    <input type="color" name="field_color_{{ field_key }}" class="form-control form-control-sm form-control-color" value="#000000">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small mb-1">X</label>
+                                                    <input type="number" name="field_x_{{ field_key }}" class="form-control form-control-sm" value="15" step="0.1">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small mb-1">Y</label>
+                                                    <input type="number" name="field_y_{{ field_key }}" class="form-control form-control-sm" value="10" step="0.1">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small mb-1">حجم الخط</label>
+                                                    <input type="number" name="field_font_size_{{ field_key }}" class="form-control form-control-sm" value="12" step="0.5">
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="field_x_px_{{ field_key }}" class="field-x-px-input" data-field="{{ field_key }}" value="">
+                                            <input type="hidden" name="field_y_px_{{ field_key }}" class="field-y-px-input" data-field="{{ field_key }}" value="">
+                                            <input type="hidden" name="field_width_px_{{ field_key }}" class="field-width-px-input" data-field="{{ field_key }}" value="">
+                                            <input type="hidden" name="field_height_px_{{ field_key }}" class="field-height-px-input" data-field="{{ field_key }}" value="">
+                                            <input type="hidden" name="field_font_size_px_{{ field_key }}" class="field-fontsize-px-input" data-field="{{ field_key }}" value="">
+                                            <input type="hidden" name="field_x_ratio_{{ field_key }}" value="">
+                                            <input type="hidden" name="field_y_ratio_{{ field_key }}" value="">
+                                            <input type="hidden" name="field_width_ratio_{{ field_key }}" value="">
+                                            <input type="hidden" name="field_height_ratio_{{ field_key }}" value="">
+                                            <input type="hidden" name="field_font_size_ratio_{{ field_key }}" value="">
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <h6 class="text-primary border-bottom pb-2 mb-3 mt-3" id="course-settings-header" style="display: none;">
+                                        إعدادات المقررات 
+                                        <span class="badge bg-info" id="course-settings-count-badge">8 مقررات</span>
+                                    </h6>
+                                    <div id="course-settings-container">
+                                        <!-- Course settings fields will be dynamically generated here -->
+                                    </div>
+                                    
+                                    <button type="button" class="btn btn-sm btn-primary w-100 mt-2" onclick="updateCanvasFromForm()">
+                                        <i class="ti ti-refresh me-1"></i> تحديث المعاينة
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(4)">السابق</button>
+                                <button type="button" class="btn btn-primary" onclick="nextStep(4)">التالي</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 5: Final Preview & Save -->
+                        <div id="step5" class="content" style="display: none;">
+                            <div class="card mb-4">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-0">المعاينة النهائية والحفظ</h5>
+                                        <small class="text-muted">راجع النتيجة النهائية قبل الحفظ</small>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="updateTranscriptPreview()">
+                                        <i class="ti ti-refresh me-1"></i> تحديث المعاينة
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-success">
+                                        <i class="ti ti-check me-2"></i>
+                                        راجع الإعدادات واضغط على حفظ القالب عند الانتهاء
+                                    </div>
+                                    <div id="finalPreviewContainer">
+                                        <div id="finalPreviewLoading" class="text-center p-5">
+                                            <div class="spinner-border text-primary" role="status"></div>
+                                            <p class="mt-2">جاري توليد المعاينة النهائية...</p>
+                                        </div>
+                                        <object id="finalPreviewFrame" data="" type="application/pdf" style="width: 100%; height: 700px; display: none;">
+                                            <div class="alert alert-warning">
+                                                لا يمكن عرض المعاينة النهائية
+                                            </div>
+                                        </object>
+                                        <div id="finalPreviewError" class="alert alert-danger" style="display: none;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(5)">السابق</button>
+                                <button type="button" class="btn btn-success" onclick="submitTranscriptForm()">
+                                    <i class="ti ti-device-floppy me-1"></i>
+                                    {% if is_edit %}حفظ التغييرات{% else %}حفظ القالب{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+<style>
+.settings-group {
+    background: #f8f9fa;
+    border-radius: 0.375rem;
+    padding: 0.625rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e9ecef;
+}
+.settings-title {
+    color: #566a7f;
+    font-size: 0.8125rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+.form-check-primary .form-check-input:checked {
+    background-color: #28c76f;
+    border-color: #28c76f;
+}
+#visualEditorContainer,
+.preview-container {
+    min-height: 500px;
+    background: #f8f9fa;
+    border: 1px solid #e2e5ec;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#certificateCanvas,
+.preview-canvas {
+    width: 100%;
+    max-width: 1100px;
+    height: auto;
+    border: 1px solid #d7dae3;
+    border-radius: 0.35rem;
+    box-shadow: 0 10px 30px rgba(15, 34, 58, 0.12);
+    background: #fff;
+}
+.position-indicator {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    background: rgba(40, 199, 111, 0.95);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    box-shadow: 0 12px 35px rgba(40, 199, 111, 0.35);
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.position-indicator.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+.position-indicator .indicator-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+.editor-mode-helper {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    z-index: 20;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+    font-size: 0.9rem;
+    background: rgba(40, 199, 111, 0.12);
+    color: #057a55;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+function safeJSONParse(value, fallback = {}) {
+    if (value === undefined || value === null) return fallback;
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim();
+    if (!normalized || normalized === 'undefined' || normalized === 'null') return fallback;
+    try {
+        return JSON.parse(normalized);
+    } catch (error) {
+        console.warn('Failed to parse JSON value', { value: normalized, error });
+        return fallback;
+    }
+}
+
+// Get template data from form attributes
+var formEl = document.getElementById('transcriptTemplateForm');
+var isEdit = formEl.dataset.isEdit === 'true';
+var templateId = formEl.dataset.templateId !== 'null' ? formEl.dataset.templateId : null;
+var templateActiveFields = safeJSONParse(formEl.dataset.templateFields, {});
+var templateFieldSettings = safeJSONParse(formEl.dataset.fieldSettings, {});
+var templateQrSettings = safeJSONParse(formEl.dataset.qrSettings, {});
+var templatePdfUrl = formEl.dataset.templatePdfUrl || '';
+var currentTranscriptLanguages = ['arabic', 'english'];
+var uploadStatusEl = null;
+
+$(document).ready(function() {
+    window.stepper = new Stepper(document.querySelector('.bs-stepper'), {
+        linear: true,
+        animation: true
+    });
+    window.currentStep = 1;
+    updateStepVisibility();
+    
+    // Generate course fields based on initial count
+    generateCourseFields();
+    
+    updateFieldCount();
+    $(document).on('change', '.field-checkbox', function() {
+        updateFieldCount();
+        updateExampleFields();
+        updateFieldSettings();
+    });
+    
+    // Listen for course count changes
+    $('#id_active_course_count').on('change input', function() {
+        generateCourseFields();
+        generateCourseExampleFields();
+        generateCourseSettingsFields();
+    });
+    
+    if (isEdit) {
+        initializeEditState();
+    }
+    
+    $('#id_transcript_type').on('change', function() {
+        applyTranscriptTypeFilter();
+    });
+
+    applyTranscriptTypeFilter();
+    initUploadStatusWatcher();
+});
+
+// Course field generation
+function generateCourseFields() {
+    const courseCount = parseInt($('#id_active_course_count').val()) || 8;
+    $('#course-count-badge').text(courseCount + ' مقررات');
+    
+    let html = '';
+    for (let i = 1; i <= courseCount; i++) {
+        html += `
+            <div class="col-12 mb-2">
+                <h6 class="text-secondary mb-2">المقرر ${i}</h6>
+            </div>
+            <div class="col-md-3 mb-2 field-option course-field" data-field="course_${i}_percentage">
+                <div class="form-check form-check-primary">
+                    <input class="form-check-input field-checkbox" type="checkbox" 
+                           name="field_active_course_${i}_percentage" 
+                           id="field_course_${i}_percentage" checked>
+                    <label class="form-check-label" for="field_course_${i}_percentage">
+                        <strong>النسبة المئوية</strong>
+                        <br><small class="text-muted">Percentage</small>
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-3 mb-2 field-option course-field" data-field="course_${i}_grade">
+                <div class="form-check form-check-primary">
+                    <input class="form-check-input field-checkbox" type="checkbox" 
+                           name="field_active_course_${i}_grade" 
+                           id="field_course_${i}_grade" checked>
+                    <label class="form-check-label" for="field_course_${i}_grade">
+                        <strong>الدرجة</strong>
+                        <br><small class="text-muted">Grade</small>
+                    </label>
+                </div>
+            </div>
+        `;
+    }
+    $('#course-fields-container').html(html);
+    updateFieldCount();
+}
+
+function generateCourseExampleFields() {
+    const courseCount = parseInt($('#id_active_course_count').val()) || 8;
+    
+    // Update badge and show header
+    $('#course-example-count-badge').text(courseCount + ' مقررات');
+    $('#course-example-header').show();
+    
+    let html = '';
+    for (let i = 1; i <= courseCount; i++) {
+        const isCheckedPercentage = $(`#field_course_${i}_percentage`).is(':checked');
+        const isCheckedGrade = $(`#field_course_${i}_grade`).is(':checked');
+        
+        html += `
+            <div class="col-md-3 mb-3 example-field-group course-example" data-field="course_${i}_percentage" style="${isCheckedPercentage ? '' : 'display: none;'}">
+                <label class="form-label">النسبة المئوية للمقرر ${i}</label>
+                <input type="text" class="form-control example-input" 
+                       id="example_course_${i}_percentage"
+                       placeholder="مثال: 95%"
+                       dir="ltr">
+            </div>
+            <div class="col-md-3 mb-3 example-field-group course-example" data-field="course_${i}_grade" style="${isCheckedGrade ? '' : 'display: none;'}">
+                <label class="form-label">الدرجة للمقرر ${i}</label>
+                <input type="text" class="form-control example-input" 
+                       id="example_course_${i}_grade"
+                       placeholder="مثال: A+"
+                       dir="ltr">
+            </div>
+        `;
+    }
+    $('#course-example-fields-container').html(html);
+}
+
+function generateCourseSettingsFields() {
+    const courseCount = parseInt($('#id_active_course_count').val()) || 8;
+    const fontsHtml = `{% for font_key, font_name in fonts %}<option value="{{ font_key }}">{{ font_name }}</option>{% endfor %}`;
+    
+    // Update badge and show header
+    $('#course-settings-count-badge').text(courseCount + ' مقررات');
+    $('#course-settings-header').show();
+    
+    let html = '';
+    for (let i = 1; i <= courseCount; i++) {
+        const isCheckedPercentage = $(`#field_course_${i}_percentage`).is(':checked');
+        const isCheckedGrade = $(`#field_course_${i}_grade`).is(':checked');
+        
+        // Percentage field settings
+        html += `
+            <div class="settings-group mb-3 field-settings course-settings" data-field="course_${i}_percentage" style="${isCheckedPercentage ? '' : 'display: none;'}">
+                <h6 class="settings-title">النسبة المئوية للمقرر ${i}</h6>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label small mb-1">الخط</label>
+                        <select name="field_font_course_${i}_percentage" class="form-select form-select-sm">
+                            ${fontsHtml}
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small mb-1">اللون</label>
+                        <input type="color" name="field_color_course_${i}_percentage" class="form-control form-control-sm form-control-color" value="#000000">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small mb-1">X</label>
+                        <input type="number" name="field_x_course_${i}_percentage" class="form-control form-control-sm" value="15" step="0.1">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small mb-1">Y</label>
+                        <input type="number" name="field_y_course_${i}_percentage" class="form-control form-control-sm" value="${5 + i * 0.8}" step="0.1">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small mb-1">حجم الخط</label>
+                        <input type="number" name="field_font_size_course_${i}_percentage" class="form-control form-control-sm" value="12" step="0.5">
+                    </div>
+                </div>
+                <input type="hidden" name="field_x_px_course_${i}_percentage" value="">
+                <input type="hidden" name="field_y_px_course_${i}_percentage" value="">
+                <input type="hidden" name="field_width_px_course_${i}_percentage" value="">
+                <input type="hidden" name="field_height_px_course_${i}_percentage" value="">
+                <input type="hidden" name="field_font_size_px_course_${i}_percentage" value="">
+                <input type="hidden" name="field_x_ratio_course_${i}_percentage" value="">
+                <input type="hidden" name="field_y_ratio_course_${i}_percentage" value="">
+                <input type="hidden" name="field_width_ratio_course_${i}_percentage" value="">
+                <input type="hidden" name="field_height_ratio_course_${i}_percentage" value="">
+                <input type="hidden" name="field_font_size_ratio_course_${i}_percentage" value="">
+            </div>
+        `;
+        // Grade field settings
+        html += `
+            <div class="settings-group mb-3 field-settings course-settings" data-field="course_${i}_grade" style="${isCheckedGrade ? '' : 'display: none;'}">
+                <h6 class="settings-title">الدرجة للمقرر ${i}</h6>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label small mb-1">الخط</label>
+                        <select name="field_font_course_${i}_grade" class="form-select form-select-sm">
+                            ${fontsHtml}
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small mb-1">اللون</label>
+                        <input type="color" name="field_color_course_${i}_grade" class="form-control form-control-sm form-control-color" value="#000000">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small mb-1">X</label>
+                        <input type="number" name="field_x_course_${i}_grade" class="form-control form-control-sm" value="12" step="0.1">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small mb-1">Y</label>
+                        <input type="number" name="field_y_course_${i}_grade" class="form-control form-control-sm" value="${5 + i * 0.8}" step="0.1">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small mb-1">حجم الخط</label>
+                        <input type="number" name="field_font_size_course_${i}_grade" class="form-control form-control-sm" value="12" step="0.5">
+                    </div>
+                </div>
+                <input type="hidden" name="field_x_px_course_${i}_grade" value="">
+                <input type="hidden" name="field_y_px_course_${i}_grade" value="">
+                <input type="hidden" name="field_width_px_course_${i}_grade" value="">
+                <input type="hidden" name="field_height_px_course_${i}_grade" value="">
+                <input type="hidden" name="field_font_size_px_course_${i}_grade" value="">
+                <input type="hidden" name="field_x_ratio_course_${i}_grade" value="">
+                <input type="hidden" name="field_y_ratio_course_${i}_grade" value="">
+                <input type="hidden" name="field_width_ratio_course_${i}_grade" value="">
+                <input type="hidden" name="field_height_ratio_course_${i}_grade" value="">
+                <input type="hidden" name="field_font_size_ratio_course_${i}_grade" value="">
+            </div>
+        `;
+    }
+    $('#course-settings-container').html(html);
+}
+
+function initializeEditState() {
+    if (!isEdit) return;
+    if (templateActiveFields && Object.keys(templateActiveFields).length) {
+        $('.field-checkbox').prop('checked', false);
+        Object.keys(templateActiveFields).forEach(function(fieldKey) {
+            if (templateActiveFields[fieldKey]) {
+                $('#field_' + fieldKey).prop('checked', true);
+            }
+        });
+    }
+    updateFieldCount();
+    updateExampleFields();
+    updateFieldSettings();
+    applyTemplateFieldSettings();
+    applyTemplateQrSettings();
+}
+
+function applyTemplateFieldSettings() {
+    if (!templateFieldSettings || !Object.keys(templateFieldSettings).length) return;
+    Object.keys(templateFieldSettings).forEach(function(fieldKey) {
+        const settings = templateFieldSettings[fieldKey] || {};
+        setNumericInputValue(`input[name="field_x_${fieldKey}"]`, settings.x);
+        setNumericInputValue(`input[name="field_y_${fieldKey}"]`, settings.y);
+        setNumericInputValue(`input[name="field_font_size_${fieldKey}"]`, settings.font_size);
+        setSelectValue(`select[name="field_font_${fieldKey}"]`, settings.font_name);
+        setInputValue(`input[name="field_color_${fieldKey}"]`, settings.font_color);
+        setHiddenInputValue(`field_x_px_${fieldKey}`, settings.x_px);
+        setHiddenInputValue(`field_y_px_${fieldKey}`, settings.y_px);
+        setHiddenInputValue(`field_width_px_${fieldKey}`, settings.box_width_px);
+        setHiddenInputValue(`field_height_px_${fieldKey}`, settings.box_height_px);
+        setHiddenInputValue(`field_font_size_px_${fieldKey}`, settings.font_size_px);
+        setHiddenInputValue(`field_x_ratio_${fieldKey}`, settings.x_ratio);
+        setHiddenInputValue(`field_y_ratio_${fieldKey}`, settings.y_ratio);
+        setHiddenInputValue(`field_width_ratio_${fieldKey}`, settings.width_ratio);
+        setHiddenInputValue(`field_height_ratio_${fieldKey}`, settings.height_ratio);
+        setHiddenInputValue(`field_font_size_ratio_${fieldKey}`, settings.font_size_ratio);
+    });
+    bootstrapFieldPositionStateFromTemplate();
+}
+
+function applyTemplateQrSettings() {
+    if (!templateQrSettings || !Object.keys(templateQrSettings).length) return;
+    setNumericInputValue('input[name="qr_x"]', templateQrSettings.x);
+    setNumericInputValue('input[name="qr_y"]', templateQrSettings.y);
+    setNumericInputValue('input[name="qr_size"]', templateQrSettings.size);
+    setNumericInputValue('input[name="qr_rotation"]', templateQrSettings.rotation_angle);
+    setHiddenInputValue('qr_x_px', templateQrSettings.x_px);
+    setHiddenInputValue('qr_y_px', templateQrSettings.y_px);
+    setHiddenInputValue('qr_size_px', templateQrSettings.size_px);
+    setHiddenInputValue('qr_x_ratio', templateQrSettings.x_ratio);
+    setHiddenInputValue('qr_y_ratio', templateQrSettings.y_ratio);
+    setHiddenInputValue('qr_size_ratio', templateQrSettings.size_ratio);
+    bootstrapQrPositionStateFromTemplate();
+}
+
+function updateFieldCount() {
+    const count = $('.field-checkbox:checked').length;
+    $('#selected-count').text(count + ' حقل محدد');
+}
+
+function updateExampleFields() {
+    const exampleData = safeJSONParse($('#example-fields-container').attr('data-example'), {});
+    
+    $('.example-field-group').hide();
+    $('.field-checkbox:checked').each(function() {
+        const fieldKey = $(this).attr('name').replace('field_active_', '');
+        if (!isFieldAllowedForCurrentType(fieldKey)) return;
+        const fieldGroup = $(`.example-field-group[data-field="${fieldKey}"]`);
+        fieldGroup.show();
+        
+        const inputField = fieldGroup.find(`#example_${fieldKey}`);
+        if (inputField.val() === '' && exampleData[fieldKey]) {
+            inputField.val(exampleData[fieldKey]);
+        }
+    });
+}
+
+function updateFieldSettings() {
+    $('.field-settings').hide();
+    $('.field-checkbox:checked').each(function() {
+        const fieldKey = $(this).attr('name').replace('field_active_', '');
+        if (!isFieldAllowedForCurrentType(fieldKey)) return;
+        $(`.field-settings[data-field="${fieldKey}"]`).show();
+    });
+}
+
+function validateStep(step) {
+    switch(step) {
+        case 1:
+            const name = $('#id_name').val();
+            const fileInput = $('#id_pdf_file')[0];
+            if (!name || (!fileInput.files.length && !$('a[href$=".pdf"]').length)) {
+                Swal.fire({title: 'خطأ', text: 'يرجى إدخال اسم القالب وتحميل الملف', icon: 'error'});
+                return false;
+            }
+            return true;
+        case 2:
+            if ($('.field-checkbox:checked').length === 0) {
+                Swal.fire({title: 'خطأ', text: 'يرجى تفعيل حقل واحد على الأقل', icon: 'error'});
+                return false;
+            }
+            return true;
+        default:
+            return true;
+    }
+}
+
+window.nextStep = function(currentStep) {
+    if (validateStep(currentStep)) {
+        window.currentStep = currentStep + 1;
+        stepper.next();
+        updateStepVisibility();
+        
+        // Generate course example fields when entering Step 3
+        if (currentStep === 2) {
+            generateCourseExampleFields();
+            updateExampleFields();
+        }
+        // Generate course settings and enter visual editor when entering Step 4
+        if (currentStep === 3) {
+            generateCourseSettingsFields();
+            updateFieldSettings();
+            if (isEdit) {
+                applyTemplateFieldSettings();
+                applyTemplateQrSettings();
+            }
+            onEnterStep4();
+        }
+        // Generate final PDF preview when entering Step 5
+        if (currentStep === 4) {
+            updateTranscriptPreview();
+        }
+    }
+}
+
+window.prevStep = function(currentStep) {
+    window.currentStep = currentStep - 1;
+    stepper.previous();
+    updateStepVisibility();
+}
+
+function updateStepVisibility() {
+    $('.content').hide();
+    $(`#step${window.currentStep}`).fadeIn(300);
+}
+
+function determineFieldLanguage(fieldKey) {
+    if (!fieldKey) return 'all';
+    if (fieldKey.endsWith('_ar') || fieldKey.indexOf('arabic') === 0 || fieldKey.includes('_ar_')) return 'arabic';
+    if (fieldKey.endsWith('_en') || fieldKey.indexOf('english') === 0 || fieldKey.includes('_en_')) return 'english';
+    return 'all';
+}
+
+function isFieldAllowedForCurrentType(fieldKey) {
+    const lang = determineFieldLanguage(fieldKey);
+    return lang === 'all' || currentTranscriptLanguages.indexOf(lang) !== -1;
+}
+
+function applyTranscriptTypeFilter() {
+    const certType = $('#id_transcript_type').val() || 'bilingual';
+    if (certType === 'arabic') {
+        currentTranscriptLanguages = ['arabic'];
+    } else if (certType === 'english') {
+        currentTranscriptLanguages = ['english'];
+    } else {
+        currentTranscriptLanguages = ['arabic', 'english'];
+    }
+
+    $('.field-option').each(function() {
+        const fieldKey = $(this).data('field');
+        const allowed = isFieldAllowedForCurrentType(fieldKey);
+        $(this).toggle(allowed);
+        if (!allowed) {
+            $(this).find('.field-checkbox').prop('checked', false);
+        }
+    });
+
+    updateFieldCount();
+    updateExampleFields();
+    updateFieldSettings();
+}
+
+function initUploadStatusWatcher() {
+    uploadStatusEl = $('#upload-status');
+    const fileInput = $('#id_pdf_file');
+    if (!fileInput.length || !uploadStatusEl.length) return;
+
+    fileInput.on('change', function() {
+        if (this.files && this.files.length) {
+            uploadStatusEl
+                .removeClass('d-none alert-success')
+                .addClass('alert-info')
+                .html('<i class="ti ti-loader-2 me-1 ti-spin"></i> تم استلام الملف...');
+        } else {
+            uploadStatusEl.addClass('d-none');
+        }
+    });
+
+    if (isEdit && templateId) {
+        uploadStatusEl
+            .removeClass('d-none')
+            .addClass('alert-info')
+            .html('<i class="ti ti-info-circle me-1"></i> يتم استخدام ملف القالب الحالي.');
+    }
+}
+
+// Visual Editor
+let fabricCanvas = null;
+let pdfImageUrl = null;
+let editorMode = false;
+let canvasScale = 1.0;
+
+const CSS_DPI = 96;
+const INCH_TO_CM = 2.54;
+const DEFAULT_PX_PER_CM = CSS_DPI / INCH_TO_CM;
+const PDF_RENDER_SCALE = 2.0;
+const PDF_POINTS_PER_INCH = 72;
+const DEFAULT_PAGE_WIDTH_CM = 21.0;  // A4 portrait width
+const DEFAULT_PAGE_HEIGHT_CM = 29.7; // A4 portrait height
+
+let pdfOriginalWidth = null;  // Rendered width at 2x scale (pixels)
+let pdfOriginalHeight = null; // Rendered height at 2x scale (pixels)
+let pdfPageWidthPoints = null;  // Actual PDF MediaBox width (points)
+let pdfPageHeightPoints = null; // Actual PDF MediaBox height (points)
+let pxPerCmX = DEFAULT_PX_PER_CM;
+let pxPerCmY = DEFAULT_PX_PER_CM;
+let pdfPageWidthCm = DEFAULT_PAGE_WIDTH_CM;
+let pdfPageHeightCm = DEFAULT_PAGE_HEIGHT_CM;
+
+// Position tracking for accurate coordinate mapping
+let fieldPositionState = {};
+let qrPositionState = null;
+
+function getCurrentPageWidthCm() {
+    const inputVal = parseFloat(document.getElementById('designer_page_width_cm')?.value);
+    return pdfPageWidthCm || inputVal || DEFAULT_PAGE_WIDTH_CM;
+}
+
+function getCurrentPageHeightCm() {
+    const inputVal = parseFloat(document.getElementById('designer_page_height_cm')?.value);
+    return pdfPageHeightCm || inputVal || DEFAULT_PAGE_HEIGHT_CM;
+}
+
+function updateDesignerDimensionInputs() {
+    const widthCmInput = document.getElementById('designer_page_width_cm');
+    const heightCmInput = document.getElementById('designer_page_height_cm');
+    if (widthCmInput) widthCmInput.value = pdfPageWidthCm ? pdfPageWidthCm.toFixed(2) : widthCmInput.value;
+    if (heightCmInput) heightCmInput.value = pdfPageHeightCm ? pdfPageHeightCm.toFixed(2) : heightCmInput.value;
+    
+    const widthPxInput = document.getElementById('designer_page_width_px');
+    const heightPxInput = document.getElementById('designer_page_height_px');
+    if (widthPxInput) widthPxInput.value = pdfOriginalWidth ? pdfOriginalWidth.toFixed(2) : widthPxInput.value;
+    if (heightPxInput) heightPxInput.value = pdfOriginalHeight ? pdfOriginalHeight.toFixed(2) : heightPxInput.value;
+}
+
+// Track which fields have been user-modified (don't overwrite with form values)
+let userModifiedFields = {};
+
+function setHiddenInputValue(name, value) {
+    const input = document.querySelector(`input[name="${name}"]`);
+    if (!input) return;
+    const numericValue = typeof value === 'number' ? value : parseFloat(value);
+    if (!Number.isFinite(numericValue)) return;
+    input.value = numericValue;
+}
+
+function normalizeNumber(value) {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+}
+
+function hasNumber(value) {
+    return typeof value === 'number' && Number.isFinite(value);
+}
+
+function hasPositiveNumber(value) {
+    return hasNumber(value) && value > 0;
+}
+
+function setNumericInputValue(selector, value) {
+    const normalized = normalizeNumber(value);
+    if (normalized === null) return;
+    const input = document.querySelector(selector);
+    if (input) {
+        input.value = normalized;
+    }
+}
+
+function setInputValue(selector, value) {
+    if (value === undefined || value === null || value === '') return;
+    const input = document.querySelector(selector);
+    if (input) {
+        input.value = value;
+    }
+}
+
+function setSelectValue(selector, value) {
+    if (value === undefined || value === null || value === '') return;
+    const selectEl = document.querySelector(selector);
+    if (!selectEl) return;
+    const hasOption = Array.from(selectEl.options).some(option => option.value === value);
+    if (hasOption) {
+        selectEl.value = value;
+    }
+}
+
+function updateHiddenFieldMetrics(fieldKey, positionState) {
+    if (!fieldKey || !positionState) return;
+    setHiddenInputValue(`field_x_px_${fieldKey}`, positionState.xPx);
+    setHiddenInputValue(`field_y_px_${fieldKey}`, positionState.yPx);
+    setHiddenInputValue(`field_width_px_${fieldKey}`, positionState.widthPx);
+    setHiddenInputValue(`field_height_px_${fieldKey}`, positionState.heightPx);
+    setHiddenInputValue(`field_font_size_px_${fieldKey}`, positionState.fontSizePx);
+    setHiddenInputValue(`field_x_ratio_${fieldKey}`, positionState.xRatio);
+    setHiddenInputValue(`field_y_ratio_${fieldKey}`, positionState.yRatio);
+    setHiddenInputValue(`field_width_ratio_${fieldKey}`, positionState.widthRatio);
+    setHiddenInputValue(`field_height_ratio_${fieldKey}`, positionState.heightRatio);
+    setHiddenInputValue(`field_font_size_ratio_${fieldKey}`, positionState.fontSizeRatio);
+}
+
+function updateHiddenQrMetrics(qrState) {
+    if (!qrState) return;
+    setHiddenInputValue('qr_x_px', qrState.xPx);
+    setHiddenInputValue('qr_y_px', qrState.yPx);
+    setHiddenInputValue('qr_size_px', qrState.sizePx);
+    setHiddenInputValue('qr_x_ratio', qrState.xRatio);
+    setHiddenInputValue('qr_y_ratio', qrState.yRatio);
+    setHiddenInputValue('qr_size_ratio', qrState.sizeRatio);
+}
+
+function bootstrapFieldPositionStateFromTemplate() {
+    if (!templateFieldSettings || !Object.keys(templateFieldSettings).length) return;
+    fieldPositionState = {};
+    Object.keys(templateFieldSettings).forEach(function(fieldKey) {
+        const settings = templateFieldSettings[fieldKey] || {};
+        const xPx = normalizeNumber(settings.x_px);
+        const yPx = normalizeNumber(settings.y_px);
+        const widthPx = normalizeNumber(settings.box_width_px);
+        const heightPx = normalizeNumber(settings.box_height_px);
+        const fontSizePx = normalizeNumber(settings.font_size_px);
+        const baseWidthPx = normalizeNumber(settings.base_width_px);
+        const baseHeightPx = normalizeNumber(settings.base_height_px);
+        const xRatio = normalizeNumber(settings.x_ratio);
+        const yRatio = normalizeNumber(settings.y_ratio);
+        const widthRatio = normalizeNumber(settings.width_ratio);
+        const heightRatio = normalizeNumber(settings.height_ratio);
+        const fontSizeRatio = normalizeNumber(settings.font_size_ratio);
+        if (
+            xPx === null &&
+            yPx === null &&
+            widthPx === null &&
+            heightPx === null &&
+            fontSizePx === null &&
+            baseWidthPx === null &&
+            baseHeightPx === null &&
+            xRatio === null &&
+            yRatio === null &&
+            widthRatio === null &&
+            heightRatio === null &&
+            fontSizeRatio === null
+        ) {
+            return;
+        }
+
+        const derivedXRatio = xRatio !== null ? xRatio : (xPx !== null && baseWidthPx ? xPx / baseWidthPx : null);
+        const derivedYRatio = yRatio !== null ? yRatio : (yPx !== null && baseHeightPx ? yPx / baseHeightPx : null);
+        const derivedWidthRatio = widthRatio !== null ? widthRatio : (widthPx !== null && baseWidthPx ? widthPx / baseWidthPx : null);
+        const derivedHeightRatio = heightRatio !== null ? heightRatio : (heightPx !== null && baseHeightPx ? heightPx / baseHeightPx : null);
+        const derivedFontSizeRatio = fontSizeRatio !== null ? fontSizeRatio : (fontSizePx !== null && baseHeightPx ? fontSizePx / baseHeightPx : null);
+
+        fieldPositionState[fieldKey] = {
+            xPx: xPx,
+            yPx: yPx,
+            widthPx: widthPx,
+            heightPx: heightPx,
+            fontSizePx: fontSizePx,
+            baseWidthPx: baseWidthPx,
+            baseHeightPx: baseHeightPx,
+            xRatio: derivedXRatio,
+            yRatio: derivedYRatio,
+            widthRatio: derivedWidthRatio,
+            heightRatio: derivedHeightRatio,
+            fontSizeRatio: derivedFontSizeRatio
+        };
+
+        if (derivedXRatio !== null) setHiddenInputValue(`field_x_ratio_${fieldKey}`, derivedXRatio);
+        if (derivedYRatio !== null) setHiddenInputValue(`field_y_ratio_${fieldKey}`, derivedYRatio);
+        if (derivedWidthRatio !== null) setHiddenInputValue(`field_width_ratio_${fieldKey}`, derivedWidthRatio);
+        if (derivedHeightRatio !== null) setHiddenInputValue(`field_height_ratio_${fieldKey}`, derivedHeightRatio);
+        if (derivedFontSizeRatio !== null) setHiddenInputValue(`field_font_size_ratio_${fieldKey}`, derivedFontSizeRatio);
+    });
+}
+
+function bootstrapQrPositionStateFromTemplate() {
+    if (!templateQrSettings || !Object.keys(templateQrSettings).length) return;
+    const xPx = normalizeNumber(templateQrSettings.x_px);
+    const yPx = normalizeNumber(templateQrSettings.y_px);
+    const sizePx = normalizeNumber(templateQrSettings.size_px);
+    const baseWidthPx = normalizeNumber(templateQrSettings.base_width_px);
+    const baseHeightPx = normalizeNumber(templateQrSettings.base_height_px);
+    const xRatio = normalizeNumber(templateQrSettings.x_ratio);
+    const yRatio = normalizeNumber(templateQrSettings.y_ratio);
+    const sizeRatio = normalizeNumber(templateQrSettings.size_ratio);
+
+    const derivedXRatio = xRatio !== null ? xRatio : (xPx !== null && baseWidthPx ? xPx / baseWidthPx : null);
+    const derivedYRatio = yRatio !== null ? yRatio : (yPx !== null && baseHeightPx ? yPx / baseHeightPx : null);
+    const derivedSizeRatio = sizeRatio !== null ? sizeRatio : (sizePx !== null && baseWidthPx ? sizePx / baseWidthPx : null);
+
+    const hasValues = [xPx, yPx, sizePx, baseWidthPx, baseHeightPx, derivedXRatio, derivedYRatio, derivedSizeRatio]
+        .some(val => val !== null);
+    qrPositionState = hasValues ? {
+        xPx: xPx,
+        yPx: yPx,
+        sizePx: sizePx,
+        baseWidthPx: baseWidthPx,
+        baseHeightPx: baseHeightPx,
+        xRatio: derivedXRatio,
+        yRatio: derivedYRatio,
+        sizeRatio: derivedSizeRatio
+    } : null;
+
+    if (derivedXRatio !== null) setHiddenInputValue('qr_x_ratio', derivedXRatio);
+    if (derivedYRatio !== null) setHiddenInputValue('qr_y_ratio', derivedYRatio);
+    if (derivedSizeRatio !== null) setHiddenInputValue('qr_size_ratio', derivedSizeRatio);
+}
+
+function recordFieldPositionFromObject(obj, isUserModification = false) {
+    if (!obj || !obj.fieldKey || !canvasScale || !pdfOriginalWidth || !pdfOriginalHeight) return;
+    if (!pdfPageWidthPoints || !pdfPageHeightPoints) return; // Need actual PDF dimensions
+    
+    // Always update position if it's a user modification
+    // If it's not a user modification, only skip if the field was already user-modified
+    // This allows re-adding fields to update their positions
+    if (userModifiedFields[obj.fieldKey] && !isUserModification) {
+        return;
+    }
+    
+    // Calculate positions in original PDF pixel coordinates (before canvas scaling)
+    // These are at PDF_RENDER_SCALE (2x) - same scale as pdfOriginalWidth/Height from PDF.js viewport
+    const originalX = obj.left / canvasScale;
+    const originalY = obj.top / canvasScale;
+    const originalWidth = (obj.width * obj.scaleX) / canvasScale;
+    const originalHeight = (obj.height * obj.scaleY) / canvasScale;
+    const originalFontSize = obj.fontSize ? (obj.fontSize * obj.scaleY) / canvasScale : null;
+    
+    // Calculate position RATIOS (0 to 1) using ACTUAL viewport dimensions from PDF.js
+    // pdfOriginalWidth/Height are the actual rendered viewport size - this is the source of truth
+    const xRatio = originalX / pdfOriginalWidth;
+    const yRatio = originalY / pdfOriginalHeight;
+    const widthRatio = originalWidth / pdfOriginalWidth;
+    const heightRatio = originalHeight / pdfOriginalHeight;
+    const fontSizeRatio = originalFontSize ? originalFontSize / pdfOriginalHeight : null;
+    
+    fieldPositionState[obj.fieldKey] = {
+        // Pixel values (for compatibility)
+        xPx: originalX,
+        yPx: originalY,
+        widthPx: originalWidth,
+        heightPx: originalHeight,
+        fontSizePx: originalFontSize,
+        baseWidthPx: pdfOriginalWidth,  // Use actual viewport dimensions
+        baseHeightPx: pdfOriginalHeight,
+        // RATIO values (0 to 1) - these are the most accurate
+        xRatio: xRatio,
+        yRatio: yRatio,
+        widthRatio: widthRatio,
+        heightRatio: heightRatio,
+        fontSizeRatio: fontSizeRatio
+    };
+
+    updateHiddenFieldMetrics(obj.fieldKey, fieldPositionState[obj.fieldKey]);
+    
+    if (isUserModification) {
+        userModifiedFields[obj.fieldKey] = true;
+    }
+}
+
+function recordQrPosition(rect, isUserModification = false) {
+    if (!rect || !canvasScale || !pdfOriginalWidth || !pdfOriginalHeight) return;
+    if (!pdfPageWidthPoints || !pdfPageHeightPoints) return; // Need actual PDF dimensions
+    
+    // If QR was already user-modified and this is NOT a user modification, skip
+    if (userModifiedFields['qr'] && !isUserModification) {
+        return;
+    }
+    
+    const originalX = rect.left / canvasScale;
+    const originalY = rect.top / canvasScale;
+    const originalSize = (rect.width * rect.scaleX) / canvasScale;
+    
+    // Calculate RATIOS using ACTUAL viewport dimensions from PDF.js
+    const xRatio = originalX / pdfOriginalWidth;
+    const yRatio = originalY / pdfOriginalHeight;
+    const sizeRatio = originalSize / Math.min(pdfOriginalWidth, pdfOriginalHeight);
+    
+    qrPositionState = {
+        xPx: originalX,
+        yPx: originalY,
+        sizePx: originalSize,
+        baseWidthPx: pdfOriginalWidth,
+        baseHeightPx: pdfOriginalHeight,
+        // RATIO values
+        xRatio: xRatio,
+        yRatio: yRatio,
+        sizeRatio: sizeRatio
+    };
+
+    updateHiddenQrMetrics(qrPositionState);
+    
+    if (isUserModification) {
+        userModifiedFields['qr'] = true;
+    }
+}
+
+function initFabricCanvas() {
+    if (!fabricCanvas) {
+        fabricCanvas = new fabric.Canvas('certificateCanvas', {
+            selection: false,
+            preserveObjectStacking: true
+        });
+        
+        fabricCanvas.on('object:modified', function(e) {
+            if (e.target && e.target.fieldKey) {
+                updateFormFieldsFromCanvas(e.target);
+                // Record position for accurate PDF generation - mark as USER modification
+                if (e.target.fieldKey === 'qr') {
+                    recordQrPosition(e.target, true);  // true = user modification
+                } else {
+                    recordFieldPositionFromObject(e.target, true);  // true = user modification
+                }
+            }
+        });
+        
+        // Show coordinates while dragging
+        fabricCanvas.on('object:moving', function(e) {
+            if (e.target && e.target.fieldKey) {
+                const xCm = (e.target.left / canvasScale / pxPerCmX).toFixed(2);
+                const yCm = (e.target.top / canvasScale / pxPerCmY).toFixed(2);
+                updatePositionIndicator(xCm, yCm);
+            }
+        });
+        
+        // Update font size when scaling
+        fabricCanvas.on('object:scaling', function(e) {
+            if (e.target && e.target.fieldKey && e.target.fieldKey !== 'qr') {
+                const newFontSize = (e.target.fontSize * e.target.scaleY / canvasScale).toFixed(1);
+                const fontSizeInput = document.querySelector(`input[name="field_font_size_${e.target.fieldKey}"]`);
+                if (fontSizeInput) {
+                    fontSizeInput.value = newFontSize;
+                }
+            }
+        });
+    }
+}
+
+// Auto-update canvas when form inputs change
+let canvasUpdateTimeout;
+$(document).on('input change', '#step4 input[type="number"], #step4 input[type="color"], #step4 select', function() {
+    clearTimeout(canvasUpdateTimeout);
+    canvasUpdateTimeout = setTimeout(function() {
+        updateCanvasFromForm();
+    }, 300);
+});
+
+// Also update when example data changes in Step 3
+$(document).on('input', '.example-input', function() {
+    clearTimeout(canvasUpdateTimeout);
+    canvasUpdateTimeout = setTimeout(function() {
+        if (fabricCanvas) {
+            addTextFieldsToCanvas();
+        }
+    }, 500);
+});
+
+function toggleEditorMode() {
+    editorMode = !editorMode;
+    const btnText = document.getElementById('editorModeText');
+    const helper = document.getElementById('editorModeHelper');
+    
+    if (editorMode) {
+        btnText.textContent = 'إيقاف التحرير';
+        enableEditing();
+        if (helper) helper.classList.remove('d-none');
+    } else {
+        btnText.textContent = 'تفعيل التحرير';
+        disableEditing();
+        if (helper) helper.classList.add('d-none');
+    }
+}
+
+function enableEditing() {
+    if (fabricCanvas) {
+        fabricCanvas.selection = true;
+        fabricCanvas.forEachObject(function(obj) {
+            if (obj.type === 'textbox' || obj.type === 'rect' || obj.type === 'text') {
+                obj.selectable = true;
+                obj.evented = true;
+            }
+        });
+        fabricCanvas.renderAll();
+    }
+}
+
+function disableEditing() {
+    if (fabricCanvas) {
+        fabricCanvas.selection = false;
+        fabricCanvas.discardActiveObject();
+        fabricCanvas.forEachObject(function(obj) {
+            if (obj.type === 'textbox' || obj.type === 'rect' || obj.type === 'text') {
+                obj.selectable = false;
+                obj.evented = false;
+            }
+        });
+        fabricCanvas.renderAll();
+    }
+}
+
+function loadPDFToCanvas() {
+    const pdfInput = document.getElementById('id_pdf_file');
+    const pdfFile = pdfInput && pdfInput.files ? pdfInput.files[0] : null;
+
+    if (pdfFile) {
+        $('#canvasLoading').show();
+        const fileReader = new FileReader();
+        fileReader.onload = function(event) {
+            processPdfArrayBuffer(event.target.result);
+        };
+        fileReader.readAsArrayBuffer(pdfFile);
+        return;
+    }
+
+    if (isEdit && templatePdfUrl) {
+        $('#canvasLoading').show();
+        fetch(templatePdfUrl, { credentials: 'same-origin' })
+        .then(response => response.arrayBuffer())
+        .then(buffer => processPdfArrayBuffer(buffer))
+        .catch(error => {
+            console.error('Error loading PDF:', error);
+            $('#canvasError').show().text('تعذر تحميل ملف القالب');
+        });
+        return;
+    }
+
+    $('#canvasError').show();
+}
+
+function processPdfArrayBuffer(arrayBuffer) {
+    const typedArray = new Uint8Array(arrayBuffer);
+    
+    // Reset position tracking when loading new PDF
+    fieldPositionState = {};
+    qrPositionState = null;
+    userModifiedFields = {};
+    if (isEdit) {
+        bootstrapFieldPositionStateFromTemplate();
+        bootstrapQrPositionStateFromTemplate();
+    }
+
+    pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
+        return pdf.getPage(1);
+    }).then(function(page) {
+        // Get ACTUAL PDF MediaBox dimensions (same as Python reads)
+        // This is the source of truth for page dimensions
+        const mediaBox = page.mediaBox || page.viewBox || null;
+        let pageWidthPoints = null;
+        let pageHeightPoints = null;
+        
+        if (mediaBox && mediaBox.length >= 4) {
+            // MediaBox format: [x0, y0, x1, y1]
+            pageWidthPoints = mediaBox[2] - mediaBox[0];
+            pageHeightPoints = mediaBox[3] - mediaBox[1];
+        }
+        
+        // If MediaBox not available, try viewBox
+        if (!pageWidthPoints || !pageHeightPoints) {
+            const viewBox = page.viewBox || null;
+            if (viewBox && viewBox.length >= 4) {
+                pageWidthPoints = viewBox[2];
+                pageHeightPoints = viewBox[3];
+            }
+        }
+        
+        // Store actual PDF dimensions in points (this is what Python reads from MediaBox)
+        if (pageWidthPoints && pageHeightPoints) {
+            pdfPageWidthPoints = pageWidthPoints;
+            pdfPageHeightPoints = pageHeightPoints;
+            // Convert points to cm (72 points = 1 inch = 2.54 cm)
+            pdfPageWidthCm = (pageWidthPoints / PDF_POINTS_PER_INCH) * INCH_TO_CM;
+            pdfPageHeightCm = (pageHeightPoints / PDF_POINTS_PER_INCH) * INCH_TO_CM;
+        } else {
+            // Fallback to defaults
+            pdfPageWidthPoints = (DEFAULT_PAGE_WIDTH_CM / INCH_TO_CM) * PDF_POINTS_PER_INCH;
+            pdfPageHeightPoints = (DEFAULT_PAGE_HEIGHT_CM / INCH_TO_CM) * PDF_POINTS_PER_INCH;
+            pdfPageWidthCm = DEFAULT_PAGE_WIDTH_CM;
+            pdfPageHeightCm = DEFAULT_PAGE_HEIGHT_CM;
+        }
+        
+        // Render PDF at 2x scale for better quality
+        const viewport = page.getViewport({ scale: PDF_RENDER_SCALE });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        // Store rendered dimensions (at 2x scale) - THIS IS WHAT WE USE FOR RATIOS
+        pdfOriginalWidth = viewport.width;
+        pdfOriginalHeight = viewport.height;
+        
+        // Calculate pixels per cm based on ACTUAL PDF dimensions
+        pxPerCmX = pdfOriginalWidth / pdfPageWidthCm;
+        pxPerCmY = pdfOriginalHeight / pdfPageHeightCm;
+        
+        
+        updateDesignerDimensionInputs();
+        
+        const renderContext = {
+            canvasContext: context,
+            viewport: viewport
+        };
+        
+        return page.render(renderContext).promise.then(function() {
+            pdfImageUrl = canvas.toDataURL();
+            renderCanvasWithPDF();
+            $('#canvasLoading').hide();
+        });
+    }).catch(function(error) {
+        console.error('Error loading PDF:', error);
+        $('#canvasError').show().text('خطأ في تحميل ملف PDF');
+        $('#canvasLoading').hide();
+    });
+}
+
+function renderCanvasWithPDF() {
+    if (!pdfImageUrl) return;
+    
+    initFabricCanvas();
+    
+    fabric.Image.fromURL(pdfImageUrl, function(img) {
+        const containerWidth = document.getElementById('visualEditorContainer').offsetWidth - 20;
+        const scale = containerWidth / img.width;
+        canvasScale = scale;
+        
+        fabricCanvas.setWidth(img.width * scale);
+        fabricCanvas.setHeight(img.height * scale);
+        
+        img.set({
+            scaleX: scale,
+            scaleY: scale,
+            selectable: false,
+            evented: false
+        });
+        
+        fabricCanvas.setBackgroundImage(img, fabricCanvas.renderAll.bind(fabricCanvas));
+        addTextFieldsToCanvas();
+    });
+}
+
+// Font mapping
+const fontMap = {
+    'IBM_Plex_Sans_Arabic_Bold': { family: 'IBM Plex Sans Arabic', weight: 'bold' },
+    'IBM_Plex_Sans_Arabic_Regular': { family: 'IBM Plex Sans Arabic', weight: 'normal' },
+    'din-next-lt-w23-bold': { family: 'Din Next LT', weight: 'bold' },
+    'GESS': { family: 'GESS', weight: 'normal' },
+    'Bressay-Bold': { family: 'Bressay', weight: 'bold' },
+    'majallab': { family: 'Majalla', weight: 'normal' }
+};
+
+function addTextFieldsToCanvas() {
+    const exampleData = safeJSONParse($('#example-fields-container').attr('data-example'), {});
+    const fieldsConfig = safeJSONParse($('#example-fields-container').attr('data-fields-config'), {});
+    
+    // Reset userModifiedFields when re-adding fields so positions can be updated
+    userModifiedFields = {};
+    
+    fabricCanvas.getObjects().forEach(function(obj) {
+        if (obj.type === 'textbox' || obj.type === 'rect' || obj.type === 'text') {
+            fabricCanvas.remove(obj);
+        }
+    });
+    
+    document.querySelectorAll('.field-checkbox:checked').forEach(function(checkbox) {
+        const fieldKey = checkbox.name.replace('field_active_', '');
+        const labelEl = checkbox.closest('.form-check')?.querySelector('strong');
+        const fieldLabel = labelEl ? labelEl.textContent : fieldKey;
+        const exampleText = document.getElementById('example_' + fieldKey)?.value || exampleData[fieldKey] || fieldLabel;
+        
+        // Get field configuration for direction
+        const fieldConfig = fieldsConfig[fieldKey] || {};
+        const isRTL = fieldConfig.direction === 'rtl' || fieldKey.endsWith('_ar') || fieldKey.includes('arabic');
+        
+        // Use stored position state if available, otherwise use form inputs
+        let xPx = null;
+        let yPx = null;
+        const storedPosition = fieldPositionState[fieldKey];
+        const storedXRatio = storedPosition ? normalizeNumber(storedPosition.xRatio) : null;
+        const storedYRatio = storedPosition ? normalizeNumber(storedPosition.yRatio) : null;
+        const storedXPx = storedPosition ? normalizeNumber(storedPosition.xPx) : null;
+        const storedYPx = storedPosition ? normalizeNumber(storedPosition.yPx) : null;
+        const storedBaseWidthPx = storedPosition ? normalizeNumber(storedPosition.baseWidthPx) : null;
+        const storedBaseHeightPx = storedPosition ? normalizeNumber(storedPosition.baseHeightPx) : null;
+        const storedPxLooksEmpty = storedXPx === 0 && storedYPx === 0 &&
+            !hasPositiveNumber(storedBaseWidthPx) && !hasPositiveNumber(storedBaseHeightPx);
+
+        if (storedXRatio !== null) {
+            xPx = (storedXRatio * pdfOriginalWidth) * canvasScale;
+        } else if (storedXPx !== null && !storedPxLooksEmpty) {
+            if (hasPositiveNumber(storedBaseWidthPx)) {
+                xPx = (storedXPx / storedBaseWidthPx) * pdfOriginalWidth * canvasScale;
+            } else {
+                xPx = storedXPx * canvasScale;
+            }
+        }
+
+        if (storedYRatio !== null) {
+            yPx = (storedYRatio * pdfOriginalHeight) * canvasScale;
+        } else if (storedYPx !== null && !storedPxLooksEmpty) {
+            if (hasPositiveNumber(storedBaseHeightPx)) {
+                yPx = (storedYPx / storedBaseHeightPx) * pdfOriginalHeight * canvasScale;
+            } else {
+                yPx = storedYPx * canvasScale;
+            }
+        }
+
+        if (xPx === null || yPx === null) {
+            const xCm = parseFloat(document.querySelector(`input[name="field_x_${fieldKey}"]`)?.value || 15);
+            const yCm = parseFloat(document.querySelector(`input[name="field_y_${fieldKey}"]`)?.value || 10);
+            if (xPx === null) {
+                xPx = xCm * pxPerCmX * canvasScale;
+            }
+            if (yPx === null) {
+                yPx = yCm * pxPerCmY * canvasScale;
+            }
+        }
+        
+        const fontSize = parseFloat(document.querySelector(`input[name="field_font_size_${fieldKey}"]`)?.value || 12);
+        const color = document.querySelector(`input[name="field_color_${fieldKey}"]`)?.value || '#000000';
+        const fontSelect = document.querySelector(`select[name="field_font_${fieldKey}"]`)?.value || 'IBM_Plex_Sans_Arabic_Regular';
+        
+        const fontInfo = fontMap[fontSelect] || { family: 'IBM Plex Sans Arabic', weight: 'normal' };
+        
+        // Use stored width if available, otherwise use default
+        let textWidth = 300 * canvasScale;
+        const storedWidthRatio = storedPosition ? normalizeNumber(storedPosition.widthRatio) : null;
+        const storedWidthPx = storedPosition ? normalizeNumber(storedPosition.widthPx) : null;
+        if (storedWidthRatio !== null && storedWidthRatio > 0) {
+            textWidth = (storedWidthRatio * pdfOriginalWidth) * canvasScale;
+        } else if (storedWidthPx !== null && storedWidthPx > 0) {
+            if (hasPositiveNumber(storedBaseWidthPx)) {
+                textWidth = (storedWidthPx / storedBaseWidthPx) * pdfOriginalWidth * canvasScale;
+            } else {
+                textWidth = storedWidthPx * canvasScale;
+            }
+        }
+        
+        const text = new fabric.Textbox(exampleText, {
+            left: xPx,
+            top: yPx,
+            fontSize: fontSize * canvasScale,
+            fill: color,
+            fontFamily: fontInfo.family,
+            fontWeight: fontInfo.weight,
+            width: textWidth,
+            textAlign: isRTL ? 'right' : 'left',
+            direction: isRTL ? 'rtl' : 'ltr',
+            fieldKey: fieldKey,
+            selectable: editorMode,
+            evented: editorMode,
+            hasControls: true,
+            hasBorders: true,
+            lockRotation: true,
+            borderColor: '#28c76f',
+            cornerColor: '#28c76f',
+            cornerSize: 8,
+            transparentCorners: false
+        });
+        
+        fabricCanvas.add(text);
+        text.bringToFront();
+        // Record initial position (not user modification - can be overwritten by user)
+        recordFieldPositionFromObject(text, false);
+    });
+    
+    // Add QR placeholder
+    const qrX = parseFloat(document.querySelector('input[name="qr_x"]')?.value || 6.9);
+    const qrY = parseFloat(document.querySelector('input[name="qr_y"]')?.value || 1.2);
+    const qrSize = parseFloat(document.querySelector('input[name="qr_size"]')?.value || 4);
+    
+    const qrRect = new fabric.Rect({
+        left: qrX * pxPerCmX * canvasScale,
+        top: qrY * pxPerCmY * canvasScale,
+        width: qrSize * pxPerCmX * canvasScale,
+        height: qrSize * pxPerCmY * canvasScale,
+        fill: 'rgba(40, 199, 111, 0.15)',
+        stroke: '#28c76f',
+        strokeWidth: 3,
+        strokeDashArray: [8, 4],
+        fieldKey: 'qr',
+        selectable: editorMode,
+        evented: editorMode,
+        borderColor: '#28c76f',
+        cornerColor: '#28c76f',
+        cornerSize: 10,
+        transparentCorners: false,
+        lockRotation: true
+    });
+    
+    // Add "QR CODE" label
+    const qrText = new fabric.Text('QR CODE', {
+        left: (qrX * pxPerCmX * canvasScale) + (qrSize * pxPerCmX * canvasScale / 2),
+        top: (qrY * pxPerCmY * canvasScale) + (qrSize * pxPerCmY * canvasScale / 2),
+        fontSize: Math.max(12 * canvasScale, 10),
+        fill: '#28c76f',
+        fontFamily: 'Arial',
+        fontWeight: 'bold',
+        originX: 'center',
+        originY: 'center',
+        selectable: false,
+        evented: false
+    });
+    
+    fabricCanvas.add(qrRect);
+    fabricCanvas.add(qrText);
+    // Record initial position (not user modification - can be overwritten by user)
+    recordQrPosition(qrRect, false);
+    fabricCanvas.renderAll();
+}
+
+function updateFormFieldsFromCanvas(obj) {
+    if (!obj.fieldKey) return;
+    
+    const xCm = (obj.left / canvasScale / pxPerCmX).toFixed(2);
+    const yCm = (obj.top / canvasScale / pxPerCmY).toFixed(2);
+    
+    if (obj.fieldKey === 'qr') {
+        document.querySelector('input[name="qr_x"]').value = xCm;
+        document.querySelector('input[name="qr_y"]').value = yCm;
+        const sizeCm = (obj.width * obj.scaleX / canvasScale / pxPerCmX).toFixed(2);
+        document.querySelector('input[name="qr_size"]').value = sizeCm;
+    } else {
+        document.querySelector(`input[name="field_x_${obj.fieldKey}"]`).value = xCm;
+        document.querySelector(`input[name="field_y_${obj.fieldKey}"]`).value = yCm;
+        
+        // Update font size if scaled
+        if (obj.scaleX !== 1 || obj.scaleY !== 1) {
+            const newFontSize = (obj.fontSize * obj.scaleY / canvasScale).toFixed(1);
+            const fontSizeInput = document.querySelector(`input[name="field_font_size_${obj.fieldKey}"]`);
+            if (fontSizeInput) {
+                fontSizeInput.value = newFontSize;
+            }
+        }
+    }
+    
+    updatePositionIndicator(xCm, yCm);
+}
+
+let positionIndicatorTimeout = null;
+function updatePositionIndicator(x, y) {
+    const indicator = document.getElementById('positionIndicator');
+    const textEl = document.getElementById('positionIndicatorText');
+    if (!indicator || !textEl) return;
+    textEl.textContent = `X=${x}cm, Y=${y}cm`;
+    indicator.classList.add('show');
+    if (positionIndicatorTimeout) clearTimeout(positionIndicatorTimeout);
+    positionIndicatorTimeout = setTimeout(() => {
+        indicator.classList.remove('show');
+    }, 2500);
+}
+
+function updateCanvasFromForm() {
+    if (fabricCanvas) {
+        addTextFieldsToCanvas();
+    }
+}
+
+function onEnterStep4() {
+    setTimeout(function() {
+        if (!fabricCanvas || !pdfImageUrl) {
+            loadPDFToCanvas();
+        } else {
+            updateCanvasFromForm();
+        }
+        
+        if (!editorMode) {
+            toggleEditorMode();
+        }
+    }, 300);
+}
+
+// =============================================================================
+// TRANSCRIPT PREVIEW & SUBMIT
+// =============================================================================
+
+function updateTranscriptPreview() {
+    const formData = new FormData();
+    const pdfFile = $('#id_pdf_file')[0].files[0];
+    const courseCount = parseInt($('#id_active_course_count').val()) || 8;
+    
+    // Show loading state
+    $('#finalPreviewLoading').show();
+    $('#finalPreviewFrame').hide();
+    $('#finalPreviewError').hide();
+    
+    if (pdfFile) {
+        formData.append('pdf_file', pdfFile);
+    } else if (isEdit && templateId !== 'null' && templatePdfUrl) {
+        formData.append('template_id', templateId);
+        formData.append('pdf_url', templatePdfUrl);
+    } else {
+        $('#finalPreviewLoading').hide();
+        $('#finalPreviewError').text('يرجى تحميل ملف PDF').show();
+        return;
+    }
+    
+    // Build active fields and example data
+    let activeFields = {};
+    let fieldSettings = {};
+    const designerWidth = getCurrentPageWidthCm();
+    const designerHeight = getCurrentPageHeightCm();
+    const designerWidthPx = parseFloat($('#designer_page_width_px').val()) || pdfOriginalWidth || null;
+    const designerHeightPx = parseFloat($('#designer_page_height_px').val()) || pdfOriginalHeight || null;
+    const fieldsConfigEl = document.getElementById('example-fields-container');
+    const fieldsConfig = fieldsConfigEl ? safeJSONParse(fieldsConfigEl.getAttribute('data-fields-config'), {}) : {};
+    
+    // Collect base fields
+    // First, ensure all canvas objects have their positions recorded (in case of recent moves)
+    if (fabricCanvas) {
+        fabricCanvas.getObjects().forEach(function(obj) {
+            if (obj.fieldKey && obj.fieldKey !== 'qr') {
+                // Re-record position to ensure state is up-to-date
+                recordFieldPositionFromObject(obj, userModifiedFields[obj.fieldKey] || false);
+            }
+        });
+    }
+    
+    $('.field-checkbox:checked').each(function() {
+        const fieldKey = $(this).attr('name').replace('field_active_', '');
+        activeFields[fieldKey] = true;
+        
+        const exampleVal = $(`#example_${fieldKey}`).val() || '';
+        formData.append(`example_${fieldKey}`, exampleVal);
+        
+        // Get current position state - ensure we're reading the latest state
+        const positionState = fieldPositionState[fieldKey] || {};
+        const fieldConfig = fieldsConfig[fieldKey] || {};
+        const baseWidthPx = normalizeNumber(positionState.baseWidthPx);
+        const baseHeightPx = normalizeNumber(positionState.baseHeightPx);
+        const xPx = normalizeNumber(positionState.xPx);
+        const yPx = normalizeNumber(positionState.yPx);
+        const widthPx = normalizeNumber(positionState.widthPx);
+        const heightPx = normalizeNumber(positionState.heightPx);
+        const fontSizePx = normalizeNumber(positionState.fontSizePx);
+        const xRatio = normalizeNumber(positionState.xRatio);
+        const yRatio = normalizeNumber(positionState.yRatio);
+        const widthRatio = normalizeNumber(positionState.widthRatio);
+        const heightRatio = normalizeNumber(positionState.heightRatio);
+        const fontSizeRatio = normalizeNumber(positionState.fontSizeRatio);
+        
+        
+        fieldSettings[fieldKey] = {
+            x: parseFloat($(`input[name="field_x_${fieldKey}"]`).val()) || 15,
+            y: parseFloat($(`input[name="field_y_${fieldKey}"]`).val()) || 10,
+            font_size: parseFloat($(`input[name="field_font_size_${fieldKey}"]`).val()) || 12,
+            font_name: $(`select[name="field_font_${fieldKey}"]`).val() || 'IBM_Plex_Sans_Arabic_Regular',
+            font_color: $(`input[name="field_color_${fieldKey}"]`).val() || '#000000',
+            text_direction: fieldConfig.direction || 'rtl',
+            base_width_cm: designerWidth,
+            base_height_cm: designerHeight,
+            base_width_px: hasPositiveNumber(baseWidthPx) ? baseWidthPx : designerWidthPx,
+            base_height_px: hasPositiveNumber(baseHeightPx) ? baseHeightPx : designerHeightPx,
+            x_px: xPx !== null ? xPx : null,
+            y_px: yPx !== null ? yPx : null,
+            box_width_px: widthPx !== null ? widthPx : null,
+            box_height_px: heightPx !== null ? heightPx : null,
+            font_size_px: fontSizePx !== null ? fontSizePx : null,
+            // Position RATIOS (0 to 1) - most accurate positioning method
+            x_ratio: xRatio !== null ? xRatio : null,
+            y_ratio: yRatio !== null ? yRatio : null,
+            width_ratio: widthRatio !== null ? widthRatio : null,
+            height_ratio: heightRatio !== null ? heightRatio : null,
+            font_size_ratio: fontSizeRatio !== null ? fontSizeRatio : null,
+            text_anchor: 'left',
+            enabled: true
+        };
+    });
+    
+    
+    formData.append('settings', JSON.stringify({
+        active_fields: activeFields,
+        field_settings: fieldSettings,
+        active_course_count: courseCount,
+        // Send actual PDF dimensions for verification
+        pdf_dimensions: {
+            width_cm: pdfPageWidthCm,
+            height_cm: pdfPageHeightCm,
+            width_px: pdfOriginalWidth,
+            height_px: pdfOriginalHeight
+        },
+        qr_settings: {
+            x: parseFloat($('input[name="qr_x"]').val()) || 6.9,
+            y: parseFloat($('input[name="qr_y"]').val()) || 1.2,
+            size: parseFloat($('input[name="qr_size"]').val()) || 4,
+            rotation_angle: parseFloat($('input[name="qr_rotation"]').val()) || 0,
+            base_width_cm: designerWidth,
+            base_height_cm: designerHeight,
+            base_width_px: hasPositiveNumber(normalizeNumber(qrPositionState && qrPositionState.baseWidthPx))
+                ? normalizeNumber(qrPositionState && qrPositionState.baseWidthPx)
+                : designerWidthPx,
+            base_height_px: hasPositiveNumber(normalizeNumber(qrPositionState && qrPositionState.baseHeightPx))
+                ? normalizeNumber(qrPositionState && qrPositionState.baseHeightPx)
+                : designerHeightPx,
+            x_px: normalizeNumber(qrPositionState && qrPositionState.xPx),
+            y_px: normalizeNumber(qrPositionState && qrPositionState.yPx),
+            size_px: normalizeNumber(qrPositionState && qrPositionState.sizePx),
+            // Position RATIOS (0 to 1)
+            x_ratio: normalizeNumber(qrPositionState && qrPositionState.xRatio),
+            y_ratio: normalizeNumber(qrPositionState && qrPositionState.yRatio),
+            size_ratio: normalizeNumber(qrPositionState && qrPositionState.sizeRatio)
+        }
+    }));
+    
+    formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+    
+    var previewUrl = '{% url "transcript_template_preview" %}';
+    fetch(previewUrl, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        $('#finalPreviewLoading').hide();
+        if (data.preview_url) {
+            // Add cache-busting timestamp to ensure fresh preview
+            const cacheBuster = '&_t=' + Date.now();
+            const previewUrl = data.preview_url + (data.preview_url.includes('?') ? cacheBuster : '?' + cacheBuster.substring(1));
+            
+            // Force reload of PDF object by removing and re-adding it
+            const previewFrame = $('#finalPreviewFrame');
+            const oldData = previewFrame.attr('data');
+            previewFrame.hide();
+            
+            // Change data attribute to force reload
+            previewFrame.attr('data', previewUrl);
+            
+            // Force reload by briefly removing and re-adding to DOM
+            const parent = previewFrame.parent();
+            previewFrame.detach();
+            parent.append(previewFrame);
+            
+            previewFrame.show();
+            $('#finalPreviewError').hide();
+        } else {
+            $('#finalPreviewError').text(data.error || 'خطأ في توليد المعاينة').show();
+        }
+    })
+    .catch(error => {
+        $('#finalPreviewLoading').hide();
+        $('#finalPreviewError').text('حدث خطأ: ' + error).show();
+    });
+}
+
+function submitTranscriptForm() {
+    Swal.fire({
+        title: 'تأكيد الحفظ',
+        text: 'هل أنت متأكد من حفظ قالب السجل؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، احفظ',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#transcriptTemplateForm').submit();
+        }
+    });
+}
+</script>
+{% endblock %}

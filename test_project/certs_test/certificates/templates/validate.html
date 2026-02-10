@@ -1,0 +1,78 @@
+{% extends 'new_template/validate_base.html' %}
+{% load static %}
+
+{% block title %} التحقق من الشهادات | نظام الشهادات المعتمدة بتقنية البلوكتشين
+{% endblock %}
+
+{% block content %}
+<div class="card-container">
+    <div class="card">
+        <div class="card-header">
+            <h2>تفاصيل الشهادة</h2>
+            {% if certificate %}
+            <p>شهادتك صالحة وتحمل المعلومات المذكورة أدناه</p>
+        </div>
+        <div class="card-content">
+            <div class="certificate-details">
+                <h5>
+                    <img src="{% static 'validation/svgs/person.svg' %}" alt="person-icon" />
+                    <span class="bold title">الاسم: </span>
+                    <span class="subject">{{ certificate.name }}</span>
+                </h5>
+                <h5>
+                    <img src="{% static 'validation/svgs/course.svg' %}" alt="course-icon" />
+                    <span class="bold title">الدورة: </span>
+                    <span class="subject">{{ certificate.course_name }}</span>
+                </h5>
+                {% if certificate.duration %}
+                <h5>
+                    <img src="{% static 'validation/svgs/time.svg' %}" alt="time-icon" />
+                    <span class="bold title">المدة: </span>
+                    <span class="subject">{{ certificate.duration }}</span>
+                </h5>
+                {% endif %}
+                <h5>
+                    <img src="{% static 'validation/svgs/cer_id.svg' %}" alt="certificate-icon" />
+                    <span class="bold title">معرف الشهادة: </span>
+                    <span class="subject">{{ certificate.certificate_hash }}</span>
+                </h5>
+
+                <div class="download-button">
+                    <button class="btn">
+                        * تحميل <img src="{% static 'validation/svgs/downloading.svg' %}" alt="download" />
+                    </button>
+                    <p class="download-note">* في حال قمنا بإرسال الشهادة لك عبر البريد الإلكتروني، لن تتمكن من تحميلها</p>
+                </div>
+            </div>
+
+            <div class="certificate-image">
+                <img src="{% static 'validation/svgs/validate_img.svg' %}" alt="Certificate" />
+            </div>
+        </div>
+        {% else %}
+
+        
+            <p>الشهادة غير صالحة</p>
+        </div>
+        <div class="card-content">
+            <div class="certificate-details">
+     
+                <h5>
+                    <img src="{% static 'validation/svgs/cer_id.svg' %}" alt="certificate-icon" />
+                    <span class="bold title">معرف الشهادة:* </span>
+                    <span class="subject">غير صحيح</span>
+                </h5>
+
+                <div class="download-button">
+                    <p class="download-note">* هذه الشهادة لم يتم إصدارها</p>
+                </div>
+            </div>
+
+            <div class="certificate-image">
+                <img src="{% static 'validation/svgs/unvalidate_img.svg' %}" alt="Certificate" />
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+{
+    "font_name": "GESS",
+    "font_file": "GESS.ttf",
+    "font_color":[1, 0, 153],
+    "name": {
+        "x": 27.2,
+        "y": 10.7,
+        "font_size": 26
+    },
+    "course_name": {
+        "x": 18.5,
+        "y": 9.2,
+        "font_size": 20
+    },
+    "date_text": {
+        "x": 25.1,
+        "y": 8.1,
+        "font_size": 20
+    },
+    "qr_code": {
+        "x": 26,
+        "y": 0.3,
+        "size": 3,
+        "rotation_angle": 0
+    }
+}

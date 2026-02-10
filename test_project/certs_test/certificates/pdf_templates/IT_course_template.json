@@ -1,0 +1,26 @@
+{
+    "font_name": "Bressay-Bold",
+    "font_file": "Bressay-Bold.ttf",
+    "font_color":[1, 153, 102],
+    "name": {
+        "x": 26.9,
+        "y": 10.8,
+        "font_size": 25
+    },
+    "course_name": {
+        "x": 26.9,
+        "y": 8,
+        "font_size": 25
+    },
+    "date_text": {
+        "x": 24.5,
+        "y": 6.8,
+        "font_size": 20
+    },
+    "qr_code": {
+        "x": 4.5,
+        "y": 9,
+        "size": 3,
+        "rotation_angle": 45
+    }
+}

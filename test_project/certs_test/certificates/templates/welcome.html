@@ -1,0 +1,218 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>نظام الشهادات المعتمدة بتقنية البلوكتشين - جامعة الملك خالد</title>
+    <meta name="description" content="نظام الشهادات المعتمدة بتقنية البلوكتشين في جامعة الملك خالد لإصدار والتحقق من الشهادات المعتمدة">
+    <link rel="stylesheet" href="{% static 'nafath/assets/bootstrap/css/bootstrap.min.css' %}">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --kku-primary: #2d7e32;
+            --kku-secondary: #1976d2;
+            --text-dark: #2c3e50;
+            --text-muted: #6c757d;
+        }
+        
+        * {
+            font-family: 'IBM Plex Sans Arabic', 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f3460 0%, #1e5799 50%, #2989d8 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+        
+        .kku-navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .brand-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--kku-primary);
+        }
+        
+        .brand-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            background: linear-gradient(135deg, rgba(15, 52, 96, 0.9) 0%, rgba(30, 87, 153, 0.8) 50%, rgba(41, 137, 216, 0.7) 100%);
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1) 2px, transparent 2px),
+                radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 60px 60px, 40px 40px;
+            z-index: 1;
+        }
+        
+        .hero-content-box {
+            position: relative;
+            z-index: 2;
+            max-width: 800px;
+            color: white;
+        }
+        
+        .badge {
+            background: linear-gradient(135deg, var(--kku-primary), #4caf50) !important;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        .hero-title {
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+            margin-bottom: 1.5rem !important;
+        }
+        
+        .hero-text {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 500;
+            text-shadow: 0 1px 10px rgba(0,0,0,0.2);
+        }
+        
+        .kku-btn-primary {
+            background: linear-gradient(135deg, var(--kku-secondary), #1e88e5);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .kku-btn-primary:hover {
+            background: linear-gradient(135deg, #1565c0, #1976d2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(25, 118, 210, 0.3);
+            color: white;
+        }
+        
+        .kku-btn-outline {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .kku-btn-outline:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .fine-text {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 400;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.2rem !important;
+            }
+            
+            .hero-text {
+                font-size: 1.1rem;
+            }
+            
+            .hero-actions {
+                gap: 0.8rem !important;
+            }
+            
+            .kku-btn-primary, .kku-btn-outline {
+                padding: 0.7rem 1.5rem;
+                font-size: 0.95rem;
+            }
+        }
+    </style>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="https://myfiles.kku.edu.sa/public/kkuLogo/kku-logo-ico.ico" />
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg kku-navbar navbar-light py-3">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-3" href="{% url 'welcome' %}" aria-label="نظام الشهادات المعتمدة">
+                <img src="https://myfiles.kku.edu.sa/public/kkuLogo/kku-logo.svg" alt="شعار جامعة الملك خالد" width="52" height="52">
+                <div>
+                    <div class="brand-title">نظام الشهادات المعتمدة</div>
+                    <div class="brand-subtitle">البلوكتشين — جامعة الملك خالد</div>
+                </div>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <header id="home" class="hero dga-section" role="banner">
+        <div class="container text-center">
+            <div class="hero-content-box mx-auto">
+                <span class="badge rounded-pill px-3 py-2 mb-3">منصة ذكية لإدارة الشهادات المعتمدة</span>
+                <h1 class="hero-title display-5 mb-3">نظام الشهادات المعتمدة بتقنية البلوكتشين</h1>
+                <p class="hero-text mb-4">ثقة المستقبل تبدأ من هنا</p>
+                <p class="hero-text mb-4">من الإصدار وحتى التحقق</p>
+                <p class="hero-text mb-4">يتيح لك هذا النظام إصدار والتحقق من الشهادات المعتمدة باستخدام تكنولوجيا البلوكتشين — لضمان الأمان والشفافية الكاملة</p>
+
+                <div class="hero-actions d-flex justify-content-center flex-column flex-sm-row gap-3">
+                    <a href="{% url 'default_login' %}?next={% url 'index' %}" class="btn kku-btn-primary btn-lg px-4" aria-label="الدخول الموحد للجامعة MySSO">
+                        الدخول الموحد للجامعة MySSO
+                    </a>
+                    <a href="{% url 'nafath_login' %}?next={% url 'index' %}" class="btn kku-btn-outline btn-lg px-4 d-flex align-items-center gap-2" aria-label="الدخول عبر النفاذ الوطني">
+                        <img src="{% static 'nafath/assets/custom/images/NIC-logo.png' %}" alt="شعار النفاذ الوطني" width="22" height="22">
+                        <span>الدخول عبر النفاذ الوطني</span>
+                    </a>
+                </div>
+
+                <p class="fine-text text-onimage mt-3 mb-0">بالدخول تُوافق على السياسات واللوائح المنظمة لنظام الشهادات في جامعة الملك خالد.</p>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Bootstrap JS -->
+    <script src="{% static 'nafath/assets/bootstrap/js/bootstrap.min.js' %}" defer></script>
+</body>
+
+</html>

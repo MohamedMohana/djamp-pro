@@ -1,0 +1,310 @@
+{% extends 'new_template/base.html' %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ page_subtitle }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label" for="{{ form.name_ar.id_for_label }}">{{ form.name_ar.label }}</label>
+                                    {{ form.name_ar }}
+                                    {% if form.name_ar.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.name_ar.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label" for="{{ form.name_en.id_for_label }}">{{ form.name_en.label }}</label>
+                                    {{ form.name_en }}
+                                    {% if form.name_en.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.name_en.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <!-- Templates Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات القوالب</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            {{ form.can_view_templates }}
+                                            <label class="form-check-label" for="{{ form.can_view_templates.id_for_label }}">
+                                                {{ form.can_view_templates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_create_templates }}
+                                            <label class="form-check-label" for="{{ form.can_create_templates.id_for_label }}">
+                                                {{ form.can_create_templates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_edit_templates }}
+                                            <label class="form-check-label" for="{{ form.can_edit_templates.id_for_label }}">
+                                                {{ form.can_edit_templates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            {{ form.can_delete_templates }}
+                                            <label class="form-check-label" for="{{ form.can_delete_templates.id_for_label }}">
+                                                {{ form.can_delete_templates.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Certificates Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات الشهادات</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            {{ form.can_view_certificates }}
+                                            <label class="form-check-label" for="{{ form.can_view_certificates.id_for_label }}">
+                                                {{ form.can_view_certificates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_create_certificates }}
+                                            <label class="form-check-label" for="{{ form.can_create_certificates.id_for_label }}">
+                                                {{ form.can_create_certificates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            {{ form.can_verify_certificates }}
+                                            <label class="form-check-label" for="{{ form.can_verify_certificates.id_for_label }}">
+                                                {{ form.can_verify_certificates.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Users Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات المستخدمين</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            {{ form.can_view_users }}
+                                            <label class="form-check-label" for="{{ form.can_view_users.id_for_label }}">
+                                                {{ form.can_view_users.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_create_users }}
+                                            <label class="form-check-label" for="{{ form.can_create_users.id_for_label }}">
+                                                {{ form.can_create_users.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_edit_users }}
+                                            <label class="form-check-label" for="{{ form.can_edit_users.id_for_label }}">
+                                                {{ form.can_edit_users.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            {{ form.can_delete_users }}
+                                            <label class="form-check-label" for="{{ form.can_delete_users.id_for_label }}">
+                                                {{ form.can_delete_users.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Roles Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات الأدوار</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            {{ form.can_view_roles }}
+                                            <label class="form-check-label" for="{{ form.can_view_roles.id_for_label }}">
+                                                {{ form.can_view_roles.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_create_roles }}
+                                            <label class="form-check-label" for="{{ form.can_create_roles.id_for_label }}">
+                                                {{ form.can_create_roles.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_edit_roles }}
+                                            <label class="form-check-label" for="{{ form.can_edit_roles.id_for_label }}">
+                                                {{ form.can_edit_roles.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            {{ form.can_delete_roles }}
+                                            <label class="form-check-label" for="{{ form.can_delete_roles.id_for_label }}">
+                                                {{ form.can_delete_roles.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Advanced Templates Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات القوالب المتقدمة</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            {{ form.can_view_advanced_templates }}
+                                            <label class="form-check-label" for="{{ form.can_view_advanced_templates.id_for_label }}">
+                                                {{ form.can_view_advanced_templates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_create_advanced_templates }}
+                                            <label class="form-check-label" for="{{ form.can_create_advanced_templates.id_for_label }}">
+                                                {{ form.can_create_advanced_templates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_edit_advanced_templates }}
+                                            <label class="form-check-label" for="{{ form.can_edit_advanced_templates.id_for_label }}">
+                                                {{ form.can_edit_advanced_templates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            {{ form.can_delete_advanced_templates }}
+                                            <label class="form-check-label" for="{{ form.can_delete_advanced_templates.id_for_label }}">
+                                                {{ form.can_delete_advanced_templates.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Advanced Certificates Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات الشهادات المتقدمة</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            {{ form.can_view_advanced_certificates }}
+                                            <label class="form-check-label" for="{{ form.can_view_advanced_certificates.id_for_label }}">
+                                                {{ form.can_view_advanced_certificates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            {{ form.can_create_advanced_certificates }}
+                                            <label class="form-check-label" for="{{ form.can_create_advanced_certificates.id_for_label }}">
+                                                {{ form.can_create_advanced_certificates.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Transcript Templates Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات قوالب السجلات</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            {{ form.can_view_transcript_templates }}
+                                            <label class="form-check-label" for="{{ form.can_view_transcript_templates.id_for_label }}">
+                                                {{ form.can_view_transcript_templates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_create_transcript_templates }}
+                                            <label class="form-check-label" for="{{ form.can_create_transcript_templates.id_for_label }}">
+                                                {{ form.can_create_transcript_templates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            {{ form.can_edit_transcript_templates }}
+                                            <label class="form-check-label" for="{{ form.can_edit_transcript_templates.id_for_label }}">
+                                                {{ form.can_edit_transcript_templates.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            {{ form.can_delete_transcript_templates }}
+                                            <label class="form-check-label" for="{{ form.can_delete_transcript_templates.id_for_label }}">
+                                                {{ form.can_delete_transcript_templates.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Transcripts Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات السجلات</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            {{ form.can_view_transcripts }}
+                                            <label class="form-check-label" for="{{ form.can_view_transcripts.id_for_label }}">
+                                                {{ form.can_view_transcripts.label }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            {{ form.can_create_transcripts }}
+                                            <label class="form-check-label" for="{{ form.can_create_transcripts.id_for_label }}">
+                                                {{ form.can_create_transcripts.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary me-2">حفظ</button>
+                            <a href="{% url 'role_list' %}" class="btn btn-label-secondary">إلغاء</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

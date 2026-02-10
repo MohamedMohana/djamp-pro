@@ -1,0 +1,217 @@
+{% extends 'new_template/base.html' %}
+{% load static %}
+
+{% block title %}لوحة تحكم مدير النظام{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}" />
+<style>
+    :root {
+        --primary-green: rgb(36, 130, 119);
+    }
+    
+    .text-primary { color: var(--primary-green) !important; }
+    .bg-primary { background-color: var(--primary-green) !important; }
+    .border-primary { border-color: var(--primary-green) !important; }
+    
+    h4.fw-bold {
+        color: var(--primary-green);
+        border-bottom: 3px solid var(--primary-green);
+        padding-bottom: 0.5rem;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="fw-bold py-3 mb-4">لوحة تحكم مدير النظام</h4>
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي الشهادات</h5>
+                    <h2>{{ total_certificates }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي المستخدمين</h5>
+                    <h2>{{ total_users }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">عدد الأدوار</h5>
+                    <h2>{{ roles|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">الشهادات هذا الشهر</h5>
+                    {% if certificates_per_month and certificates_per_month|length > 0 %}
+                        {% for m in certificates_per_month %}
+                            {% if forloop.last %}
+                                <h2>{{ m.count }}</h2>
+                                <div class="small">{{ m.year }}-{{ m.month|stringformat:'02d' }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <h2>0</h2>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">الشهادات حسب الدورة</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for c in certificates_by_course %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ c.course_name }}
+                            <span class="badge bg-primary rounded-pill">{{ c.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">لا يوجد بيانات</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">المستخدمون حسب الدور</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for r in users_by_role %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ r.role__name_ar|default:'بدون صلاحية' }}
+                            <span class="badge bg-info rounded-pill">{{ r.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">لا يوجد بيانات</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">أكثر المستخدمين إصداراً للشهادات</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for c in certificates_by_creator %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ c.created_by__username }}
+                            <span class="badge bg-success rounded-pill">{{ c.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">لا يوجد بيانات</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">أكثر المستفيدين حصولاً على الشهادات</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for c in top_recipients %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ c.name }}
+                            <span class="badge bg-warning rounded-pill">{{ c.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">لا يوجد بيانات</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">الشهادات المصدرة حديثاً</div>
+                <div class="card-body table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>تاريخ الإصدار</th>
+                                <th>الاسم</th>
+                                <th>اسم الدورة</th>
+                                <th>المدة</th>
+                                <th>هاش الشهادة</th>
+                                <th>أنشئت بواسطة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for cert in recent_certificates %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ cert.date|date:'Y-m-d' }}</td>
+                                <td>{{ cert.name }}</td>
+                                <td>{{ cert.course_name }}</td>
+                                <td>{{ cert.duration }}</td>
+                                <td>
+                                    {% if cert.certificate_hash %}
+                                        {{ cert.certificate_hash|slice:':12' }}...
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ cert.created_by }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="7">لا يوجد شهادات حديثة</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">الشهادات حسب الشهر</div>
+                <div class="card-body">
+                    <div id="certificatesPerMonthChart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.44.0"></script>
+<script>
+    // Prepare data for certificates per month chart
+    var months = "{% for m in certificates_per_month %}{% if not forloop.first %},{% endif %}{{ m.year|stringformat:'d'|slice:'-2:' }}-{{ m.month|stringformat:'02d' }}{% endfor %}".split(",");
+    var counts = "{% for m in certificates_per_month %}{% if not forloop.first %},{% endif %}{{ m.count }}{% endfor %}".split(",").map(Number);
+    var options = {
+        chart: { type: 'bar', height: 350 },
+        series: [{ name: 'عدد الشهادات', data: counts }],
+        xaxis: { categories: months },
+        colors: ['rgb(36, 130, 119)'],
+        dataLabels: { enabled: false },
+        title: { text: 'الشهادات حسب الشهر', align: 'center' },
+    };
+    var chart = new ApexCharts(document.querySelector("#certificatesPerMonthChart"), options);
+    chart.render();
+</script>
+{% endblock %} 

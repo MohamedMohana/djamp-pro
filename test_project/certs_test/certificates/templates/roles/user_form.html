@@ -1,0 +1,386 @@
+{% extends 'new_template/base.html' %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ page_subtitle }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label" for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
+                                    {{ form.first_name }}
+                                    {% if form.first_name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.first_name.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label" for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
+                                    {{ form.last_name }}
+                                    {% if form.last_name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.last_name.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.email.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                                    {{ form.username }}
+                                    {% if form.username.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.username.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label" for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.phone.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.roles.label }}</label>
+                                    <small class="text-muted d-block mb-2">{{ form.roles.help_text }}</small>
+                                    <div class="card" style="border: 1px solid #ddd; max-height: 200px; overflow-y: auto;">
+                                        <div class="card-body p-2" id="rolesContainer">
+                                            {% for checkbox in form.roles %}
+                                            <div class="form-check">
+                                                {{ checkbox.tag }}
+                                                <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                                    {{ checkbox.choice_label }}
+                                                </label>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% if form.roles.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.roles.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Supervisor Organization Field (only for admin roles) -->
+                        <div class="row" id="supervisorOrgRow" style="display: none;">
+                            <div class="col-12">
+                                <div class="card mb-3" style="border: 2px solid #28a745; background-color: #f8fff9;">
+                                    <div class="card-header" style="background-color: #d4edda;">
+                                        <h6 class="mb-0 text-success">
+                                            <i class="ti ti-building me-2"></i>
+                                            معلومات جهة الإشراف
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.supervisor_organization.id_for_label }}">
+                                                <i class="ti ti-building-store me-1"></i>
+                                                {{ form.supervisor_organization.label }}
+                                            </label>
+                                            {{ form.supervisor_organization }}
+                                            <small class="text-muted d-block mt-1">
+                                                هذا الحقل مطلوب عند تعيين صلاحية مشرف أو مشرف متقدم
+                                            </small>
+                                            {% if form.supervisor_organization.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.supervisor_organization.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Temporary Role Section -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card mb-4" style="border: 2px solid #e3f2fd;">
+                                    <div class="card-header" style="background-color: #f8f9fa;">
+                                        <h6 class="mb-0">
+                                            <i class="ti ti-clock me-2"></i>
+                                            إعدادات الصلاحية المؤقتة
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <div class="col-12">
+                                                <div class="form-check">
+                                                    {{ form.is_temporary_role }}
+                                                    <label class="form-check-label" for="{{ form.is_temporary_role.id_for_label }}">
+                                                        {{ form.is_temporary_role.label }}
+                                                    </label>
+                                                    <small class="text-muted d-block mt-1">
+                                                        فعّل هذا الخيار لتعيين صلاحية مؤقتة للمستخدم لفترة محددة
+                                                    </small>
+                                                </div>
+                                                {% if form.is_temporary_role.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form.is_temporary_role.errors }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div id="temporaryRoleFields" style="display: none;">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label" for="{{ form.role_start_date.id_for_label }}">
+                                                            <i class="ti ti-calendar me-1"></i>
+                                                            {{ form.role_start_date.label }}
+                                                        </label>
+                                                        {{ form.role_start_date }}
+                                                        {% if form.role_start_date.errors %}
+                                                            <div class="invalid-feedback d-block">
+                                                                {{ form.role_start_date.errors }}
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label" for="{{ form.role_end_date.id_for_label }}">
+                                                            <i class="ti ti-calendar-off me-1"></i>
+                                                            {{ form.role_end_date.label }}
+                                                        </label>
+                                                        {{ form.role_end_date }}
+                                                        {% if form.role_end_date.errors %}
+                                                            <div class="invalid-feedback d-block">
+                                                                {{ form.role_end_date.errors }}
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="alert alert-info">
+                                                <i class="ti ti-info-circle me-2"></i>
+                                                <strong>ملاحظة:</strong> 
+                                                سيتم إرسال إشعار بالبريد الإلكتروني للمستخدم عند تفعيل الصلاحية المؤقتة.
+                                                ستنتهي الصلاحية تلقائياً في التاريخ المحدد وسيعود المستخدم لصلاحيته السابقة.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary me-2">حفظ</button>
+                            <a href="{% url 'user_list' %}" class="btn btn-label-secondary">إلغاء</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const temporaryRoleCheck = document.getElementById('temporaryRoleCheck');
+    const temporaryRoleFields = document.getElementById('temporaryRoleFields');
+    const roleStartDate = document.getElementById('roleStartDate');
+    const roleEndDate = document.getElementById('roleEndDate');
+    const rolesContainer = document.getElementById('rolesContainer');
+    const roleCheckboxes = rolesContainer ? rolesContainer.querySelectorAll('input[type="checkbox"]') : [];
+    const supervisorOrgRow = document.getElementById('supervisorOrgRow');
+    const supervisorOrganization = document.getElementById('supervisorOrganization');
+    const supervisorRoleKeywords = ['مشرف', 'مشرف متقدم'];
+
+    function roleRequiresSupervisor(roleText) {
+        return supervisorRoleKeywords.some(keyword => roleText.includes(keyword));
+    }
+
+    // Get selected role labels
+    function getSelectedRoleLabels() {
+        const labels = [];
+        roleCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                const label = checkbox.parentElement.querySelector('label');
+                if (label) {
+                    labels.push(label.textContent.trim());
+                }
+            }
+        });
+        return labels;
+    }
+
+    // Check if any selected role requires supervisor
+    function anySelectedRoleRequiresSupervisor() {
+        const selectedLabels = getSelectedRoleLabels();
+        return selectedLabels.some(label => roleRequiresSupervisor(label));
+    }
+
+    // Function to toggle supervisor organization field based on roles
+    function toggleSupervisorOrgField() {
+        if (anySelectedRoleRequiresSupervisor()) {
+            supervisorOrgRow.style.display = 'block';
+        } else {
+            supervisorOrgRow.style.display = 'none';
+            if (supervisorOrganization) {
+                supervisorOrganization.value = '';
+            }
+        }
+    }
+
+    // Function to toggle temporary role section based on role selection
+    function toggleTemporaryRoleSection() {
+        const temporaryRoleSection = document.getElementById('temporaryRoleFields').closest('.row');
+        
+        // Only show temporary role section if any role requires supervisor
+        if (anySelectedRoleRequiresSupervisor()) {
+            temporaryRoleSection.style.display = 'block';
+        } else {
+            temporaryRoleSection.style.display = 'none';
+            // Clear temporary role settings when hidden
+            if (temporaryRoleCheck) {
+                temporaryRoleCheck.checked = false;
+            }
+            toggleTemporaryRoleFields();
+        }
+    }
+
+    // Function to toggle temporary role fields
+    function toggleTemporaryRoleFields() {
+        if (temporaryRoleCheck && temporaryRoleCheck.checked) {
+            temporaryRoleFields.style.display = 'block';
+            // Set current date/time as default for start date
+            if (roleStartDate && !roleStartDate.value) {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                roleStartDate.value = now.toISOString().slice(0, 16);
+            }
+        } else {
+            if (temporaryRoleFields) {
+                temporaryRoleFields.style.display = 'none';
+            }
+            if (roleStartDate) roleStartDate.value = '';
+            if (roleEndDate) roleEndDate.value = '';
+        }
+    }
+
+    // Initial toggles based on current state
+    toggleTemporaryRoleFields();
+    toggleSupervisorOrgField();
+    toggleTemporaryRoleSection();
+
+    // Add event listeners
+    if (temporaryRoleCheck) {
+        temporaryRoleCheck.addEventListener('change', toggleTemporaryRoleFields);
+    }
+    
+    // Add change event to all role checkboxes
+    roleCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            toggleSupervisorOrgField();
+            toggleTemporaryRoleSection();
+        });
+    });
+
+    // Add validation for date fields
+    if (roleStartDate) {
+        roleStartDate.addEventListener('change', function() {
+            if (roleStartDate.value && roleEndDate && roleEndDate.value) {
+                const startDate = new Date(roleStartDate.value);
+                const endDate = new Date(roleEndDate.value);
+                
+                if (startDate >= endDate) {
+                    alert('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+                    roleStartDate.focus();
+                }
+            }
+        });
+    }
+
+    if (roleEndDate) {
+        roleEndDate.addEventListener('change', function() {
+            if (roleStartDate && roleStartDate.value && roleEndDate.value) {
+                const startDate = new Date(roleStartDate.value);
+                const endDate = new Date(roleEndDate.value);
+                
+                if (startDate >= endDate) {
+                    alert('تاريخ النهاية يجب أن يكون بعد تاريخ البداية');
+                    roleEndDate.focus();
+                }
+            }
+        });
+    }
+
+    // Add form validation before submit
+    document.querySelector('form').addEventListener('submit', function(e) {
+        // Validate at least one role is selected
+        const selectedRoles = Array.from(roleCheckboxes).filter(cb => cb.checked);
+        if (selectedRoles.length === 0) {
+            e.preventDefault();
+            alert('يرجى اختيار صلاحية واحدة على الأقل');
+            return false;
+        }
+        
+        if (temporaryRoleCheck && temporaryRoleCheck.checked) {
+            if (!roleStartDate || !roleStartDate.value || !roleEndDate || !roleEndDate.value) {
+                e.preventDefault();
+                alert('يرجى تحديد تاريخ البداية والنهاية للصلاحية المؤقتة');
+                return false;
+            }
+            
+            const startDate = new Date(roleStartDate.value);
+            const endDate = new Date(roleEndDate.value);
+            
+            if (startDate >= endDate) {
+                e.preventDefault();
+                alert('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+                return false;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

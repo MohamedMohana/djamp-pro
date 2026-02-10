@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شهادة حضور - {{ course_name }}</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <style type="text/css">
+        table { mso-table-lspace: 0; mso-table-rspace: 0; }
+    </style>
+    <![endif]-->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
+            font-family: 'Segoe UI', 'IBM Plex Sans Arabic', Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+        }
+        table {
+            border-collapse: collapse;
+        }
+        .wrapper {
+            width: 100%;
+            background-color: #f1f1f1;
+            padding: 24px 16px;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .header {
+            background-color: #002147;
+            color: #ffffff;
+            padding: 20px 24px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .header a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+        .content {
+            padding: 28px 24px;
+            font-size: 16px;
+            line-height: 1.7;
+            color: #333333;
+        }
+        .content p {
+            margin: 0 0 16px 0;
+        }
+        .content p:last-child {
+            margin-bottom: 0;
+        }
+        .message-block {
+            margin-bottom: 24px;
+        }
+        .verify-block {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #e8e8e8;
+            color: #555555;
+        }
+        .footer {
+            padding: 20px 24px;
+            font-size: 13px;
+            color: #777777;
+            text-align: center;
+            background-color: #fafafa;
+            border-top: 1px solid #eeeeee;
+        }
+        .footer p {
+            margin: 0 0 4px 0;
+        }
+    </style>
+</head>
+<body>
+<table role="presentation" class="wrapper" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+        <td align="center" dir="rtl" style="background-color: #f1f1f1; padding: 48px 16px; direction: rtl; text-align: right;">
+            <table role="presentation" class="container" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px;">
+                <tr>
+                    <td class="header" dir="rtl" style="background-color: #002147; color: #ffffff; padding: 20px 24px; font-size: 18px; font-weight: bold; text-align: center; direction: rtl;">
+                        <a href="https://certs.kku.edu.sa/" target="_blank" style="color: #ffffff; text-decoration: none;">نظام الشهادات المعتمدة بتقنية البلوكتشين</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="content" dir="rtl" style="padding: 28px 24px; font-size: 16px; line-height: 1.7; color: #333333; direction: rtl; text-align: right;">
+                        <p style="margin: 0 0 16px 0;">مرحبًا <strong>{{ name }}</strong>،</p>
+                        <div class="message-block" style="margin-bottom: 24px;">
+                            {% if custom_message %}
+                            <p style="margin: 0 0 16px 0;">{{ custom_message }} <strong>{{ course_name }}</strong>.</p>
+                            {% else %}
+                            <p style="margin: 0 0 16px 0;">تم إصدار شهادتك لحضور الدورة التدريبية <strong>{{ course_name }}</strong>.</p>
+                            {% endif %}
+                        </div>
+                        <div class="verify-block" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e8e8e8; color: #555555;">
+                            {% if certificate_hash %}
+                            <p style="margin: 0 0 4px 0;"><strong>هاش الشهادة هو</strong></p>
+                            <p style="margin: 0 0 12px 0; font-size: 13px; direction: ltr; text-align: center; word-break: break-all;">{{ certificate_hash }}</p>
+                            {% endif %}
+                            <p style="margin: 0;">لضمان صحة الشهادة، يمكنك التحقق منها عبر مسح <strong>رمز <span dir="ltr">QR</span></strong> الموجود على الشهادة أو عن طريق خدمة التحقق المتوفرة لدى <a href="https://certs.kku.edu.sa" target="_blank" style="color: #002147; text-decoration: underline;">نظام الشهادات</a>.</p>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="footer" dir="rtl" style="padding: 20px 24px; font-size: 13px; color: #777777; text-align: center; background-color: #fafafa; border-top: 1px solid #eeeeee; direction: rtl;">
+                        <p style="margin: 0 0 4px 0;">© {% now "Y" %} جميع الحقوق محفوظة</p>
+                        <p style="margin: 0;">تطوير عمادة الخدمات الإلكترونية</p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,370 @@
+{% extends 'new_template/validate_base.html' %}
+{% load static %}
+
+{% block title %}التحقق من سجل المقررات | نظام الشهادات المعتمدة{% endblock %}
+
+{% block content %}
+<div class="card-container">
+    <div class="card">
+        <div class="card-header">
+            <h2>تفاصيل سجل المقررات</h2>
+            {% if transcript %}
+            <p>السجل صالح ويحمل المعلومات المذكورة أدناه</p>
+        </div>
+        <div class="card-content">
+            <div class="certificate-details">
+                <h5>
+                    <img src="{% static 'validation/svgs/person.svg' %}" alt="person-icon" />
+                    <span class="bold title">الاسم: </span>
+                    <span class="subject">{{ primary_name|default:"ــ" }}</span>
+                </h5>
+                <h5>
+                    <img src="{% static 'validation/svgs/course.svg' %}" alt="course-icon" />
+                    <span class="bold title">البرنامج: </span>
+                    <span class="subject">{{ transcript.get_program_name|default:transcript.template.get_display_name }}</span>
+                </h5>
+                {% if transcript.get_gpa %}
+                <h5>
+                    <img src="{% static 'validation/svgs/time.svg' %}" alt="gpa-icon" />
+                    <span class="bold title">المعدل التراكمي: </span>
+                    <span class="subject">{{ transcript.get_gpa }}</span>
+                </h5>
+                {% endif %}
+                {% if transcript.get_overall_grade %}
+                <h5>
+                    <img src="{% static 'validation/svgs/time.svg' %}" alt="grade-icon" />
+                    <span class="bold title">التقدير العام: </span>
+                    <span class="subject">{{ transcript.get_overall_grade }}</span>
+                </h5>
+                {% endif %}
+                <h5>
+                    <img src="{% static 'validation/svgs/cer_id.svg' %}" alt="certificate-icon" />
+                    <span class="bold title">معرف السجل: </span>
+                    <span class="subject">{{ transcript.certificate_hash }}</span>
+                </h5>
+                <div class="download-button">
+                    <button class="btn" disabled>
+                        * تحميل <img src="{% static 'validation/svgs/downloading.svg' %}" alt="download" />
+                    </button>
+                    <p class="download-note">* في حال قمنا بإرسال السجل لك عبر البريد الإلكتروني، لن تتمكن من تحميله من صفحة التحقق.</p>
+                </div>
+            </div>
+
+            <div class="certificate-image">
+                <img src="{% static 'validation/svgs/validate_img.svg' %}" alt="Transcript" />
+            </div>
+        </div>
+
+        {% if transcript_extra_fields %}
+        <div class="extra-section">
+            <h5 class="mb-3">البيانات التفصيلية</h5>
+            <div class="row">
+                {% for field in transcript_extra_fields %}
+                <div class="col-md-6 mb-3">
+                    <div class="field-item">
+                        <small class="text-muted d-block mb-1">{{ field.label }}</small>
+                        <strong>{{ field.value }}</strong>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if course_grades %}
+        <div class="courses-section">
+            <h5 class="mb-3">المقررات</h5>
+            <div class="table-responsive">
+                <table class="table table-bordered courses-table">
+                    <thead>
+                        <tr>
+                            <th class="col-number">#</th>
+                            <th class="col-name">اسم المقرر</th>
+                            <th class="col-percentage">النسبة المئوية</th>
+                            <th class="col-grade">الدرجة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for course in course_grades %}
+                        <tr>
+                            <td class="col-number">{{ forloop.counter }}</td>
+                            <td class="col-name">{{ course.name }}</td>
+                            <td class="col-percentage">{{ course.percentage|default:"—" }}</td>
+                            <td class="col-grade">{{ course.grade|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <p>السجل غير صالح</p>
+        </div>
+        <div class="card-content">
+            <div class="certificate-details">
+                <h5>
+                    <img src="{% static 'validation/svgs/cer_id.svg' %}" alt="certificate-icon" />
+                    <span class="bold title">معرف السجل: </span>
+                    <span class="subject">غير صحيح</span>
+                </h5>
+                <div class="download-button">
+                    <p class="download-note">* هذا السجل لم يتم إصداره</p>
+                </div>
+            </div>
+            <div class="certificate-image">
+                <img src="{% static 'validation/svgs/unvalidate_img.svg' %}" alt="Transcript" />
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.extra-section, .courses-section {
+    border-top: 1px solid #eee;
+    margin: 0 1.5rem 1.5rem;
+    padding-top: 1.5rem;
+}
+.field-item {
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    border: 1px solid #e4e8ef;
+    box-shadow: 0 2px 6px rgba(40, 199, 111, 0.08);
+    transition: 0.3s;
+}
+.field-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+.field-item small {
+    font-size: 1.4rem;
+    color: #6c757d;
+}
+.field-item strong {
+    font-size: 2rem;
+    font-weight: 600;
+    display: block;
+    margin-top: 0.5rem;
+}
+.courses-section {
+    width: 100%;
+}
+.courses-section .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.courses-section .courses-table {
+    width: 100%;
+    font-size: 2rem;
+    margin: 0;
+    min-width: 600px;
+}
+.courses-section .courses-table th {
+    background: #f8f9fa;
+    font-weight: 700;
+    padding: 1.2rem 1rem;
+    text-align: center;
+    border: 1px solid #dee2e6;
+    font-size: 2rem;
+}
+.courses-section .courses-table td {
+    padding: 1rem;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid #dee2e6;
+    font-size: 2rem;
+    font-weight: 600;
+}
+.courses-section .courses-table .col-number {
+    width: 5%;
+    min-width: 50px;
+    font-weight: 700;
+}
+.courses-section .courses-table .col-name {
+    width: 50%;
+    min-width: 250px;
+    text-align: right;
+    font-weight: 600;
+}
+.courses-section .courses-table .col-percentage {
+    width: 20%;
+    min-width: 120px;
+    font-weight: 600;
+}
+.courses-section .courses-table .col-grade {
+    width: 25%;
+    min-width: 100px;
+    font-weight: 700;
+    color: #28c76f;
+}
+.courses-section .courses-table tbody tr:hover {
+    background-color: #f8f9fa;
+    transition: background-color 0.2s ease;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 767.98px) {
+    .extra-section, .courses-section {
+        margin: 0 1rem 1.5rem;
+        padding-top: 1.5rem;
+    }
+    
+    .extra-section .row {
+        margin: 0;
+    }
+    
+    .extra-section .col-md-6 {
+        padding-left: 0;
+        padding-right: 0;
+        margin-bottom: 1rem;
+    }
+    
+    .field-item {
+        padding: 0.875rem;
+    }
+    
+    .field-item small {
+        font-size: 1.2rem;
+    }
+    
+    .field-item strong {
+        font-size: 1.6rem;
+    }
+    
+    .courses-section {
+        margin: 0 0 1.5rem 0;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .courses-section .table-responsive {
+        margin: 0 -1rem;
+        padding: 0 1rem;
+        width: calc(100% + 2rem);
+    }
+    
+    .courses-section .courses-table {
+        width: 100%;
+        min-width: 100%;
+        font-size: 1.6rem;
+        display: table;
+    }
+    
+    .courses-section .courses-table th {
+        padding: 1rem 0.5rem;
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+    
+    .courses-section .courses-table td {
+        padding: 0.875rem 0.5rem;
+        font-size: 1.6rem;
+        font-weight: 600;
+    }
+    
+    .courses-section .courses-table .col-number {
+        width: 8%;
+        min-width: 40px;
+        padding: 0.875rem 0.25rem !important;
+        font-weight: 700;
+    }
+    
+    .courses-section .courses-table .col-name {
+        width: 45%;
+        min-width: 0;
+        text-align: right;
+        padding: 0.875rem 0.5rem !important;
+        font-weight: 600;
+    }
+    
+    .courses-section .courses-table .col-percentage {
+        width: 22%;
+        min-width: 0;
+        padding: 0.875rem 0.5rem !important;
+        font-weight: 600;
+    }
+    
+    .courses-section .courses-table .col-grade {
+        width: 25%;
+        min-width: 0;
+        padding: 0.875rem 0.5rem !important;
+        font-weight: 700;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .extra-section, .courses-section {
+        margin: 0 0.5rem 1.5rem;
+        padding-top: 1.25rem;
+    }
+    
+    .courses-section {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    
+    .courses-section .table-responsive {
+        margin: 0 -0.5rem;
+        padding: 0 0.5rem;
+        width: calc(100% + 1rem);
+    }
+    
+    .courses-section .courses-table {
+        font-size: 1.4rem;
+    }
+    
+    .courses-section .courses-table th {
+        padding: 0.875rem 0.4rem;
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+    
+    .courses-section .courses-table td {
+        padding: 0.75rem 0.4rem;
+        font-size: 1.4rem;
+        font-weight: 600;
+    }
+    
+    .courses-section .courses-table .col-number {
+        width: 10%;
+        min-width: 35px;
+        padding: 0.75rem 0.2rem !important;
+        font-weight: 700;
+    }
+    
+    .courses-section .courses-table .col-name {
+        width: 40%;
+        padding: 0.75rem 0.4rem !important;
+        font-weight: 600;
+    }
+    
+    .courses-section .courses-table .col-percentage {
+        width: 25%;
+        padding: 0.75rem 0.4rem !important;
+        font-weight: 600;
+    }
+    
+    .courses-section .courses-table .col-grade {
+        width: 25%;
+        padding: 0.75rem 0.4rem !important;
+        font-weight: 700;
+    }
+    
+    .field-item {
+        padding: 0.75rem;
+    }
+    
+    .field-item small {
+        font-size: 1.1rem;
+    }
+    
+    .field-item strong {
+        font-size: 1.4rem;
+    }
+}
+</style>
+
+{% endblock %}

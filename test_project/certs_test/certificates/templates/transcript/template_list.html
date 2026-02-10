@@ -1,0 +1,191 @@
+{% extends 'new_template/base.html' %}
+
+{% block title %}إدارة قوالب السجلات{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+        <div class="content-overlay"></div>
+        <div class="header-navbar-shadow"></div>
+        <div class="content-wrapper">
+            <div class="content-header row">
+                <div class="content-header-left col-md-9 col-12 mb-2">
+                    <div class="row breadcrumbs-top">
+                        <div class="col-12">
+                            <h4 class="content-header-title float-left mb-0">إدارة قوالب السجلات</h4>
+                            <div class="breadcrumb-wrapper">
+                                <ol class="breadcrumb">
+                                    <li class="breadcrumb-item">
+                                        <a href="{% url 'index' %}">لوحة التحكم</a>
+                                    </li>
+                                    <li class="breadcrumb-item">إدارة قوالب السجلات</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h4 class="card-title">قوالب سجلات المقررات المتاحة</h4>
+                                {% if can_create %}
+                                <a href="{% url 'transcript_template_create' %}" class="btn btn-primary">
+                                    <i class="ti ti-plus"></i>
+                                    إنشاء قالب سجل جديد
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                {% if has_templates %}
+                                <table class="table table-hover" id="transcriptTemplatesTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center">#</th>
+                                            <th class="text-right">اسم القالب</th>
+                                            <th class="text-center">عدد المقررات</th>
+                                            <th class="text-right">أنشأت بواسطة</th>
+                                            <th class="text-right">تاريخ الإنشاء</th>
+                                            <th class="text-right">تاريخ التحديث</th>
+                                            <th class="text-center">الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for template in templates %}
+                                        <tr>
+                                            <td class="text-center">{{ forloop.counter }}</td>
+                                            <td class="text-right">{{ template.get_display_name }}</td>
+                                            <td class="text-center">{{ template.active_course_count }}</td>
+                                            <td class="text-right">
+                                                {% if template.created_by %}
+                                                    {{ template.created_by.get_full_name|default:template.created_by.username }}
+                                                {% else %}
+                                                    مشرف النظام
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-right">{{ template.created_at|date:"Y-m-d H:i" }}</td>
+                                            <td class="text-right">{{ template.updated_at|date:"Y-m-d H:i" }}</td>
+                                            <td class="text-center">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="ti ti-dots-vertical"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ template.pdf_file.url }}" target="_blank">
+                                                                <i class="ti ti-download me-1"></i>
+                                                                تحميل
+                                                            </a>
+                                                        </li>
+                                                        {% if can_edit and user.is_superuser or template.created_by == user %}
+                                                        <li>
+                                                            <a class="dropdown-item" href="{% url 'transcript_template_edit' template.id %}">
+                                                                <i class="ti ti-edit me-1"></i>
+                                                                تعديل
+                                                            </a>
+                                                        </li>
+                                                        {% endif %}
+                                                        {% if can_delete and user.is_superuser or template.created_by == user %}
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" href="#" 
+                                                               data-bs-toggle="modal" 
+                                                               data-bs-target="#deleteModal{{ template.id }}">
+                                                                <i class="ti ti-trash me-1"></i>
+                                                                حذف
+                                                            </a>
+                                                        </li>
+                                                        {% endif %}
+                                                    </ul>
+                                                </div>
+
+                                                <!-- Delete Modal -->
+                                                {% if can_delete and user.is_superuser or template.created_by == user %}
+                                                <div class="modal fade" id="deleteModal{{ template.id }}" tabindex="-1">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">تأكيد الحذف</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                هل أنت متأكد من حذف قالب السجل "{{ template.get_display_name }}"؟
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                                <form action="{% url 'transcript_template_delete' template.id %}" method="POST" style="display: inline;">
+                                                                    {% csrf_token %}
+                                                                    <button type="submit" class="btn btn-danger">حذف</button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="text-center py-5">
+                                    <p class="text-muted">لا توجد قوالب سجلات متاحة</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var hasTemplates = '{{ has_templates|yesno:"true,false" }}' === 'true';
+    
+    $(document).ready(function() {
+        if (hasTemplates) {
+        var table = $('#transcriptTemplatesTable').DataTable({
+            "language": {
+                "emptyTable": "لا توجد قوالب سجلات متاحة",
+                "zeroRecords": "لا توجد قوالب سجلات متاحة",
+                "info": "عرض _START_ إلى _END_ من _TOTAL_ قالب",
+                "infoEmpty": "عرض 0 إلى 0 من 0 قالب",
+                "infoFiltered": "(تمت التصفية من _MAX_ قالب)",
+                "lengthMenu": "عرض _MENU_ قوالب",
+                "loadingRecords": "جارٍ التحميل...",
+                "processing": "جارٍ التحميل...",
+                "search": "بحث:",
+                "paginate": {
+                    "first": "الأول",
+                    "last": "الأخير",
+                    "next": "التالي",
+                    "previous": "السابق"
+                }
+            },
+            "order": [[0, "asc"]],
+            "pageLength": 10,
+            "lengthMenu": [[10, 25, 50, -1], ["10", "25", "50", "الكل"]],
+            "autoWidth": false,
+            "responsive": true,
+            "drawCallback": function(settings) {
+                $('[data-bs-toggle="tooltip"]').tooltip();
+            }
+        });
+
+        table.on('order.dt search.dt', function () {
+            table.column(0, {search:'applied', order:'applied'}).nodes().each(function (cell, i) {
+                cell.innerHTML = i + 1;
+            });
+        }).draw();
+        }
+    });
+</script>
+{% endblock %}

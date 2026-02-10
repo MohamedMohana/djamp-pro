@@ -1,0 +1,52 @@
+# Ignore .env file
+.env
+
+# Ignore everything inside media
+media/**
+
+# BUT keep the folders themselves
+!media/pdf_templates/
+!media/preview/
+
+# And keep placeholder .gitignore files inside them
+!media/pdf_templates/.gitignore
+!media/advanced_templates/.gitignore
+!media/preview/.gitignore
+
+# Ignore temporary template files (files starting with underscores)
+media/pdf_templates/_*
+media/pdf_templates/___*
+media/advanced_templates/_*
+media/advanced_templates/___*
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Cursor IDE files
+.cursor/
+.cursorignore
+
+# macOS
+.DS_Store
+
+# Other
+blockchain.out

@@ -1,0 +1,52 @@
+{% extends 'new_template/base.html' %}
+
+{% block title %}نظام الشهادات المعتمدة{% endblock %}
+
+{% block content %}
+
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+        <div class="content-overlay"></div>
+        {% comment %} <div class="header-navbar-shadow"></div> {% endcomment %}
+        <div class="content-wrapper">
+            <div class="content-header row">
+                <div class="content-header-left col-md-9 col-12 mb-2">
+                    <div class="row breadcrumbs-top">
+                        <div class="col-12">
+                            {% comment %} <h2 class="content-header-title float-left mb-0">لوحة التحكم</h2> {% endcomment %}
+                            <div class="breadcrumb-wrapper">
+                                <ol class="breadcrumb">
+                                    {% comment %} <li class="breadcrumb-item"><a href="{% url 'index' %}">لوحة
+                                            التحكم</a> {% endcomment %}
+                                    </li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-body">
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="container mt-5">
+                                <div class="row justify-content-center">
+                                    <div class="col-md-8">
+                                        <h1 class="text-center mb-4">مرحباً {{ full_name }} في تطبيق الشهادات المعتمدة باستخدام تقنيات البلوكتشين</h1>
+                                        <p class="lead text-center">
+                                            يمكنك من خلال هذا التطبيق إنشاء وإدارة والتحقق من الشهادات الخاصة بك
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

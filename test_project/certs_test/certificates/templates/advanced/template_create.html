@@ -1,0 +1,1646 @@
+{% extends 'new_template/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="fw-bold py-3 mb-4">
+        {% if is_edit %}تعديل القالب المتقدم{% else %}إنشاء قالب متقدم جديد{% endif %}
+    </h4>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="bs-stepper wizard-numbered mt-2">
+                <!-- Stepper Header -->
+                <div class="bs-stepper-header">
+                    <div class="step" data-target="#step1">
+                        <button type="button" class="step-trigger">
+                            <span class="bs-stepper-circle">1</span>
+                            <span class="bs-stepper-label">تحميل القالب</span>
+                        </button>
+                    </div>
+                    <div class="line"></div>
+                    <div class="step" data-target="#step2">
+                        <button type="button" class="step-trigger">
+                            <span class="bs-stepper-circle">2</span>
+                            <span class="bs-stepper-label">اختيار الحقول</span>
+                        </button>
+                    </div>
+                    <div class="line"></div>
+                    <div class="step" data-target="#step3">
+                        <button type="button" class="step-trigger">
+                            <span class="bs-stepper-circle">3</span>
+                            <span class="bs-stepper-label">بيانات المثال</span>
+                        </button>
+                    </div>
+                    <div class="line"></div>
+                    <div class="step" data-target="#step4">
+                        <button type="button" class="step-trigger">
+                            <span class="bs-stepper-circle">4</span>
+                            <span class="bs-stepper-label">تخصيص الحقول</span>
+                        </button>
+                    </div>
+                    <div class="line"></div>
+                    <div class="step" data-target="#step5">
+                        <button type="button" class="step-trigger">
+                            <span class="bs-stepper-circle">5</span>
+                            <span class="bs-stepper-label">المعاينة والحفظ</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stepper Content -->
+                <div class="bs-stepper-content p-0 mt-4">
+                    <form id="advancedTemplateForm" method="post" enctype="multipart/form-data" 
+                          data-is-edit="{{ is_edit|yesno:'true,false' }}"
+                          data-template-id="{% if is_edit %}{{ template.id }}{% else %}null{% endif %}"
+                          data-template-fields='{{ template_active_fields_json|safe }}'
+                          data-field-settings='{{ template_field_settings_json|safe }}'
+                          data-qr-settings='{{ template_qr_settings_json|safe }}'
+                          data-template-pdf-url="{{ template_pdf_url|default:'' }}">
+                        {% csrf_token %}
+                        
+                        <!-- Step 1: Upload Template -->
+                        <div id="step1" class="content dstepper-block">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">تحميل القالب</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row justify-content-center">
+                                        <div class="col-lg-8 col-md-10 col-12">
+                                            <div class="mb-3">
+                                                <label class="form-label">{{ form.name.label }}</label>
+                                                {{ form.name }}
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">{{ form.pdf_file.label }}</label>
+                                                {% if template %}
+                                                    <div class="mb-2">
+                                                        <a href="{{ template.pdf_file.url }}" target="_blank" class="btn btn-sm btn-info">
+                                                            <i class="ti ti-file"></i> عرض الملف الحالي
+                                                        </a>
+                                                    </div>
+                                                    <small class="text-muted d-block mb-2">اختياري: يمكنك تحميل ملف جديد</small>
+                                                {% endif %}
+                                                {{ form.pdf_file }}
+                                                <small class="text-muted d-block mt-1">الحد الأقصى: 500 كيلوبايت</small>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">{{ form.certificate_type.label }}</label>
+                                                {{ form.certificate_type }}
+                                                <small class="text-muted d-block mt-1">اختر اللغة: عربي، إنجليزي، أو ثنائي</small>
+                                            </div>
+                                            <div id="upload-status" class="alert alert-success d-none mt-3 mb-0">
+                                                <i class="ti ti-check me-1"></i> تم تحميل ملف القالب بنجاح، يمكنك المتابعة للخطوة التالية.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-primary" onclick="nextStep(1)">التالي</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Select Fields -->
+                        <div id="step2" class="content" style="display: none;">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">اختيار الحقول النشطة</h5>
+                                    <small class="text-muted">اختر الحقول المناسبة حسب اللغة المختارة (الحقول المتاحة تُعرض فقط)</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info">
+                                        <i class="ti ti-info-circle me-2"></i>
+                                        يمكنك تفعيل أو إلغاء تفعيل أي حقل حسب احتياجاتك
+                                    </div>
+                                    <div class="row">
+                                        {% for field_key, field_config in fields.items %}
+                                        <div class="col-md-6 mb-3 field-option" data-field="{{ field_key }}">
+                                            <div class="form-check form-check-primary">
+                                                <input class="form-check-input field-checkbox" type="checkbox" 
+                                                       name="field_active_{{ field_key }}" 
+                                                       id="field_{{ field_key }}">
+                                                <label class="form-check-label" for="field_{{ field_key }}">
+                                                    <strong>{{ field_config.label_ar }}</strong>
+                                                    <br><small class="text-muted">{{ field_config.label_en }}</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div id="field-count-display" class="mt-3">
+                                        <span class="badge bg-label-success" id="selected-count">0 حقل محدد</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(2)">السابق</button>
+                                <button type="button" class="btn btn-primary" onclick="nextStep(2)">التالي</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Example Data -->
+                        <div id="step3" class="content" style="display: none;">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">بيانات المثال</h5>
+                                    <small class="text-muted">أدخل بيانات تجريبية للمعاينة (للحقول المفعلة فقط)</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info">
+                                        <i class="ti ti-info-circle me-2"></i>
+                                        ستظهر حقول الإدخال فقط للحقول التي قمت بتفعيلها في الخطوة السابقة
+                                    </div>
+                                    <div id="example-fields-container" class="row" data-example='{{ example_data|safe }}' data-fields-config='{{ fields_json|safe }}'>
+                                        {% for field_key, field_config in fields.items %}
+                                        <div class="col-md-6 mb-3 example-field-group" data-field="{{ field_key }}" style="display: none;">
+                                            <label class="form-label">{{ field_config.label_ar }}</label>
+                                            <input type="text" class="form-control example-input" 
+                                                   id="example_{{ field_key }}"
+                                                   placeholder="{{ field_config.placeholder_ar }}"
+                                                   dir="{{ field_config.direction }}">
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(3)">السابق</button>
+                                <button type="button" class="btn btn-primary" onclick="nextStep(3)">التالي</button>
+                            </div>
+                        </div>
+
+
+                        <!-- Step 4: Customize Fields -->
+                        <div id="step4" class="content" style="display: none;">
+    <div class="card mb-4 preview-card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="mb-0">معاينة مرئية تفاعلية</h5>
+                <small class="text-muted">اسحب وأفلت الحقول مباشرة على الشهادة</small>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleEditorMode()">
+                <i class="ti ti-edit me-1"></i>
+                <span id="editorModeText">تفعيل التحرير</span>
+            </button>
+        </div>
+        <div class="card-body p-2 position-relative">
+            <div id="editorModeHelper" class="editor-mode-helper d-none">
+                <i class="ti ti-hand-move"></i>
+                <span>يمكنك الآن سحب الحقول وتغيير حجمها مباشرة على الشهادة</span>
+            </div>
+            <div id="visualEditorContainer" class="preview-container">
+                <canvas id="certificateCanvas" class="preview-canvas"></canvas>
+                <div id="canvasLoading" class="text-center p-5" style="display: none;">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2">جاري تحميل المعاينة...</p>
+                </div>
+                <div id="canvasError" class="alert alert-warning m-3" style="display: none;">
+                    يرجى تحميل ملف PDF في الخطوة 1 وتفعيل الحقول في الخطوة 2
+                </div>
+                                        <div id="positionIndicator" class="position-indicator">
+                                            <div class="indicator-content">
+                                                <i class="ti ti-target"></i>
+                                                <div id="positionIndicatorText">X=0.00cm, Y=0.00cm</div>
+                                            </div>
+                                        </div>
+            </div>
+            <div id="previewError" class="alert alert-danger mt-2" style="display: none;"></div>
+            <div class="alert alert-info mt-2 mb-0">
+                <small>
+                    <i class="ti ti-info-circle me-1"></i>
+                    <strong>تلميح:</strong> اضغط على زر "تفعيل التحرير" ثم اسحب الحقول بالماوس لتحديد مواضعها. سيتم حفظ المواضع تلقائياً.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 settings-card">
+                                        <div class="card-header py-2">
+                                            <h5 class="mb-0">تخصيص الحقول</h5>
+                                            <small class="text-muted">اضبط المواضع والخطوط لكل حقل</small>
+                                        </div>
+        <div class="card-body p-3" style="max-height: 720px; overflow-y: auto;">
+            <input type="hidden" id="designer_page_width_cm" name="designer_page_width_cm" value="{{ designer_width_cm|default:29.7 }}">
+            <input type="hidden" id="designer_page_height_cm" name="designer_page_height_cm" value="{{ designer_height_cm|default:21 }}">
+            <input type="hidden" id="designer_page_width_px" name="designer_page_width_px" value="{{ designer_width_px|default:'0' }}">
+            <input type="hidden" id="designer_page_height_px" name="designer_page_height_px" value="{{ designer_height_px|default:'0' }}">
+            <input type="hidden" id="qr_x_px" name="qr_x_px" value="0">
+            <input type="hidden" id="qr_y_px" name="qr_y_px" value="0">
+            <input type="hidden" id="qr_size_px" name="qr_size_px" value="0">
+
+                                            <div class="settings-group mb-3">
+                                                <h6 class="settings-title">إعدادات QR</h6>
+                                                <div class="row g-2">
+                                                    <div class="col-3">
+                                                        <label class="form-label small mb-1">X</label>
+                                                        <input type="number" name="qr_x" class="form-control form-control-sm" value="6.9" step="0.1">
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <label class="form-label small mb-1">Y</label>
+                                                        <input type="number" name="qr_y" class="form-control form-control-sm" value="1.2" step="0.1">
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <label class="form-label small mb-1">حجم</label>
+                                                        <input type="number" name="qr_size" class="form-control form-control-sm" value="5" step="0.1">
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <label class="form-label small mb-1">دوران</label>
+                                                        <input type="number" name="qr_rotation" class="form-control form-control-sm" value="0" step="1">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div id="field-settings-container">
+                                                {% for field_key, field_config in fields.items %}
+                                                <div class="settings-group mb-3 field-settings" data-field="{{ field_key }}" style="display: none;">
+                                                    <h6 class="settings-title">{{ field_config.label_ar }}</h6>
+                                                    <div class="row g-2">
+                                                        <div class="col-6">
+                                                            <label class="form-label small mb-1">الخط</label>
+                                                            <select name="field_font_{{ field_key }}" class="form-select form-select-sm">
+                                                                {% for font_key, font_name in fonts %}
+                                                                <option value="{{ font_key }}">{{ font_name }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <label class="form-label small mb-1">اللون</label>
+                                                            <input type="color" name="field_color_{{ field_key }}" class="form-control form-control-sm form-control-color" value="#000000">
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <label class="form-label small mb-1">X</label>
+                                                            <input type="number" name="field_x_{{ field_key }}" class="form-control form-control-sm" value="15" step="0.1">
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <label class="form-label small mb-1">Y</label>
+                                                            <input type="number" name="field_y_{{ field_key }}" class="form-control form-control-sm" value="10" step="0.1">
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <label class="form-label small mb-1">حجم الخط</label>
+                                                            <input type="number" name="field_font_size_{{ field_key }}" class="form-control form-control-sm" value="18" step="0.5">
+                                                        </div>
+                                                    </div>
+                    <input type="hidden" name="field_x_px_{{ field_key }}" class="field-x-px-input" data-field="{{ field_key }}" value="0">
+                    <input type="hidden" name="field_y_px_{{ field_key }}" class="field-y-px-input" data-field="{{ field_key }}" value="0">
+                    <input type="hidden" name="field_width_px_{{ field_key }}" class="field-width-px-input" data-field="{{ field_key }}" value="0">
+                    <input type="hidden" name="field_height_px_{{ field_key }}" class="field-height-px-input" data-field="{{ field_key }}" value="0">
+                    <input type="hidden" name="field_font_size_px_{{ field_key }}" class="field-fontsize-px-input" data-field="{{ field_key }}" value="0">
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            
+            <button type="button" class="btn btn-sm btn-primary w-100 mt-2" onclick="updateAdvancedPreview()">
+                                                <i class="ti ti-refresh me-1"></i> تحديث المعاينة
+                                            </button>
+                                    </div>
+                                </div>
+
+                            <div class="d-flex justify-content-between gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(4)">السابق</button>
+                                <button type="button" class="btn btn-primary" onclick="nextStep(4)">التالي</button>
+                            </div>
+                        </div>
+                        <!-- Step 5: Final Preview & Save -->
+                        <div id="step5" class="content" style="display: none;">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">المعاينة النهائية والحفظ</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-success">
+                                        <i class="ti ti-check me-2"></i>
+                                        راجع الإعدادات واضغط على حفظ القالب عند الانتهاء
+                                    </div>
+                                    <div id="finalPreviewContainer">
+                                        <object id="finalPreviewFrame" data="" type="application/pdf" style="width: 100%; height: 700px;">
+                                            <div class="alert alert-warning">
+                                                لا يمكن عرض المعاينة النهائية
+                                            </div>
+                                        </object>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(5)">السابق</button>
+                                <button type="button" class="btn btn-success" onclick="submitAdvancedForm()">
+                                    <i class="ti ti-device-floppy me-1"></i>حفظ القالب المتقدم
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+<style>
+/* IBM Plex Sans Arabic Fonts */
+@font-face {
+    font-family: 'IBM Plex Sans Arabic';
+    src: url('{% static "certificates/fonts/IBMPlexSansArabic-Regular.ttf" %}') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'IBM Plex Sans Arabic';
+    src: url('{% static "certificates/fonts/IBMPlexSansArabic-Bold.ttf" %}') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+/* Din Next LT Font */
+@font-face {
+    font-family: 'Din Next LT';
+    src: url('{% static "certificates/fonts/din-next-lt-w23-bold.ttf" %}') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+/* GESS Font */
+@font-face {
+    font-family: 'GESS';
+    src: url('{% static "certificates/fonts/GESS.ttf" %}') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* Bressay Bold Font */
+@font-face {
+    font-family: 'Bressay';
+    src: url('{% static "certificates/fonts/Bressay-Bold.ttf" %}') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+/* Majalla Font */
+@font-face {
+    font-family: 'Majalla';
+    src: url('{% static "certificates/fonts/majallab.ttf" %}') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+.settings-group {
+    background: #f8f9fa;
+    border-radius: 0.375rem;
+    padding: 0.625rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e9ecef;
+}
+.settings-title {
+    color: #566a7f;
+    font-size: 0.8125rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+.form-check-primary .form-check-input:checked {
+    background-color: #28c76f;
+    border-color: #28c76f;
+}
+#visualEditorContainer,
+.preview-container {
+    min-height: 720px;
+    background: #f8f9fa;
+    border: 1px solid #e2e5ec;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#certificateCanvas,
+.preview-canvas {
+    width: 100%;
+    max-width: 1100px;
+    height: auto;
+    border: 1px solid #d7dae3;
+    border-radius: 0.35rem;
+    box-shadow: 0 10px 30px rgba(15, 34, 58, 0.12);
+    background: #fff;
+}
+.preview-card .card-body {
+    position: relative;
+}
+.position-indicator {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    background: rgba(40, 199, 111, 0.95);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    box-shadow: 0 12px 35px rgba(40, 199, 111, 0.35);
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.position-indicator.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+.position-indicator .indicator-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+.settings-card .card-body {
+    max-height: 720px;
+    overflow-y: auto;
+}
+.canvas-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+}
+.editor-mode-helper {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    z-index: 20;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+    font-size: 0.9rem;
+    background: rgba(40, 199, 111, 0.12);
+    color: #057a55;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+function safeJSONParse(value, fallback = {}) {
+    if (value === undefined || value === null) {
+        return fallback;
+    }
+    if (typeof value !== 'string') {
+        return value;
+    }
+    const normalized = value.trim();
+    if (!normalized || normalized === 'undefined' || normalized === 'null') {
+        return fallback;
+    }
+    try {
+        return JSON.parse(normalized);
+    } catch (error) {
+        console.warn('Failed to parse JSON value', { value: normalized, error });
+        return fallback;
+    }
+}
+
+// Get template data from form attributes
+var formEl = document.getElementById('advancedTemplateForm');
+var isEdit = formEl.dataset.isEdit === 'true';
+var templateId = formEl.dataset.templateId !== 'null' ? formEl.dataset.templateId : null;
+var templateActiveFields = safeJSONParse(formEl.dataset.templateFields, {});
+var templateFieldSettings = safeJSONParse(formEl.dataset.fieldSettings, {});
+var templateQrSettings = safeJSONParse(formEl.dataset.qrSettings, {});
+var templatePdfUrl = formEl.dataset.templatePdfUrl || '';
+var currentCertificateLanguages = ['arabic', 'english'];
+var uploadStatusEl = null;
+
+$(document).ready(function() {
+    window.stepper = new Stepper(document.querySelector('.bs-stepper'), {
+        linear: true,
+        animation: true
+    });
+    window.currentStep = 1;
+    updateStepVisibility();
+    
+    // Update field count
+    updateFieldCount();
+    $('.field-checkbox').on('change', function() {
+        updateFieldCount();
+        updateExampleFields();
+        updateFieldSettings();
+    });
+    
+    if (isEdit) {
+        initializeEditState();
+    }
+    
+    // Auto-update preview when any input in Step 4 changes
+    let previewTimeout;
+    $(document).on('input change', '#step4 input[type="number"], #step4 input[type="color"], #step4 select', function() {
+        clearTimeout(previewTimeout);
+        previewTimeout = setTimeout(function() {
+            updateAdvancedPreview();
+        }, 500); // Wait 500ms after user stops typing
+    });
+    
+    // Also update when example data changes in Step 3
+    $(document).on('input', '.example-input', function() {
+        clearTimeout(previewTimeout);
+        previewTimeout = setTimeout(function() {
+            updateAdvancedPreview();
+        }, 800); // Longer delay for text input
+    });
+
+    $('#id_certificate_type').on('change', function() {
+        applyCertificateTypeFilter();
+    });
+
+    applyCertificateTypeFilter();
+    initUploadStatusWatcher();
+});
+
+function initializeEditState() {
+    if (!isEdit) {
+        return;
+    }
+    if (templateActiveFields && Object.keys(templateActiveFields).length) {
+        $('.field-checkbox').prop('checked', false);
+        Object.keys(templateActiveFields).forEach(function(fieldKey) {
+            if (templateActiveFields[fieldKey]) {
+                $('#field_' + fieldKey).prop('checked', true);
+            }
+        });
+    }
+    updateFieldCount();
+    updateExampleFields();
+    updateFieldSettings();
+    applyTemplateFieldSettings();
+    applyTemplateQrSettings();
+}
+
+function setNumericInputValue(selector, value) {
+    const normalized = normalizeNumber(value);
+    if (normalized === null) {
+        return;
+    }
+    const input = document.querySelector(selector);
+    if (input) {
+        input.value = normalized;
+    }
+}
+
+function setInputValue(selector, value) {
+    if (value === undefined || value === null || value === '') {
+        return;
+    }
+    const input = document.querySelector(selector);
+    if (input) {
+        input.value = value;
+    }
+}
+
+function setSelectValue(selector, value) {
+    if (value === undefined || value === null || value === '') {
+        return;
+    }
+    const selectEl = document.querySelector(selector);
+    if (!selectEl) {
+        return;
+    }
+    const hasOption = Array.from(selectEl.options).some(option => option.value === value);
+    if (hasOption) {
+        selectEl.value = value;
+    }
+}
+
+function normalizeNumber(value) {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+}
+
+function applyTemplateFieldSettings() {
+    if (!templateFieldSettings || !Object.keys(templateFieldSettings).length) {
+        return;
+    }
+    Object.keys(templateFieldSettings).forEach(function(fieldKey) {
+        const settings = templateFieldSettings[fieldKey] || {};
+        setNumericInputValue(`input[name="field_x_${fieldKey}"]`, settings.x);
+        setNumericInputValue(`input[name="field_y_${fieldKey}"]`, settings.y);
+        setNumericInputValue(`input[name="field_font_size_${fieldKey}"]`, settings.font_size);
+        setSelectValue(`select[name="field_font_${fieldKey}"]`, settings.font_name);
+        setInputValue(`input[name="field_color_${fieldKey}"]`, settings.font_color);
+        setNumericInputValue(`input[name="field_x_px_${fieldKey}"]`, settings.x_px);
+        setNumericInputValue(`input[name="field_y_px_${fieldKey}"]`, settings.y_px);
+        setNumericInputValue(`input[name="field_width_px_${fieldKey}"]`, settings.box_width_px);
+        setNumericInputValue(`input[name="field_height_px_${fieldKey}"]`, settings.box_height_px);
+        setNumericInputValue(`input[name="field_font_size_px_${fieldKey}"]`, settings.font_size_px);
+    });
+    bootstrapFieldPositionStateFromTemplate();
+}
+
+function applyTemplateQrSettings() {
+    if (!templateQrSettings || !Object.keys(templateQrSettings).length) {
+        return;
+    }
+    setNumericInputValue('input[name="qr_x"]', templateQrSettings.x);
+    setNumericInputValue('input[name="qr_y"]', templateQrSettings.y);
+    setNumericInputValue('input[name="qr_size"]', templateQrSettings.size);
+    setNumericInputValue('input[name="qr_rotation"]', templateQrSettings.rotation_angle);
+    setNumericInputValue('#qr_x_px', templateQrSettings.x_px);
+    setNumericInputValue('#qr_y_px', templateQrSettings.y_px);
+    setNumericInputValue('#qr_size_px', templateQrSettings.size_px);
+    const qrState = {
+        xPx: normalizeNumber(templateQrSettings.x_px),
+        yPx: normalizeNumber(templateQrSettings.y_px),
+        sizePx: normalizeNumber(templateQrSettings.size_px),
+        baseWidthPx: normalizeNumber(templateQrSettings.base_width_px),
+        baseHeightPx: normalizeNumber(templateQrSettings.base_height_px)
+    };
+    const hasValues = Object.values(qrState).some(val => val !== null);
+    qrPositionState = hasValues ? qrState : null;
+}
+
+function bootstrapFieldPositionStateFromTemplate() {
+    if (!templateFieldSettings || !Object.keys(templateFieldSettings).length) {
+        return;
+    }
+    fieldPositionState = {};
+    Object.keys(templateFieldSettings).forEach(function(fieldKey) {
+        const settings = templateFieldSettings[fieldKey] || {};
+        const xPx = normalizeNumber(settings.x_px);
+        const yPx = normalizeNumber(settings.y_px);
+        const widthPx = normalizeNumber(settings.box_width_px);
+        const heightPx = normalizeNumber(settings.box_height_px);
+        const fontSizePx = normalizeNumber(settings.font_size_px);
+        const baseWidthPx = normalizeNumber(settings.base_width_px);
+        const baseHeightPx = normalizeNumber(settings.base_height_px);
+        if (
+            xPx === null &&
+            yPx === null &&
+            widthPx === null &&
+            heightPx === null &&
+            fontSizePx === null &&
+            baseWidthPx === null &&
+            baseHeightPx === null
+        ) {
+            return;
+        }
+        fieldPositionState[fieldKey] = {
+            xPx: xPx,
+            yPx: yPx,
+            widthPx: widthPx,
+            heightPx: heightPx,
+            fontSizePx: fontSizePx,
+            baseWidthPx: baseWidthPx,
+            baseHeightPx: baseHeightPx
+        };
+    });
+}
+
+function updateFieldCount() {
+    const count = $('.field-checkbox:checked').length;
+    $('#selected-count').text(count + ' حقل محدد');
+}
+
+function updateExampleFields() {
+    // Get pre-filled example data
+    const exampleData = safeJSONParse($('#example-fields-container').attr('data-example'), {});
+    
+    $('.example-field-group').hide();
+    $('.field-checkbox:checked').each(function() {
+        const fieldKey = $(this).attr('name').replace('field_active_', '');
+        if (!isFieldAllowedForCurrentType(fieldKey)) {
+            return;
+        }
+        const fieldGroup = $(`.example-field-group[data-field="${fieldKey}"]`);
+        fieldGroup.show();
+        
+        // Pre-fill the field with example data if it's empty
+        const inputField = fieldGroup.find(`#example_${fieldKey}`);
+        if (inputField.val() === '' && exampleData[fieldKey]) {
+            inputField.val(exampleData[fieldKey]);
+        }
+    });
+}
+
+function updateFieldSettings() {
+    $('.field-settings').hide();
+    $('.field-checkbox:checked').each(function() {
+        const fieldKey = $(this).attr('name').replace('field_active_', '');
+        if (!isFieldAllowedForCurrentType(fieldKey)) {
+            return;
+        }
+        $(`.field-settings[data-field="${fieldKey}"]`).show();
+    });
+}
+
+function validateStep(step) {
+    switch(step) {
+        case 1:
+            const name = $('#id_name').val();
+            const fileInput = $('#id_pdf_file')[0];
+            if (!name || (!fileInput.files.length && !$('a[href$=".pdf"]').length)) {
+                Swal.fire({title: 'خطأ', text: 'يرجى إدخال اسم القالب وتحميل الملف', icon: 'error'});
+                return false;
+            }
+            if (fileInput.files.length && fileInput.files[0].size > 500 * 1024) {
+                Swal.fire({title: 'خطأ', text: 'حجم الملف يتجاوز 500 كيلوبايت', icon: 'error'});
+                return false;
+            }
+            return true;
+        case 2:
+            if ($('.field-checkbox:checked').length === 0) {
+                Swal.fire({title: 'خطأ', text: 'يرجى تفعيل حقل واحد على الأقل', icon: 'error'});
+                return false;
+            }
+            return true;
+        case 3:
+            let hasData = false;
+            $('.example-input:visible').each(function() {
+                if ($(this).val().trim()) hasData = true;
+            });
+            if (!hasData) {
+                Swal.fire({title: 'تنبيه', text: 'لم تدخل أي بيانات تجريبية. المتابعة؟', icon: 'warning', showCancelButton: true});
+            }
+            return true;
+        default:
+            return true;
+    }
+}
+
+window.nextStep = function(currentStep) {
+    if (validateStep(currentStep)) {
+        window.currentStep = currentStep + 1;
+        stepper.next();
+        updateStepVisibility();
+        if (currentStep === 3) {
+            // Initialize visual editor when entering Step 4
+            onEnterStep4();
+        }
+        if (currentStep === 4) {
+            // Generate final preview when entering Step 5
+            updateAdvancedPreview();
+        }
+    }
+}
+
+window.prevStep = function(currentStep) {
+    window.currentStep = currentStep - 1;
+    stepper.previous();
+    updateStepVisibility();
+}
+
+function updateStepVisibility() {
+    $('.content').hide();
+    $(`#step${window.currentStep}`).fadeIn(300);
+}
+
+function determineFieldLanguage(fieldKey) {
+    if (!fieldKey) return 'all';
+    if (fieldKey.endsWith('_ar') || fieldKey.indexOf('arabic') === 0 || fieldKey.includes('_ar_')) {
+        return 'arabic';
+    }
+    if (fieldKey.endsWith('_en') || fieldKey.indexOf('english') === 0 || fieldKey.includes('_en_')) {
+        return 'english';
+    }
+    return 'all';
+}
+
+function isFieldAllowedForCurrentType(fieldKey) {
+    const lang = determineFieldLanguage(fieldKey);
+    return lang === 'all' || currentCertificateLanguages.indexOf(lang) !== -1;
+}
+
+function setUploadStatus(message, type = 'success') {
+    if (!uploadStatusEl) {
+        uploadStatusEl = $('#upload-status');
+    }
+    if (!uploadStatusEl || !uploadStatusEl.length) return;
+    uploadStatusEl
+        .removeClass('d-none alert-success alert-info alert-warning')
+        .addClass(type === 'info' ? 'alert-info' : type === 'warning' ? 'alert-warning' : 'alert-success')
+        .html(message)
+        .removeClass('d-none');
+}
+
+function applyCertificateTypeFilter() {
+    const certType = $('#id_certificate_type').val() || 'bilingual';
+    if (certType === 'arabic') {
+        currentCertificateLanguages = ['arabic'];
+    } else if (certType === 'english') {
+        currentCertificateLanguages = ['english'];
+    } else {
+        currentCertificateLanguages = ['arabic', 'english'];
+    }
+
+    $('.field-option').each(function() {
+        const fieldKey = $(this).data('field');
+        const allowed = isFieldAllowedForCurrentType(fieldKey);
+        $(this).toggle(allowed);
+        if (!allowed) {
+            $(this).find('.field-checkbox').prop('checked', false);
+        }
+    });
+
+    $('.example-field-group').each(function() {
+        const fieldKey = $(this).data('field');
+        if (!isFieldAllowedForCurrentType(fieldKey)) {
+            $(this).hide();
+        }
+    });
+
+    $('.field-settings').each(function() {
+        const fieldKey = $(this).data('field');
+        if (!isFieldAllowedForCurrentType(fieldKey)) {
+            $(this).hide();
+        }
+    });
+
+    updateFieldCount();
+    updateExampleFields();
+    updateFieldSettings();
+    updateCanvasFromForm();
+}
+
+function initUploadStatusWatcher() {
+    uploadStatusEl = $('#upload-status');
+    const fileInput = $('#id_pdf_file');
+    if (!fileInput.length || !uploadStatusEl.length) return;
+
+    fileInput.on('change', function() {
+        if (this.files && this.files.length) {
+            setUploadStatus('<i class="ti ti-loader-2 me-1 ti-spin"></i> تم استلام الملف وسيتم التحقق منه فور الانتقال للخطوة التالية...', 'info');
+        } else {
+            uploadStatusEl.addClass('d-none');
+        }
+    });
+
+    if (isEdit && templateId) {
+        setUploadStatus('<i class="ti ti-info-circle me-1"></i> يتم استخدام ملف القالب الحالي. يمكنك المتابعة أو تحميل ملف جديد.', 'info');
+    }
+}
+
+// =============================================================================
+// VISUAL DRAG & DROP EDITOR - Fabric.js Implementation
+// =============================================================================
+let fabricCanvas = null;
+let pdfImageUrl = null;
+let editorMode = false;
+let canvasScale = 1.0;
+let fieldPositionState = {};
+let qrPositionState = null;
+
+const CSS_DPI = 96;
+const INCH_TO_CM = 2.54;
+const DEFAULT_PX_PER_CM = CSS_DPI / INCH_TO_CM;
+const DEFAULT_PAGE_WIDTH_CM = 29.7;
+const DEFAULT_PAGE_HEIGHT_CM = 21.0;
+const PDF_RENDER_SCALE = 2.0;
+const PDF_POINTS_PER_INCH = 72;
+
+let pdfOriginalWidth = null;
+let pdfOriginalHeight = null;
+let pdfPageWidthCm = DEFAULT_PAGE_WIDTH_CM;
+let pdfPageHeightCm = DEFAULT_PAGE_HEIGHT_CM;
+let pxPerCmX = DEFAULT_PX_PER_CM;
+let pxPerCmY = DEFAULT_PX_PER_CM;
+
+function getPxPerCmX() {
+    return pxPerCmX || DEFAULT_PX_PER_CM;
+}
+
+function getPxPerCmY() {
+    return pxPerCmY || DEFAULT_PX_PER_CM;
+}
+
+function getCurrentPageWidthCm() {
+    const inputVal = parseFloat(document.getElementById('designer_page_width_cm')?.value);
+    return pdfPageWidthCm || inputVal || DEFAULT_PAGE_WIDTH_CM;
+}
+
+function getCurrentPageHeightCm() {
+    const inputVal = parseFloat(document.getElementById('designer_page_height_cm')?.value);
+    return pdfPageHeightCm || inputVal || DEFAULT_PAGE_HEIGHT_CM;
+}
+
+function updateDesignerDimensionInputs() {
+    const widthCmInput = document.getElementById('designer_page_width_cm');
+    const heightCmInput = document.getElementById('designer_page_height_cm');
+    if (widthCmInput) {
+        widthCmInput.value = pdfPageWidthCm ? pdfPageWidthCm.toFixed(2) : widthCmInput.value;
+    }
+    if (heightCmInput) {
+        heightCmInput.value = pdfPageHeightCm ? pdfPageHeightCm.toFixed(2) : heightCmInput.value;
+    }
+    const widthPxInput = document.getElementById('designer_page_width_px');
+    const heightPxInput = document.getElementById('designer_page_height_px');
+    if (widthPxInput) {
+        widthPxInput.value = pdfOriginalWidth ? pdfOriginalWidth.toFixed(2) : widthPxInput.value;
+    }
+    if (heightPxInput) {
+        heightPxInput.value = pdfOriginalHeight ? pdfOriginalHeight.toFixed(2) : heightPxInput.value;
+    }
+}
+
+function recordFieldPositionFromObject(obj) {
+    if (!obj || !obj.fieldKey || !canvasScale || !pdfOriginalWidth || !pdfOriginalHeight) return;
+    const originalX = obj.left / canvasScale;
+    const originalY = obj.top / canvasScale;
+    const originalWidth = (obj.width * obj.scaleX) / canvasScale;
+    const originalHeight = (obj.height * obj.scaleY) / canvasScale;
+    const originalFontSize = (obj.fontSize * obj.scaleY) / canvasScale;
+    fieldPositionState[obj.fieldKey] = {
+        xPx: originalX,
+        yPx: originalY,
+        widthPx: originalWidth,
+        heightPx: originalHeight,
+        fontSizePx: originalFontSize,
+        baseWidthPx: pdfOriginalWidth,
+        baseHeightPx: pdfOriginalHeight
+    };
+    const xInput = document.querySelector(`input[name="field_x_px_${obj.fieldKey}"]`);
+    if (xInput) xInput.value = originalX.toFixed(2);
+    const yInput = document.querySelector(`input[name="field_y_px_${obj.fieldKey}"]`);
+    if (yInput) yInput.value = originalY.toFixed(2);
+    const widthInput = document.querySelector(`input[name="field_width_px_${obj.fieldKey}"]`);
+    if (widthInput) widthInput.value = originalWidth.toFixed(2);
+    const heightInput = document.querySelector(`input[name="field_height_px_${obj.fieldKey}"]`);
+    if (heightInput) heightInput.value = originalHeight.toFixed(2);
+    const fontSizeInput = document.querySelector(`input[name="field_font_size_px_${obj.fieldKey}"]`);
+    if (fontSizeInput) fontSizeInput.value = originalFontSize.toFixed(2);
+}
+
+function recordQrPosition(rect) {
+    if (!rect || !canvasScale || !pdfOriginalWidth || !pdfOriginalHeight) return;
+    const originalX = rect.left / canvasScale;
+    const originalY = rect.top / canvasScale;
+    const originalSize = (rect.width * rect.scaleX) / canvasScale;
+    qrPositionState = {
+        xPx: originalX,
+        yPx: originalY,
+        sizePx: originalSize,
+        baseWidthPx: pdfOriginalWidth,
+        baseHeightPx: pdfOriginalHeight
+    };
+    const xInput = document.getElementById('qr_x_px');
+    const yInput = document.getElementById('qr_y_px');
+    const sizeInput = document.getElementById('qr_size_px');
+    if (xInput) xInput.value = originalX.toFixed(2);
+    if (yInput) yInput.value = originalY.toFixed(2);
+    if (sizeInput) sizeInput.value = originalSize.toFixed(2);
+}
+
+// Initialize Fabric Canvas
+function initFabricCanvas() {
+    if (!fabricCanvas) {
+        fabricCanvas = new fabric.Canvas('certificateCanvas', {
+            selection: false,
+            preserveObjectStacking: true
+        });
+        
+        // Listen for object movement and update form fields
+        fabricCanvas.on('object:modified', function(e) {
+            if (e.target && e.target.fieldKey) {
+                updateFormFieldsFromCanvas(e.target);
+            }
+        });
+        
+        fabricCanvas.on('object:moving', function(e) {
+            if (e.target && e.target.fieldKey) {
+                showFieldCoordinates(e.target);
+            }
+        });
+    }
+}
+
+// Toggle between view and edit modes
+function toggleEditorMode() {
+    editorMode = !editorMode;
+    const btnText = document.getElementById('editorModeText');
+    const helper = document.getElementById('editorModeHelper');
+    
+    if (editorMode) {
+        btnText.textContent = 'إيقاف التحرير';
+        enableEditing();
+        if (helper) {
+            helper.classList.remove('d-none');
+        }
+    } else {
+        btnText.textContent = 'تفعيل التحرير';
+        disableEditing();
+        if (helper) {
+            helper.classList.add('d-none');
+        }
+    }
+}
+
+// Enable editing mode
+function enableEditing() {
+    if (fabricCanvas) {
+        fabricCanvas.selection = true;
+        fabricCanvas.forEachObject(function(obj) {
+            if (obj.type === 'textbox' || obj.type === 'rect' || obj.type === 'text') {
+                obj.selectable = true;
+                obj.evented = true;
+            }
+        });
+        fabricCanvas.renderAll();
+    }
+}
+
+// Disable editing mode
+function disableEditing() {
+    if (fabricCanvas) {
+        fabricCanvas.selection = false;
+        fabricCanvas.discardActiveObject();
+        fabricCanvas.forEachObject(function(obj) {
+            if (obj.type === 'textbox' || obj.type === 'rect' || obj.type === 'text') {
+                obj.selectable = false;
+                obj.evented = false;
+            }
+        });
+        fabricCanvas.renderAll();
+    }
+}
+
+function setCanvasLoadingState(isLoading) {
+    const loadingEl = document.getElementById('canvasLoading');
+    if (loadingEl) {
+        loadingEl.style.display = isLoading ? 'block' : 'none';
+    }
+    if (isLoading) {
+        const errorEl = document.getElementById('canvasError');
+        if (errorEl) {
+            errorEl.style.display = 'none';
+        }
+    }
+}
+
+function showCanvasError(message) {
+    setCanvasLoadingState(false);
+    const errorEl = document.getElementById('canvasError');
+    if (errorEl) {
+        errorEl.style.display = 'block';
+        errorEl.textContent = message;
+    }
+}
+
+// Load PDF as background image
+function loadPDFToCanvas() {
+    const pdfInput = document.getElementById('id_pdf_file');
+    const pdfFile = pdfInput && pdfInput.files ? pdfInput.files[0] : null;
+
+    if (pdfFile) {
+        setCanvasLoadingState(true);
+        const fileReader = new FileReader();
+        fileReader.onload = function(event) {
+            processPdfArrayBuffer(event.target.result);
+        };
+        fileReader.onerror = function() {
+            showCanvasError('تعذر قراءة ملف PDF. يرجى المحاولة مرة أخرى.');
+        };
+        fileReader.readAsArrayBuffer(pdfFile);
+        return;
+    }
+
+    if (isEdit && templatePdfUrl) {
+        setCanvasLoadingState(true);
+        fetch(templatePdfUrl, {
+            credentials: 'same-origin',
+            cache: 'no-store'
+        })
+        .then(function(response) {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            return response.arrayBuffer();
+        })
+        .then(function(buffer) {
+            processPdfArrayBuffer(buffer, { fromExistingTemplate: true });
+        })
+        .catch(function(error) {
+            console.error('Error loading existing template PDF:', error);
+            showCanvasError('تعذر تحميل ملف القالب الحالي. يرجى إعادة تحميل الملف من الخطوة 1.');
+            setUploadStatus('<i class="ti ti-alert-triangle me-1"></i> تعذر تحميل ملف القالب الحالي. يرجى إعادة تحميل الملف من الخطوة 1.', 'warning');
+        });
+        return;
+    }
+
+    showCanvasError('يرجى تحميل ملف PDF في الخطوة 1');
+}
+
+function processPdfArrayBuffer(arrayBuffer, options = {}) {
+    const { fromExistingTemplate = false } = options;
+    const typedArray = new Uint8Array(arrayBuffer);
+
+    pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
+        return pdf.getPage(1);
+    }).then(function(page) {
+        const baseViewport = page.getViewport({ scale: 1.0 });
+        const viewport = page.getViewport({ scale: PDF_RENDER_SCALE });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        pdfOriginalWidth = viewport.width;
+        pdfOriginalHeight = viewport.height;
+        
+        const viewBox = page.viewBox || null;
+        let widthCm = DEFAULT_PAGE_WIDTH_CM;
+        let heightCm = DEFAULT_PAGE_HEIGHT_CM;
+        
+        if (viewBox && viewBox.length >= 4) {
+            const widthPoints = viewBox[2];
+            const heightPoints = viewBox[3];
+            widthCm = (widthPoints / PDF_POINTS_PER_INCH) * INCH_TO_CM;
+            heightCm = (heightPoints / PDF_POINTS_PER_INCH) * INCH_TO_CM;
+        } else if (baseViewport && baseViewport.viewBox) {
+            const widthPoints = baseViewport.viewBox[2];
+            const heightPoints = baseViewport.viewBox[3];
+            widthCm = (widthPoints / PDF_POINTS_PER_INCH) * INCH_TO_CM;
+            heightCm = (heightPoints / PDF_POINTS_PER_INCH) * INCH_TO_CM;
+        } else if (baseViewport) {
+            widthCm = (baseViewport.width / CSS_DPI) * INCH_TO_CM;
+            heightCm = (baseViewport.height / CSS_DPI) * INCH_TO_CM;
+        }
+        
+        if (!isNaN(widthCm) && widthCm > 0) {
+            pdfPageWidthCm = widthCm;
+            pxPerCmX = pdfOriginalWidth / pdfPageWidthCm;
+        } else {
+            pxPerCmX = DEFAULT_PX_PER_CM;
+            pdfPageWidthCm = DEFAULT_PAGE_WIDTH_CM;
+        }
+        
+        if (!isNaN(heightCm) && heightCm > 0) {
+            pdfPageHeightCm = heightCm;
+            pxPerCmY = pdfOriginalHeight / pdfPageHeightCm;
+        } else {
+            pxPerCmY = DEFAULT_PX_PER_CM;
+            pdfPageHeightCm = DEFAULT_PAGE_HEIGHT_CM;
+        }
+
+        updateDesignerDimensionInputs();
+        
+        const renderContext = {
+            canvasContext: context,
+            viewport: viewport
+        };
+        
+        return page.render(renderContext).promise.then(function() {
+            pdfImageUrl = canvas.toDataURL();
+            renderCanvasWithPDF();
+            setCanvasLoadingState(false);
+            const successMessage = fromExistingTemplate
+                ? '<i class="ti ti-info-circle me-1"></i> يتم استخدام ملف القالب الحالي، يمكنك المتابعة للخطوة التالية.'
+                : '<i class="ti ti-check me-1"></i> تم تحميل الملف بنجاح ويمكنك المتابعة للخطوة التالية.';
+            setUploadStatus(successMessage, fromExistingTemplate ? 'info' : 'success');
+        });
+    }).catch(function(error) {
+        console.error('Error loading PDF:', error);
+        showCanvasError('خطأ في تحميل ملف PDF');
+        setUploadStatus('<i class="ti ti-alert-triangle me-1"></i> حدث خطأ أثناء قراءة الملف، حاول مرة أخرى.', 'warning');
+    });
+}
+
+// Render canvas with PDF background and text fields
+function renderCanvasWithPDF() {
+    if (!pdfImageUrl) return;
+    
+    initFabricCanvas();
+    
+    fabric.Image.fromURL(pdfImageUrl, function(img) {
+        // Calculate scale to fit container
+        const containerWidth = document.getElementById('visualEditorContainer').offsetWidth - 20;
+        const scale = containerWidth / img.width;
+        canvasScale = scale;
+        
+        fabricCanvas.setWidth(img.width * scale);
+        fabricCanvas.setHeight(img.height * scale);
+        
+        img.set({
+            scaleX: scale,
+            scaleY: scale,
+            selectable: false,
+            evented: false
+        });
+        
+        fabricCanvas.setBackgroundImage(img, fabricCanvas.renderAll.bind(fabricCanvas));
+        
+        // Add text fields for each active field
+        addTextFieldsToCanvas();
+    });
+}
+
+// Add draggable text fields to canvas
+function addTextFieldsToCanvas() {
+    const exampleFieldsContainer = document.getElementById('example-fields-container');
+    const exampleData = safeJSONParse(
+        exampleFieldsContainer ? exampleFieldsContainer.getAttribute('data-example') : null,
+        {}
+    );
+    const fieldsConfig = safeJSONParse(
+        exampleFieldsContainer ? exampleFieldsContainer.getAttribute('data-fields-config') : null,
+        {}
+    );
+    const perCmX = getPxPerCmX();
+    const perCmY = getPxPerCmY();
+    
+    // Clear existing text objects
+    fabricCanvas.getObjects().forEach(function(obj) {
+        if (obj.type === 'textbox' || obj.type === 'rect' || obj.type === 'text') {
+            fabricCanvas.remove(obj);
+        }
+    });
+    fieldPositionState = {};
+    qrPositionState = null;
+    
+    // Add text field for each checked field
+    document.querySelectorAll('.field-checkbox:checked').forEach(function(checkbox) {
+        const fieldKey = checkbox.name.replace('field_active_', '');
+        const fieldLabel = checkbox.closest('.form-check').querySelector('strong').textContent;
+        const exampleText = document.getElementById('example_' + fieldKey)?.value || exampleData[fieldKey] || fieldLabel;
+        
+        // Get field configuration for direction
+        const fieldConfig = fieldsConfig[fieldKey] || {};
+        const isRTL = fieldConfig.direction === 'rtl';
+        
+        // Get current form values
+        const xCm = parseFloat(document.querySelector(`input[name="field_x_${fieldKey}"]`)?.value || 15);
+        const yCm = parseFloat(document.querySelector(`input[name="field_y_${fieldKey}"]`)?.value || 10);
+        const fontSize = parseFloat(document.querySelector(`input[name="field_font_size_${fieldKey}"]`)?.value || 18);
+        const color = document.querySelector(`input[name="field_color_${fieldKey}"]`)?.value || '#000000';
+        const fontSelect = document.querySelector(`select[name="field_font_${fieldKey}"]`)?.value || 'IBM_Plex_Sans_Arabic_Regular';
+        
+        // Map font selection to actual font family and weight
+        const fontMap = {
+            'IBM_Plex_Sans_Arabic_Bold': { family: 'IBM Plex Sans Arabic', weight: 'bold' },
+            'IBM_Plex_Sans_Arabic_Regular': { family: 'IBM Plex Sans Arabic', weight: 'normal' },
+            'din-next-lt-w23-bold': { family: 'Din Next LT', weight: 'bold' },
+            'GESS': { family: 'GESS', weight: 'normal' },
+            'Bressay-Bold': { family: 'Bressay', weight: 'bold' },
+            'majallab': { family: 'Majalla', weight: 'normal' }
+        };
+        
+        const fontInfo = fontMap[fontSelect] || { family: 'IBM Plex Sans Arabic', weight: 'normal' };
+        const fontFamily = fontInfo.family;
+        const fontWeight = fontInfo.weight;
+        
+        // Convert cm to pixels
+        const xPx = xCm * perCmX * canvasScale;
+        const yPx = yCm * perCmY * canvasScale;
+        
+        const text = new fabric.Textbox(exampleText, {
+            left: xPx,
+            top: yPx,
+            fontSize: fontSize * canvasScale,
+            fill: color,
+            fontFamily: fontFamily,
+            fontWeight: fontWeight,
+            width: 400 * canvasScale,
+            textAlign: isRTL ? 'right' : 'left',
+            direction: isRTL ? 'rtl' : 'ltr',
+            fieldKey: fieldKey,
+            selectable: editorMode,
+            evented: editorMode,
+            hasControls: true,
+            hasBorders: true,
+            lockRotation: true,
+        borderColor: '#28c76f',
+        cornerColor: '#28c76f',
+            cornerSize: 8,
+            transparentCorners: false
+        });
+        
+        fabricCanvas.add(text);
+        text.bringToFront();  // Ensure text is on top
+        recordFieldPositionFromObject(text);
+    });
+    
+    // Add QR code rectangle with better visibility
+    const qrX = parseFloat(document.querySelector('input[name="qr_x"]')?.value || 6.9);
+    const qrY = parseFloat(document.querySelector('input[name="qr_y"]')?.value || 1.2);
+    const qrSize = parseFloat(document.querySelector('input[name="qr_size"]')?.value || 5);
+    
+    // Create QR code rectangle - SIMPLIFIED for reliability
+    const qrRect = new fabric.Rect({
+        left: qrX * perCmX * canvasScale,
+        top: qrY * perCmY * canvasScale,
+        width: qrSize * perCmX * canvasScale,
+        height: qrSize * perCmY * canvasScale,
+        fill: 'rgba(40, 199, 111, 0.15)',
+        stroke: '#28c76f',
+        strokeWidth: 3,
+        strokeDashArray: [8, 4],
+        fieldKey: 'qr',
+        selectable: editorMode,
+        evented: editorMode,
+        borderColor: '#28c76f',
+        cornerColor: '#28c76f',
+        cornerSize: 10,
+        transparentCorners: false,
+        lockRotation: true
+    });
+    
+    // Add "QR CODE" label text
+    const qrText = new fabric.Text('QR CODE', {
+        left: (qrX * perCmX * canvasScale) + (qrSize * perCmX * canvasScale / 2),
+        top: (qrY * perCmY * canvasScale) + (qrSize * perCmY * canvasScale / 2),
+        fontSize: Math.max(12 * canvasScale, 10),
+        fill: '#28c76f',
+        fontFamily: 'Arial',
+        fontWeight: 'bold',
+        originX: 'center',
+        originY: 'center',
+        selectable: false,
+        evented: false
+    });
+    
+    fabricCanvas.add(qrRect);
+    fabricCanvas.add(qrText);
+    recordQrPosition(qrRect);
+    fabricCanvas.renderAll();
+}
+
+// Update form fields when canvas object is moved
+function updateFormFieldsFromCanvas(obj) {
+    if (!obj.fieldKey) return;
+    
+    const perCmX = getPxPerCmX();
+    const perCmY = getPxPerCmY();
+    const xCm = (obj.left / canvasScale / perCmX).toFixed(2);
+    const yCm = (obj.top / canvasScale / perCmY).toFixed(2);
+    
+    if (obj.fieldKey === 'qr') {
+        document.querySelector('input[name="qr_x"]').value = xCm;
+        document.querySelector('input[name="qr_y"]').value = yCm;
+        
+        // Calculate size with scale
+        const sizeCm = (obj.width * obj.scaleX / canvasScale / perCmX).toFixed(2);
+        document.querySelector('input[name="qr_size"]').value = sizeCm;
+        recordQrPosition(obj);
+    } else {
+        document.querySelector(`input[name="field_x_${obj.fieldKey}"]`).value = xCm;
+        document.querySelector(`input[name="field_y_${obj.fieldKey}"]`).value = yCm;
+        
+        // Update font size if scaled
+        if (obj.scaleX !== 1 || obj.scaleY !== 1) {
+            const newFontSize = (obj.fontSize * obj.scaleX / canvasScale).toFixed(1);
+            document.querySelector(`input[name="field_font_size_${obj.fieldKey}"]`).value = newFontSize;
+        }
+        recordFieldPositionFromObject(obj);
+    }
+    
+    updatePositionIndicator(xCm, yCm);
+}
+
+let positionIndicatorTimeout = null;
+function updatePositionIndicator(x, y) {
+    const indicator = document.getElementById('positionIndicator');
+    const textEl = document.getElementById('positionIndicatorText');
+    if (!indicator || !textEl) return;
+    textEl.textContent = `X=${x}cm, Y=${y}cm`;
+    indicator.classList.add('show');
+    if (positionIndicatorTimeout) clearTimeout(positionIndicatorTimeout);
+    positionIndicatorTimeout = setTimeout(() => {
+        indicator.classList.remove('show');
+    }, 2500);
+}
+
+// Show coordinates while dragging
+function showFieldCoordinates(obj) {
+    const xCm = (obj.left / canvasScale / getPxPerCmX()).toFixed(2);
+    const yCm = (obj.top / canvasScale / getPxPerCmY()).toFixed(2);
+    // Could add a floating tooltip here if needed
+}
+
+// DEBUG: Add crosshair markers to show exact coordinates
+function addDebugMarkers() {
+    if (!fabricCanvas) return;
+    
+    // Remove existing debug markers
+    fabricCanvas.getObjects().forEach(function(obj) {
+        if (obj.debugMarker) {
+            fabricCanvas.remove(obj);
+        }
+    });
+    
+    // Find the QR rectangle on the canvas
+    let qrObj = null;
+    fabricCanvas.getObjects().forEach(function(obj) {
+        if (obj.fieldKey === 'qr' && obj.type === 'rect') {
+            qrObj = obj;
+        }
+    });
+    
+    if (qrObj) {
+        // Get actual position from the canvas object
+        const xPx = qrObj.left;
+        const yPx = qrObj.top;
+            const xCm = (xPx / canvasScale / getPxPerCmX()).toFixed(2);
+            const yCm = (yPx / canvasScale / getPxPerCmY()).toFixed(2);
+        
+        // Horizontal line
+        const hLine = new fabric.Line([xPx - 50, yPx, xPx + 50, yPx], {
+            stroke: 'red',
+            strokeWidth: 3,
+            selectable: false,
+            evented: false,
+            debugMarker: true
+        });
+        
+        // Vertical line
+        const vLine = new fabric.Line([xPx, yPx - 50, xPx, yPx + 50], {
+            stroke: 'red',
+            strokeWidth: 3,
+            selectable: false,
+            evented: false,
+            debugMarker: true
+        });
+        
+        // Label
+        const label = new fabric.Text(`QR Canvas: (${xCm}, ${yCm})cm`, {
+            left: xPx + 20,
+            top: yPx - 50,
+            fontSize: 14 * canvasScale,
+            fill: 'red',
+            fontWeight: 'bold',
+            selectable: false,
+            evented: false,
+            debugMarker: true,
+            backgroundColor: 'rgba(255,255,255,0.9)'
+        });
+        
+        fabricCanvas.add(hLine);
+        fabricCanvas.add(vLine);
+        fabricCanvas.add(label);
+    }
+    
+    fabricCanvas.renderAll();
+}
+
+// Update canvas when form fields change
+function updateCanvasFromForm() {
+    if (fabricCanvas) {
+        addTextFieldsToCanvas();
+    }
+}
+
+// Auto-update canvas when form inputs change
+let canvasUpdateTimeout;
+$(document).on('input change', '#step4 input[type="number"], #step4 input[type="color"], #step4 select', function() {
+    clearTimeout(canvasUpdateTimeout);
+    canvasUpdateTimeout = setTimeout(function() {
+        updateCanvasFromForm();
+    }, 300);
+});
+
+// Update canvas when example data changes in Step 3
+$(document).on('input', '.example-input', function() {
+    clearTimeout(canvasUpdateTimeout);
+    canvasUpdateTimeout = setTimeout(function() {
+        if (fabricCanvas) {
+            addTextFieldsToCanvas();
+        }
+    }, 500);
+});
+
+// Initialize canvas when entering Step 4
+function onEnterStep4() {
+    setTimeout(function() {
+        if (!fabricCanvas || !pdfImageUrl) {
+            loadPDFToCanvas();
+        } else {
+            updateCanvasFromForm();
+        }
+        
+        // Auto-enable editing mode when entering Step 4
+        if (!editorMode) {
+            toggleEditorMode();
+        }
+    }, 300);
+}
+
+// =============================================================================
+// END OF VISUAL EDITOR
+// =============================================================================
+
+function updateAdvancedPreview() {
+    const formData = new FormData();
+    const pdfFile = $('#id_pdf_file')[0].files[0];
+    const fieldsConfigEl = document.getElementById('example-fields-container');
+    const fieldsConfig = fieldsConfigEl ? safeJSONParse(fieldsConfigEl.getAttribute('data-fields-config'), {}) : {};
+    
+    if (pdfFile) {
+        formData.append('pdf_file', pdfFile);
+    } else if (isEdit && templateId !== 'null' && templatePdfUrl) {
+        formData.append('template_id', templateId);
+        formData.append('pdf_url', templatePdfUrl);
+    } else {
+        $('#previewError').text('يرجى تحميل ملف PDF').show();
+        return;
+    }
+    
+    // Build active fields and example data
+    let activeFields = {};
+    let fieldSettings = {};
+    const designerWidth = getCurrentPageWidthCm();
+    const designerHeight = getCurrentPageHeightCm();
+    const designerWidthPx = parseFloat($('#designer_page_width_px').val()) || pdfOriginalWidth || null;
+    const designerHeightPx = parseFloat($('#designer_page_height_px').val()) || pdfOriginalHeight || null;
+    $('.field-checkbox:checked').each(function() {
+        const fieldKey = $(this).attr('name').replace('field_active_', '');
+        activeFields[fieldKey] = true;
+        
+        formData.append(`example_${fieldKey}`, $(`#example_${fieldKey}`).val() || '');
+        
+        const positionState = fieldPositionState[fieldKey] || {};
+        fieldSettings[fieldKey] = {
+            x: parseFloat($(`input[name="field_x_${fieldKey}"]`).val()) || 15,
+            y: parseFloat($(`input[name="field_y_${fieldKey}"]`).val()) || 10,
+            font_size: parseFloat($(`input[name="field_font_size_${fieldKey}"]`).val()) || 18,
+            font_name: $(`select[name="field_font_${fieldKey}"]`).val() || 'IBM_Plex_Sans_Arabic_Regular',
+            font_color: $(`input[name="field_color_${fieldKey}"]`).val() || '#000000',
+            text_direction: (fieldsConfig[fieldKey]?.direction) || 'rtl',
+            base_width_cm: designerWidth,
+            base_height_cm: designerHeight,
+            base_width_px: positionState.baseWidthPx || designerWidthPx,
+            base_height_px: positionState.baseHeightPx || designerHeightPx,
+            x_px: typeof positionState.xPx === 'number' ? positionState.xPx : null,
+            y_px: typeof positionState.yPx === 'number' ? positionState.yPx : null,
+            box_width_px: typeof positionState.widthPx === 'number' ? positionState.widthPx : null,
+            box_height_px: typeof positionState.heightPx === 'number' ? positionState.heightPx : null,
+            font_size_px: typeof positionState.fontSizePx === 'number' ? positionState.fontSizePx : null,
+            text_anchor: 'left',
+            enabled: true
+        };
+    });
+    
+    formData.append('settings', JSON.stringify({
+        active_fields: activeFields,
+        field_settings: fieldSettings,
+        qr_settings: {
+            x: parseFloat($('input[name="qr_x"]').val()) || 6.9,
+            y: parseFloat($('input[name="qr_y"]').val()) || 1.2,
+            size: parseFloat($('input[name="qr_size"]').val()) || 5,
+            rotation_angle: parseFloat($('input[name="qr_rotation"]').val()) || 0,
+            base_width_cm: designerWidth,
+            base_height_cm: designerHeight,
+            base_width_px: (qrPositionState && qrPositionState.baseWidthPx) || designerWidthPx,
+            base_height_px: (qrPositionState && qrPositionState.baseHeightPx) || designerHeightPx,
+            x_px: qrPositionState && typeof qrPositionState.xPx === 'number' ? qrPositionState.xPx : null,
+            y_px: qrPositionState && typeof qrPositionState.yPx === 'number' ? qrPositionState.yPx : null,
+            size_px: qrPositionState && typeof qrPositionState.sizePx === 'number' ? qrPositionState.sizePx : null
+        }
+    }));
+    
+    formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+    
+    var previewUrl = '{% url "advanced_template_preview" %}';
+    fetch(previewUrl, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.preview_url) {
+            $('#previewFrame').attr('data', data.preview_url);
+            $('#finalPreviewFrame').attr('data', data.preview_url);
+            $('#previewError').hide();
+        } else {
+            $('#previewError').text(data.error || 'خطأ في التوليد').show();
+        }
+    })
+    .catch(error => {
+        $('#previewError').text('حدث خطأ: ' + error).show();
+    });
+}
+
+function submitAdvancedForm() {
+    Swal.fire({
+        title: 'تأكيد الحفظ',
+        text: 'هل أنت متأكد من حفظ القالب المتقدم؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، احفظ',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#advancedTemplateForm').submit();
+        }
+    });
+}
+</script>
+{% endblock %}
+

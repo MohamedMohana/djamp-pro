@@ -1,0 +1,237 @@
+{% extends 'new_template/base.html' %}
+
+{% block title %}تعديل صلاحيات {{ role.name_ar }}{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">تعديل صلاحيات: {{ role.name_ar }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">اسم الصلاحية بالعربي</label>
+                                    <input type="text" class="form-control" value="{{ role.name_ar }}" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">اسم الصلاحية بالإنجليزي</label>
+                                    <input type="text" class="form-control" value="{{ role.name_en }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <!-- Templates Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات القوالب</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_view_templates" {% if role.can_view_templates %}checked{% endif %}>
+                                            <label class="form-check-label">عرض القوالب</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_create_templates" {% if role.can_create_templates %}checked{% endif %}>
+                                            <label class="form-check-label">إنشاء القوالب</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_edit_templates" {% if role.can_edit_templates %}checked{% endif %}>
+                                            <label class="form-check-label">تعديل القوالب</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" name="can_delete_templates" {% if role.can_delete_templates %}checked{% endif %}>
+                                            <label class="form-check-label">حذف القوالب</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Certificates Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات الشهادات</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_view_certificates" {% if role.can_view_certificates %}checked{% endif %}>
+                                            <label class="form-check-label">عرض الشهادات</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_create_certificates" {% if role.can_create_certificates %}checked{% endif %}>
+                                            <label class="form-check-label">إنشاء الشهادات</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" name="can_verify_certificates" {% if role.can_verify_certificates %}checked{% endif %}>
+                                            <label class="form-check-label">التحقق من الشهادات</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Advanced Admin Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات المشرف المتقدم</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_view_advanced_templates" {% if role.can_view_advanced_templates %}checked{% endif %}>
+                                            <label class="form-check-label">عرض القوالب المتقدمة</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_create_advanced_templates" {% if role.can_create_advanced_templates %}checked{% endif %}>
+                                            <label class="form-check-label">إنشاء القوالب المتقدمة</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_edit_advanced_templates" {% if role.can_edit_advanced_templates %}checked{% endif %}>
+                                            <label class="form-check-label">تعديل القوالب المتقدمة</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_delete_advanced_templates" {% if role.can_delete_advanced_templates %}checked{% endif %}>
+                                            <label class="form-check-label">حذف القوالب المتقدمة</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_view_advanced_certificates" {% if role.can_view_advanced_certificates %}checked{% endif %}>
+                                            <label class="form-check-label">عرض الشهادات المتقدمة</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" name="can_create_advanced_certificates" {% if role.can_create_advanced_certificates %}checked{% endif %}>
+                                            <label class="form-check-label">إنشاء الشهادات المتقدمة</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Users Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات المستخدمين</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_view_users" {% if role.can_view_users %}checked{% endif %}>
+                                            <label class="form-check-label">عرض المستخدمين</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_create_users" {% if role.can_create_users %}checked{% endif %}>
+                                            <label class="form-check-label">إنشاء المستخدمين</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_edit_users" {% if role.can_edit_users %}checked{% endif %}>
+                                            <label class="form-check-label">تعديل المستخدمين</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" name="can_delete_users" {% if role.can_delete_users %}checked{% endif %}>
+                                            <label class="form-check-label">حذف المستخدمين</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Roles Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات الأدوار</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_view_roles" {% if role.can_view_roles %}checked{% endif %}>
+                                            <label class="form-check-label">عرض الصلاحيات</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_create_roles" {% if role.can_create_roles %}checked{% endif %}>
+                                            <label class="form-check-label">إنشاء الصلاحيات</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_edit_roles" {% if role.can_edit_roles %}checked{% endif %}>
+                                            <label class="form-check-label">تعديل الصلاحيات</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" name="can_delete_roles" {% if role.can_delete_roles %}checked{% endif %}>
+                                            <label class="form-check-label">حذف الصلاحيات</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Transcript Templates Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات قوالب السجلات</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_view_transcript_templates" {% if role.can_view_transcript_templates %}checked{% endif %}>
+                                            <label class="form-check-label">عرض قوالب السجلات</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_create_transcript_templates" {% if role.can_create_transcript_templates %}checked{% endif %}>
+                                            <label class="form-check-label">إنشاء قوالب السجلات</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_edit_transcript_templates" {% if role.can_edit_transcript_templates %}checked{% endif %}>
+                                            <label class="form-check-label">تعديل قوالب السجلات</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" name="can_delete_transcript_templates" {% if role.can_delete_transcript_templates %}checked{% endif %}>
+                                            <label class="form-check-label">حذف قوالب السجلات</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Transcripts Permissions -->
+                            <div class="col-md-6 col-lg-3 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">صلاحيات السجلات</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" name="can_view_transcripts" {% if role.can_view_transcripts %}checked{% endif %}>
+                                            <label class="form-check-label">عرض السجلات</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" name="can_create_transcripts" {% if role.can_create_transcripts %}checked{% endif %}>
+                                            <label class="form-check-label">إنشاء السجلات</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary me-2">حفظ التغييرات</button>
+                            <a href="{% url 'role_list' %}" class="btn btn-label-secondary">إلغاء</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

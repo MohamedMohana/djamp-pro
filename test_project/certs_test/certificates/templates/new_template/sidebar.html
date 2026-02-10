@@ -1,0 +1,172 @@
+<!-- Menu -->
+{% load static %}
+{% load permission_tags %}
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+    <div class="app-brand demo mt-3">
+        <a href="#" class="app-brand-link">
+            <span class="app-brand-logo">
+                <img class="h-px-30" src="{% static 'assets/img/logo/KKU--NEW--Logo.svg' %}">
+                <!-- <img class="h-px-30" src="https://myfiles.kku.edu.sa/public/kkuLogo/kku-logo-white.svg"> -->
+            </span>
+            <span class="app-brand-text demo menu-text fw-bold">الشهادات المتعمدة</span>
+        </a>
+
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+            <i class="ti menu-toggle-icon d-none d-xl-block ti-sm align-middle"></i>
+            <i class="ti ti-x d-block d-xl-none ti-sm align-middle"></i>
+        </a>
+    </div>
+
+    <div class="menu-inner-shadow"></div>
+
+    <ul class="menu-inner py-1">
+        <!-- Dashboard -->
+        <li class="menu-item">
+            <a href="{% url 'index' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-home"></i>
+                <div>لوحة التحكم</div>
+            </a>
+        </li>
+
+        <!-- Admin Section for both admin and super admin -->
+        {% if user.profile|has_role:'admin' or user.profile|is_super_admin %}
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">صلاحيات المشرف</span>
+        </li>
+        
+        {% if user.profile|has_perm:'can_create_certificates' %}
+        <li class="menu-item">
+            <a href="{% url 'create_certificate' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-certificate"></i>
+                <div>ارسال الشهادات</div>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% if user.profile|has_perm:'can_view_certificates' %}
+        <li class="menu-item">
+            <a href="{% url 'manage_certificates' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-file-certificate"></i>
+                <div>إدارة الشهادات</div>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% if user.profile|has_perm:'can_view_templates' %}
+        <li class="menu-item">
+            <a href="{% url 'template_list' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-template"></i>
+                <div>إدارة القوالب</div>
+            </a>
+        </li>
+        {% endif %}
+        {% endif %}
+        
+        <!-- Advanced Permissions -->
+        {% if user.profile|has_perm:'can_view_advanced_templates' or user.profile|has_perm:'can_view_advanced_certificates' %}
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">مشرف متقدم</span>
+        </li>
+        
+        {% if user.profile|has_perm:'can_create_advanced_certificates' %}
+        <li class="menu-item">
+            <a href="{% url 'advanced_create_certificate' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-certificate"></i>
+                <div>إرسال الشهادات المتقدمة</div>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% if user.profile|has_perm:'can_view_advanced_certificates' %}
+        <li class="menu-item">
+            <a href="{% url 'advanced_manage_certificates' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-file-certificate"></i>
+                <div>إدارة الشهادات المتقدمة</div>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% if user.profile|has_perm:'can_view_advanced_templates' %}
+        <li class="menu-item">
+            <a href="{% url 'advanced_template_list' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-template"></i>
+                <div>إدارة القوالب المتقدمة</div>
+            </a>
+        </li>
+        {% endif %}
+        {% endif %}
+        
+        <!-- Transcript Permissions (سجل المقررات) -->
+        {% if user.profile|has_perm:'can_view_transcript_templates' or user.profile|has_perm:'can_view_transcripts' or user.profile|is_super_admin %}
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">مشرف سجلات</span>
+        </li>
+        
+        {% if user.profile|has_perm:'can_create_transcripts' or user.profile|is_super_admin %}
+        <li class="menu-item">
+            <a href="{% url 'transcript_create' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-file-text"></i>
+                <div>إرسال السجلات</div>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% if user.profile|has_perm:'can_view_transcripts' or user.profile|is_super_admin %}
+        <li class="menu-item">
+            <a href="{% url 'transcript_manage' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-files"></i>
+                <div>إدارة السجلات</div>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% if user.profile|has_perm:'can_view_transcript_templates' or user.profile|is_super_admin %}
+        <li class="menu-item">
+            <a href="{% url 'transcript_template_list' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-layout-list"></i>
+                <div>إدارة قوالب السجلات</div>
+            </a>
+        </li>
+        {% endif %}
+        {% endif %}
+        
+        <!-- Certificate Verification (for non-admin or additional permissions) -->
+        {% if user.profile|has_perm:'can_verify_certificates' %}
+        <li class="menu-item">
+            <a href="{% url 'verify_certificate' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-checkup-list"></i>
+                <div>التحقق من شهادة</div>
+            </a>
+        </li>
+        {% endif %}
+        
+        <!-- Super Admin Additional System Management -->
+        {% if user.is_superuser and user.profile|is_super_admin %}
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">إدارة النظام</span>
+        </li>
+        
+        <li class="menu-item">
+            <a href="{% url 'role_list' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-shield-lock"></i>
+                <div>إدارة الصلاحيات</div>
+            </a>
+        </li>
+        
+        <li class="menu-item">
+            <a href="{% url 'user_list' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-users"></i>
+                <div>إدارة المستخدمين</div>
+            </a>
+        </li>
+
+        <li class="menu-item">
+            <a href="{% url 'superadmin_dashboard' %}" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-dashboard"></i>
+                <div>لوحة تحكم مدير النظام</div>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</aside>
+<!-- / Menu -->

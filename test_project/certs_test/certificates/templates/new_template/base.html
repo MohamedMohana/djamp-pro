@@ -1,0 +1,164 @@
+{% load static %}
+
+
+
+<!DOCTYPE html>
+<html lang="ar" class="light-style layout-navbar-fixed layout-menu-fixed" dir="rtl" data-theme="theme-default"
+data-assets-path="{% static 'assets' %}" data-template="vertical-menu-template">
+<!-- BEGIN: Head-->
+
+<head>
+{% comment %} this code below for Muneer {% endcomment %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.5.1/dropzone.css">
+
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=0,minimal-ui">
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <meta name="author" content="">
+    <title>{% block title %}Certfication{% endblock %}</title>
+    <!-- BEGIN: Custom Links For Individual Page-->
+    {% block head %}{% endblock %}
+    <!-- END: Custom Links For Individual Page-->
+
+    <!-- Favicon -->
+    <!-- <link rel="icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}" /> -->
+    <link rel="icon" type="image/x-icon" href="https://myfiles.kku.edu.sa/public/kkuLogo/kku-logo-ico.ico" />
+
+    <!-- Google Fonts -> IBM Plex Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Global Font Override -->
+    <style>
+        * {
+            font-family: 'IBM Plex Sans', 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        }
+    </style>
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="{% static 'vendor/fonts/fontawesome.css' %}" />
+    <link rel="stylesheet" href="{% static 'vendor/fonts/tabler-icons.css' %}" />
+    <link rel="stylesheet" href="{% static 'vendor/fonts/flag-icons.css' %}" />
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="{% static 'vendor/css/rtl/core.css' %}" class="template-customizer-core-css" />
+    <link rel="stylesheet" href="{% static 'vendor/css/rtl/theme-default.css' %}"
+        class="template-customizer-theme-css" />
+
+    <!-- Vendors CSS -->
+
+    <link rel="stylesheet" href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" />
+    <link rel="stylesheet" href="{% static 'vendor/libs/node-waves/node-waves.css' %}" />
+    <link rel="stylesheet" href="{% static 'vendor/libs/typeahead-js/typeahead.css' %}" />
+    <link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}" />
+    <link rel="stylesheet" href="{% static 'vendor/libs/swiper/swiper.css' %}" />
+    <link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+    <link rel="stylesheet"
+        href="{% static 'vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css' %}" />
+    <link rel="stylesheet"
+        href="{% static 'vendor/libs/datatables-checkboxes-jquery/datatables.checkboxes.css' %}" />
+    <link rel="stylesheet" href="{% static 'vendor/libs/bootstrap-select/bootstrap-select.css' %}" />
+    <link rel="stylesheet" href="{% static 'vendor/libs/select2/select2.css' %}" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bs-stepper/dist/css/bs-stepper.min.css" />
+
+    <!-- Page CSS -->
+    <link rel="stylesheet" href="{% static 'vendor/css/pages/cards-advance.css' %}" />
+    <!-- KKU CSS -->
+    <link rel="stylesheet" href="{% static 'css/app.css' %}" />
+    <!-- Stepper CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bs-stepper/dist/css/bs-stepper.min.css" />
+    <link rel="stylesheet" href="{% static 'assets/css/template-stepper.css' %}" />
+
+    <!-- Helpers -->
+    <script src="{% static 'vendor/js/helpers.js' %}"></script>
+
+    <!--! Template customizer & Theme config files MUST be included after core stylesheets and helpers.js in the <head> section -->
+    <!--? Template customizer: To hide customizer set displayCustomizer value false in config.js.  -->
+    <script src="{% static 'vendor/js/template-customizer.js' %}"></script>
+    <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
+    <script src="{% static 'js/config.js' %}"></script>
+
+    <!-- KKU JS -->
+    <script type="module" src="{% static 'js/custom.js' %}"></script>
+    <script src="https://unpkg.com/colorthief@2.3.2/dist/color-thief.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bs-stepper/dist/js/bs-stepper.min.js"></script>
+    <!-- Stepper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bs-stepper/dist/js/bs-stepper.min.js"></script>
+    <script src="{% static 'assets/js/template-stepper.js' %}"></script>
+
+    <Style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+        }
+    </Style>
+
+    <link rel="stylesheet" media="all" href="https://muneer.cx/static/v1/css/muneer.min.css" />
+    
+    <!-- Move Muneer trigger button to the left -->
+    <style>
+        .muneer-trigger-button-box {
+            right: auto !important;
+            left: 20px !important;
+        }
+    </style>
+
+</head>
+<!-- END: Head-->
+
+<!-- BEGIN: Body-->
+
+<body>
+    <!-- Layout wrapper -->
+    <div class="layout-wrapper layout-content-navbar">
+        <div class="layout-container">
+            <!-- Layout container -->
+            <div class="layout-page">
+                <!-- BEGIN: Header-->
+                {% include 'new_template/navbar.html' %}
+                <!-- END: Header-->
+
+
+
+                <!-- BEGIN: Main Menu-->
+                {% include 'new_template/sidebar.html' %}
+                <!-- END: Main Menu-->
+
+
+                <!-- BEGIN: Content-->
+                <div class="content-wrapper">
+                    {% block content %}{% endblock %}
+                </div>
+                <!-- END: Content-->
+
+                <div class="sidenav-overlay"></div>
+                <div class="drag-target"></div>
+
+                <!-- BEGIN: Footer-->
+                {% include 'new_template/footer.html' %}
+                <!-- END: Footer-->
+                <div class="content-backdrop fade"></div>
+            </div>
+            <!-- Content wrapper -->
+        </div>
+        <!-- / Layout page -->
+        <!-- Overlay -->
+        <div class="layout-overlay layout-menu-toggle"></div>
+
+        <!-- Drag Target Area To SlideIn Menu On Small Screens -->
+        <div class="drag-target"></div>
+    </div>
+    <!-- / Layout wrapper -->
+
+    <!-- yield scripts it's
+        optional section, if you want to add custom scripts for spacific page just use section scripts -->
+    {% block scripts %}{% endblock %}
+    <!-- End Scripts -->
+
+</body>
+<!-- END: Body-->
+
+</html>

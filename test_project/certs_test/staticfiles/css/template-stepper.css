@@ -1,0 +1,170 @@
+.bs-stepper {
+    background-color: #fff;
+    box-shadow: 0 2px 6px 0 rgba(67, 89, 113, 0.12);
+    border-radius: 0.5rem;
+}
+
+.bs-stepper .line {
+    flex: 0 1 auto !important;
+}
+
+.bs-stepper .bs-stepper-header {
+    padding: 1.5rem 1.5rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #d9dee3;
+}
+
+.bs-stepper .bs-stepper-header .line {
+    background-color: rgba(67, 89, 113, 0.4) !important;
+    min-height: 1px;
+    min-width: 50px;
+    margin: 0 1rem;
+}
+
+.bs-stepper .bs-stepper-header .step .step-trigger {
+    padding: 0;
+    flex-wrap: nowrap;
+    font-weight: 500;
+    color: #566a7f;
+}
+
+.bs-stepper .bs-stepper-header .step .step-trigger .bs-stepper-label {
+    margin: 0;
+    max-width: 224px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: start;
+    display: inline-grid;
+    font-weight: 600;
+}
+
+.bs-stepper .bs-stepper-header .step .step-trigger .bs-stepper-label .bs-stepper-title {
+    font-size: 0.9375rem;
+    line-height: 1;
+    font-weight: 500;
+}
+
+.bs-stepper .bs-stepper-header .step .step-trigger .bs-stepper-label .bs-stepper-subtitle {
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+.bs-stepper .bs-stepper-header .step .step-trigger:hover {
+    background-color: transparent;
+}
+
+.bs-stepper .bs-stepper-header .step.active .step-trigger {
+    color: #696cff;
+}
+
+.bs-stepper .bs-stepper-header .step.crossed .step-trigger {
+    color: #566a7f;
+}
+
+.bs-stepper.wizard-numbered {
+    counter-reset: number;
+}
+
+.bs-stepper.wizard-numbered .step .step-trigger {
+    position: relative;
+    padding: 0.625rem;
+}
+
+.bs-stepper.wizard-numbered .step .step-trigger .bs-stepper-label {
+    padding-left: 2.5rem;
+}
+
+.bs-stepper.wizard-numbered .step .step-trigger:before {
+    content: counter(number, decimal);
+    counter-increment: number;
+    position: absolute;
+    left: 0;
+    top: 0.375rem;
+    height: 1.875rem;
+    width: 1.875rem;
+    border-radius: 50%;
+    background-color: rgba(105, 108, 255, 0.16);
+    color: #696cff;
+    box-shadow: 0 2px 6px 0 rgba(105, 108, 255, 0.48);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9375rem;
+}
+
+.bs-stepper.wizard-numbered .step.done .step-trigger:before {
+    background-color: rgba(105, 108, 255, 0.08);
+    color: #696cff;
+    box-shadow: none;
+    content: "✓";
+}
+
+.bs-stepper.wizard-numbered .step.active .step-trigger:before {
+    background-color: #696cff;
+    color: #fff;
+    box-shadow: 0 2px 6px 0 rgba(105, 108, 255, 0.48);
+}
+
+.bs-stepper .bs-stepper-content {
+    padding: 1.5rem 1.5rem;
+}
+
+.bs-stepper.vertical .bs-stepper-header {
+    border-right: 1px solid #d9dee3;
+    border-bottom: none;
+}
+
+.bs-stepper.vertical .bs-stepper-content {
+    width: 100%;
+}
+
+.bs-stepper.vertical .line {
+    display: none;
+}
+
+.bs-stepper.vertical.wizard-numbered .step .step-trigger {
+    padding: 0.5rem 1rem;
+}
+
+@media (max-width: 991.98px) {
+    .bs-stepper .bs-stepper-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .bs-stepper .bs-stepper-header .step .step-trigger {
+        padding: 0.5rem 0;
+    }
+    .bs-stepper .bs-stepper-header .line {
+        display: none;
+    }
+    .bs-stepper.vertical {
+        flex-direction: column;
+    }
+    .bs-stepper.vertical .bs-stepper-header {
+        align-items: flex-start;
+    }
+    .bs-stepper.vertical .bs-stepper-content {
+        padding-top: 1.5rem;
+    }
+}
+
+.step-content {
+    display: none;
+}
+
+.step-content.active {
+    display: block;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

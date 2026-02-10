@@ -1,0 +1,307 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+
+/* ===================================
+    02. Reset
+====================================== */
+html {font-size: 15px;}
+body {font-family: 'IBM Plex Sans', 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; font-smoothing: antialiased; font-size:14px; color:#6f6f6f; font-weight: 400;line-height: 24px;}
+/* heading */
+h1, h2, h3, h4, h5, h6 {margin:0 0 15px; padding:0; letter-spacing: 0; font-weight: 400;}
+h1 {font-size: 45px;line-height: 70px;font-weight: 500;line-height: 70px;}
+h2 {font-size:35px; line-height:40px}
+h3 {font-size:28px; line-height:32px}
+h4 {font-size:20px; line-height:26px}
+h5 {font-size:18px; line-height:20px}
+h6 {font-size:15px; line-height:18px}
+p{font-size:15px;}
+
+
+
+
+
+.cls-1,.cls-10,.cls-11,.cls-12,.cls-2,.cls-4,.cls-5,.cls-6,.cls-7,.cls-8,.cls-9{fill-rule:evenodd;}.cls-1{fill:url(#linear-gradient);}.cls-2{fill:url(#linear-gradient-2);}.cls-3{fill:#fff;}.cls-4{fill:url(#linear-gradient-3);}.cls-5{fill:url(#linear-gradient-4);}.cls-6{fill:url(#linear-gradient-5);}.cls-7{fill:url(#linear-gradient-6);}.cls-8{fill:url(#linear-gradient-7);}.cls-9{fill:url(#linear-gradient-8);}.cls-10{fill:url(#linear-gradient-9);}.cls-11{fill:url(#linear-gradient-10);}.cls-12{fill:url(#linear-gradient-11);}
+
+.cls-1:hover,
+.cls-2:hover,
+.cls-3:hover,
+.cls-4:hover,
+.cls-5:hover,
+.cls-6:hover,
+.cls-7:hover,
+.cls-8:hover,
+.cls-9:hover,
+.cls-10:hover,
+.cls-11:hover,
+.cls-12:hover,
+.cls-13:hover,
+.cls-14:hover,
+.cls-15:hover,
+.cls-16:hover,
+.cls-17:hover,
+.cls-18:hover,
+.cls-19:hover,
+.cls-20:hover,
+.cls-21:hover,
+.cls-23:hover,
+.cls-24:hover,
+.cls-25:hover,
+.cls-26:hover
+{
+    opacity:60%;
+}
+
+
+.area{
+    background: #ECE9E6;  /* fallback for old browsers */
+background: -webkit-linear-gradient(to right, #FFFFFF, #ECE9E6);  /* Chrome 10-25, Safari 5.1-6 */
+background: linear-gradient(to right, #FFFFFF, #ECE9E6); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+      width: 100%;
+    height:100%;
+    
+   
+}
+
+.circles{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.circles li{
+    position: absolute;
+    display: block;
+    list-style: none;
+    width: 20px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    animation: animate 25s linear infinite;
+    bottom: -150px;
+    
+}
+
+.circles li:nth-child(1){
+    left: 25%;
+    width: 80px;
+    height: 80px;
+    animation-delay: 0s;
+}
+
+
+.circles li:nth-child(2){
+    left: 10%;
+    width: 20px;
+    height: 20px;
+    animation-delay: 2s;
+    animation-duration: 12s;
+}
+
+.circles li:nth-child(3){
+    left: 70%;
+    width: 20px;
+    height: 20px;
+    animation-delay: 4s;
+}
+
+.circles li:nth-child(4){
+    left: 40%;
+    width: 60px;
+    height: 60px;
+    animation-delay: 0s;
+    animation-duration: 18s;
+}
+
+.circles li:nth-child(5){
+    left: 65%;
+    width: 20px;
+    height: 20px;
+    animation-delay: 0s;
+}
+
+.circles li:nth-child(6){
+    left: 75%;
+    width: 110px;
+    height: 110px;
+    animation-delay: 3s;
+}
+
+.circles li:nth-child(7){
+    left: 35%;
+    width: 150px;
+    height: 150px;
+    animation-delay: 7s;
+}
+
+.circles li:nth-child(8){
+    left: 50%;
+    width: 25px;
+    height: 25px;
+    animation-delay: 15s;
+    animation-duration: 45s;
+}
+
+.circles li:nth-child(9){
+    left: 20%;
+    width: 15px;
+    height: 15px;
+    animation-delay: 2s;
+    animation-duration: 35s;
+}
+
+.circles li:nth-child(10){
+    left: 85%;
+    width: 150px;
+    height: 150px;
+    animation-delay: 0s;
+    animation-duration: 11s;
+}
+
+
+
+@keyframes animate {
+
+    0%{
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+        border-radius: 0;
+    }
+
+    100%{
+        transform: translateY(-1000px) rotate(720deg);
+        opacity: 0;
+        border-radius: 50%;
+    }
+
+}
+
+
+.btn{
+    font-size: 15px;
+}
+.btn-custom{
+    color:#fff;
+    text-align: center;
+    padding: 20px;
+  }
+  .btn-custom{
+    text-align: center;
+    cursor: pointer;
+    margin: 0 0 0 100px;
+  }
+    
+.btn-custom {
+    border-radius: 10px;
+    color:#fff;
+    background-color: #428176;
+    border: none;
+    padding: 20px;
+    transition: all 0.5s;
+  }
+  
+  
+  .btn-custom span {
+    cursor: pointer;
+    display: inline-block;
+    position: relative;
+    transition: 0.5s;
+    color:#fff;
+  }
+  
+  .btn-custom span:after {
+    content: ' »';
+    position: absolute;
+    opacity: 0;
+    top: 0;
+    left: -20px;
+    transition: 0.5s;
+    color:#fff;
+  }
+  
+  .btn-custom:hover span {
+    padding-left: 25px;
+  }
+  
+  .btn-custom:hover span:after {
+    opacity: 1;
+    left: 0;
+  }
+  .btn-nic-login img {
+    width: 10%;
+}
+.btn-nic-login{
+    border: 1px solid #34696794;
+    border-radius: 10px;
+    color: #346967;
+}
+.btn-nic-login:hover{
+    border: 1px solid #3469677c;
+    background-color: #43817626;
+    color: #346967;
+}
+.background-image {
+    position: absolute;
+    height: 100%;
+    width: auto;
+    overflow: hidden;
+}
+@media screen and (min-width:800px) {
+    .login-card {
+        width: 60%;
+        height: 100%;
+        padding: 50px 100px;
+        display: flex;
+        justify-content: center;
+        align-content: center;
+        border: none;
+    }
+}
+@media screen and (min-width:1000px) {
+    .login-card {
+        width: 40%;
+        height: 100%;
+        padding: 50px 100px;
+        display: flex;
+        justify-content: center;
+        align-content: center;
+        border: none;
+    }
+  .background-image{
+    width: auto;
+    min-height: 100%;
+    min-width: 100%;
+  }
+}
+@media screen and (max-width:800px) {
+    .login-card {
+        width: 500px;
+        margin: auto;
+        padding: 30px;
+        text-align: center;
+        border: none;
+        border-radius: 10px;
+    }
+  .background-image{
+    width: auto;
+    min-width: 130%;
+    min-height: 100%;
+    margin: 0 auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+@media screen and (max-width:450px) {
+    .login-card {
+        width: 350px;
+    }
+  h2 {
+    font-size: 30px;
+    line-height: 35px;
+}
+  .btn-nic-login img {
+    width: 15%;
+}
+}

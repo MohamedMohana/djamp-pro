@@ -1,0 +1,216 @@
+{% extends 'new_template/base.html' %}
+
+{% block title %}إدارة الشهادات المتقدمة{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="content-overlay"></div>
+    <div class="header-navbar-shadow"></div>
+    <div class="container"> 
+        <div class="content-wrapper">
+            <div class="content-header row">
+                <div class="content-header-left col-md-9 col-12 mb-2">
+                    <div class="row breadcrumbs-top">
+                        <div class="col-12">
+                            <h4 class="content-header-title float-left mb-0 mt-4">إدارة الشهادات المتقدمة والتحميلها</h4>
+                            <div class="breadcrumb-wrapper">
+                                <ol class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'index' %}">لوحة التحكم</a></li>
+                                    <li class="breadcrumb-item">إدارة الشهادات المتقدمة</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-body">
+                <section id="basic-datatable">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4 class="card-title">شهادات</h4>
+                                </div>
+                                <div class="card-content">
+                                    <div class="card-body card-dashboard">
+                                        <form method="get" class="mb-3">
+                                            <div class="input-group">
+                                                <input type="text" name="q" class="form-control" placeholder="ابحث عن شهادة..." value="{{ request.GET.q }}">
+                                                <button class="btn btn-primary" type="submit">بحث</button>
+                                            </div>
+                                        </form>
+                                        <div class="table-responsive">
+                                            <table class="table" id="certificatesTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col">#</th>
+                                                        <th scope="col">تاريخ الإصدار</th>
+                                                        <th scope="col">الاسم</th>
+                                                        <th scope="col">القالب</th>
+                                                        <th scope="col">البريد</th>
+                                                        <th scope="col">هاش الشهادة</th>
+                                                        <th scope="col">ملف الإخراج</th>
+                                                        <th scope="col">أنشئت بواسطة</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for cert in certificates %}
+                                                    <tr>
+                                                        <th scope="row"></th>
+                                                        <td>{{ cert.date|date:"Y-m-d" }}</td>
+                                                        <td>{{ cert.get_display_name }}</td>
+                                                        <td>{{ cert.template.get_display_name }}</td>
+                                                        <td>{{ cert.email|default:"—" }}</td>
+                                                        <td>
+                                                            <span class="truncated-hash">{{ cert.certificate_hash|truncatechars:20 }}</span>
+                                                            <span class="full-hash d-none">{{ cert.certificate_hash }}</span>
+                                                        </td>
+                                                        <td>
+                                                            <a href="{% url 'advanced_download_certificate' cert.certificate_hash %}" class="btn btn-sm btn-primary" target="_blank">
+                                                                <i class="ti ti-download"></i> تحميل الشهادة
+                                                            </a>
+                                                        </td>
+                                                        <td>{{ cert.created_by }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Pagination Controls -->
+                                        <div class="text-center mt-3">
+                                        <nav aria-label="Page navigation">
+                                            <ul class="pagination justify-content-center">
+                                            {% if certificates.has_previous %}
+                                                <li class="page-item">
+                                                <a class="page-link" href="?page={{ certificates.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">السابق</a>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item disabled">
+                                                <span class="page-link">السابق</span>
+                                                </li>
+                                            {% endif %}
+
+                                            {# If the current page is beyond page 3, show first page and ellipsis #}
+                                            {% if certificates.number > 3 %}
+                                                <li class="page-item">
+                                                <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">1</a>
+                                                </li>
+                                                {% if certificates.number > 4 %}
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                                {% endif %}
+                                            {% endif %}
+
+                                            {# Show pages around the current page #}
+                                            {% for num in certificates.paginator.page_range %}
+                                                {% if num >= certificates.number|add:"-2" and num <= certificates.number|add:"2" %}
+                                                {% if num == certificates.number %}
+                                                    <li class="page-item active">
+                                                    <span class="page-link">{{ num }}</span>
+                                                    </li>
+                                                {% else %}
+                                                    <li class="page-item">
+                                                    <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+                                                    </li>
+                                                {% endif %}
+                                                {% endif %}
+                                            {% endfor %}
+
+                                            {# If the current page is before the last 3 pages, show ellipsis and last page #}
+                                            {% if certificates.number < certificates.paginator.num_pages|add:"-2" %}
+                                                {% if certificates.number < certificates.paginator.num_pages|add:"-3" %}
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                                {% endif %}
+                                                <li class="page-item">
+                                                <a class="page-link" href="?page={{ certificates.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ certificates.paginator.num_pages }}</a>
+                                                </li>
+                                            {% endif %}
+
+                                            {% if certificates.has_next %}
+                                                <li class="page-item">
+                                                <a class="page-link" href="?page={{ certificates.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">التالي</a>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item disabled">
+                                                <span class="page-link">التالي</span>
+                                                </li>
+                                            {% endif %}
+                                            </ul>
+                                        </nav>
+                                        </div>
+
+
+                                        <!-- Toggle Hash Button -->
+                                        <div class="text-center mt-3">
+                                            <button id="toggle-hash-button" class="btn btn-primary">عرض الهاش بالكامل</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    var certificates_start_index = parseInt("{{ certificates.start_index|default:1 }}");
+    $(document).ready(function() {
+        var table = $('#certificatesTable').DataTable({
+            "paging": false,
+            "searching": false,
+            "language": {
+                "emptyTable": "لا توجد شهادات متاحة",
+                "zeroRecords": "لا توجد شهادات متاحة",
+                "info": "عرض _START_ إلى _END_ من _TOTAL_ شهادة",
+                "infoEmpty": "عرض 0 إلى 0 من 0 شهادة",
+                "infoFiltered": "(تمت التصفية من _MAX_ شهادة)",
+                "lengthMenu": "عرض _MENU_ شهادات",
+                "loadingRecords": "جارٍ التحميل...",
+                "processing": "جارٍ التحميل...",
+                "search": "بحث:",
+                "paginate": {
+                    "first": "الأول",
+                    "last": "الأخير",
+                    "next": "التالي",
+                    "previous": "السابق"
+                }
+            },
+            "order": [[0, "desc"]],
+            "autoWidth": false,
+            "responsive": true
+        });
+
+        // Add row numbers with correct start index
+        table.on('order.dt search.dt', function () {
+            table.column(0, {search:'applied', order:'applied'}).nodes().each(function (cell, i) {
+                cell.innerHTML = i + certificates_start_index;
+            });
+        }).draw();
+
+        // Toggle hash functionality
+        const toggleHashButton = document.getElementById('toggle-hash-button');
+        const truncatedHashes = document.querySelectorAll('.truncated-hash');
+        const fullHashes = document.querySelectorAll('.full-hash');
+
+        toggleHashButton.addEventListener('click', function() {
+            truncatedHashes.forEach(function(hash) {
+                hash.classList.toggle('d-none');
+            });
+            fullHashes.forEach(function(hash) {
+                hash.classList.toggle('d-none');
+            });
+            toggleHashButton.innerText = toggleHashButton.innerText === 'عرض الهاش بالكامل' ? 'إخفاء الهاش الكامل' : 'عرض الهاش بالقصر';
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

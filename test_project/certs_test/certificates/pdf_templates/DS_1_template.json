@@ -1,0 +1,26 @@
+{
+    "font_name": "majallab",
+    "font_file": "majallab.ttf",
+    "font_color":[0,162,162],
+    "name": {
+        "x": 17,
+        "y": 12,
+        "font_size": 25
+    },
+    "course_name": {
+        "x": 30,
+        "y": 30,
+        "font_size": 20
+    },
+    "date_text": {
+        "x": 0,
+        "y": 0,
+        "font_size": 15
+    },
+    "qr_code": {
+        "x": 13,
+        "y": 1,
+        "size": 2.7,
+        "rotation_angle": 0
+    }
+}

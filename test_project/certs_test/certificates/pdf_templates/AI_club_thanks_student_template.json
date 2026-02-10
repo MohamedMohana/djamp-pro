@@ -1,0 +1,26 @@
+{
+    "font_name": "din-next-lt-w23-bold",
+    "font_file": "din-next-lt-w23-bold.ttf",
+    "font_color":[43,48,139],
+    "name": {
+        "x": 17,
+        "y": 11.5,
+        "font_size": 25
+    },
+    "course_name": {
+        "x": 0,
+        "y": 0,
+        "font_size": 18
+    },
+    "date_text": {
+        "x": 0,
+        "y": 0,
+        "font_size": 18
+    },
+    "qr_code": {
+        "x": 12,
+        "y": 3,
+        "size": 3,
+        "rotation_angle": 0
+    }
+}

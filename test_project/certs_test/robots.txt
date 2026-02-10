@@ -1,0 +1,25 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /media/
+Disallow: /static/
+Disallow: /staticfiles/
+Disallow: /block_listed/
+Disallow: /pdf_templates/
+Disallow: /collected_static/
+Disallow: /nafath/
+Disallow: /accounts/
+Disallow: /manage/
+Disallow: /template/
+Disallow: /roles/
+Disallow: /users/
+Disallow: /sysdashboard/
+Disallow: /success_redirect/
+Disallow: /create/
+Disallow: /download-certificate/
+Disallow: /verify/
+Disallow: /iam_callback/
+Disallow: /nafath_login/
+Disallow: /api/
+
+# Allow everything else
+Allow: / 

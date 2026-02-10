@@ -1,0 +1,482 @@
+{% extends 'new_template/base.html' %}
+
+{% block title %}إنشاء الشهادات المتقدمة وإرسالها{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+        <div class="content-overlay"></div>
+        <div class="header-navbar-shadow"></div>
+        <div class="content-wrapper">
+
+            <div id="loading" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+                <div style="background-color: #fff; padding: 20px; border-radius: 10px; text-align: center;">
+                    <div>الرجاء الانتظار حتى تتم عملية الإرسال. لا تغلق أو تحدث الصفحة</div>
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+            </div>
+
+            <div class="content-header row">
+                <div class="content-header-left col-md-9 col-12 mb-2">
+                    <div class="row breadcrumbs-top">
+                        <div class="col-12">
+                            <h4 class="content-header-title float-left mb-0">إنشاء الشهادات المتقدمة وإرسالها</h4>
+                            <div class="breadcrumb-wrapper">
+                                <ol class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'index' %}">لوحة التحكم</a></li>
+                                    <li class="breadcrumb-item">إنشاء الشهادة المتقدمة</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="content-body">
+                {% if messages %}
+                  {% for message in messages %}
+                    {% if message.tags == 'success' %}
+                      <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <h4 class="alert-heading"><i class="ti ti-check"></i> نجاح</h4>
+                        <p>{{ message }}</p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                      </div>
+                    {% elif message.tags == 'error' %}
+                      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <h4 class="alert-heading"><i class="ti ti-alert-triangle"></i> خطأ</h4>
+                        <p>{{ message }}</p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                      </div>
+                    {% elif message.tags == 'warning' %}
+                      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <h4 class="alert-heading"><i class="ti ti-alert-circle"></i> تنبيه</h4>
+                        <p>{{ message }}</p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                      </div>
+                    {% else %}
+                      <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <p>{{ message }}</p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                      </div>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+                
+                {% if form.non_field_errors %}
+                  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <h4 class="alert-heading"><i class="ti ti-alert-triangle"></i> خطأ في النموذج</h4>
+                    <ul class="mb-0">
+                      {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                      {% endfor %}
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                {% endif %}
+                
+                <section id="basic-vertical-layouts">
+                    <div class="row match-height">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4 class="card-title">إنشاء شهادة متقدمة</h4>
+                                </div>
+                                <div class="card-content">
+                                    <div class="card-body">
+                                        <form id="advancedCertForm" class="needs-validation" method="POST" enctype="multipart/form-data" novalidate>
+                                            {% csrf_token %}
+                                            
+                                            <!-- Template Selection -->
+                                            <div class="row justify-content-center">
+                                                <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                                    <label for="{{ form.template.id_for_label }}" class="form-label">القالب</label>
+                                                    {{ form.template }}
+                                                </div>
+                                            </div>
+
+                                            
+                                            <!-- Input Method Selection -->
+                                            <div class="row justify-content-center">
+                                                <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                                    <label class="form-label">طريقة الإدخال</label>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="input_method" id="individual" value="individual" {% if initial_input_method != 'bulk' %}checked{% endif %}>
+                                                        <label class="form-check-label" for="individual">
+                                                            فردي
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="input_method" id="bulk" value="bulk" {% if initial_input_method == 'bulk' %}checked{% endif %}>
+                                                        <label class="form-check-label" for="bulk">
+                                                            جماعي (رفع ملف Excel)
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Individual Input Fields (Dynamic) -->
+                                            <div id="individualFields" class="individual-fields {% if initial_input_method == 'bulk' %}d-none{% endif %}">
+                                                <h5 class="mb-3">بيانات الشهادة</h5>
+                                                <div id="dynamicFieldsContainer" class="row g-3">
+                                                    <div class="col-12">
+                                                        <p class="text-muted mb-0">اختر القالب لعرض الحقول المتاحة.</p>
+                                                    </div>
+                                                </div>
+                                                <div id="individualEmailWrapper" class="row justify-content-center d-none">
+                                                    <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                                        <label for="{{ form.individual_email.id_for_label }}" class="form-label">البريد الإلكتروني</label>
+                                                        {{ form.individual_email }}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Supplementary Course & Duration -->
+                                            <div id="courseDurationBlock" class="d-none">
+                                                <div class="row justify-content-center">
+                                                    <div id="courseNameGroup" class="form-group col-lg-6 col-md-6 col-sm-12 mt-3 d-none">
+                                                        <label for="{{ form.course_name.id_for_label }}" class="form-label">الدورة</label>
+                                                        {{ form.course_name }}
+                                                    </div>
+                                                </div>
+                                                <div class="row justify-content-center">
+                                                    <div id="durationGroup" class="form-group col-lg-6 col-md-6 col-sm-12 mt-3 d-none">
+                                                        <label for="{{ form.duration.id_for_label }}" class="form-label">المدة</label>
+                                                        {{ form.duration }}
+                                                    </div>
+                                                </div>
+                                                <div id="courseDurationNotice" class="row justify-content-center d-none">
+                                                    <div class="col-lg-6 col-md-6 col-sm-12">
+                                                        <div class="alert alert-warning mt-2 mb-0">
+                                                            <i class="ti ti-alert-circle me-2"></i>
+                                                            سيتم استخدام القيم المدخلة هنا في البريد الإلكتروني وصفحة التحقق عند غياب الحقول المقابلة في القالب.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Bulk Upload -->
+                                            <div id="bulkFields" class="bulk-fields {% if initial_input_method != 'bulk' %}d-none{% endif %}">
+                                                <div class="row justify-content-center">
+                                                    <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                                        <label for="advanced_excel_file" class="form-label">تحميل ملف Excel</label>
+                                                        <div class="input-group">
+                                                            {{ form.excel_file }}
+                                                            <label class="input-group-text" for="advanced_excel_file">
+                                                                <i class="ti ti-upload me-1"></i> اختر ملف
+                                                            </label>
+                                                        </div>
+                                                        <small class="text-muted">يجب أن يكون الملف بصيغة (.xls, .xlsx)</small>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="row justify-content-center">
+                                                    <div class="col-lg-8 col-md-10 col-sm-12">
+                                                        <div class="alert alert-info mt-2">
+                                                            <i class="ti ti-info-circle me-2"></i>
+                                                            قم بتحديد أسماء الأعمدة المطابقة لكل حقل بعد اختيار القالب ورفع ملف Excel.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="row justify-content-center">
+                                                    <div class="col-lg-8 col-md-10 col-sm-12">
+                                                        <div id="columnMappingsContainer" class="row g-3">
+                                                            <div class="col-12">
+                                                                <p class="text-muted mb-0">اختر القالب لعرض أعمدة التطابق.</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row justify-content-center">
+                                                    <div class="form-group col-lg-6 col-md-6 col-sm-12 mt-3">
+                                                        <label for="advanced_email_column" class="form-label">عمود البريد الإلكتروني</label>
+                                                        {{ form.email_column }}
+                                                        <small class="text-muted">أدخل اسم العمود الذي يحتوي على البريد الإلكتروني لإرسال الشهادات مباشرة.</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row justify-content-center">
+                                                <div class="col-lg-6 col-md-6 col-sm-12 mt-3 d-flex justify-content-end">
+                                                    <button type="submit" class="btn btn-primary me-1">إنشاء وإرسال</button>
+                                                    <button type="reset" class="btn btn-outline-secondary">إعادة تعيين</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script id="templateFieldsData" type="application/json">{{ template_fields_json|default:'{}'|safe }}</script>
+<script id="previousFormData" type="application/json">{{ previous_form_json|default:'{}'|safe }}</script>
+
+<script>
+function safeJSONParse(value, fallback = {}) {
+    if (!value) {
+        return fallback;
+    }
+    if (typeof value !== 'string') {
+        return value;
+    }
+    try {
+        return JSON.parse(value);
+    } catch (error) {
+        console.warn('Failed to parse JSON payload', error);
+        return fallback;
+    }
+}
+
+const TEMPLATE_FIELDS = safeJSONParse(document.getElementById('templateFieldsData')?.textContent, {});
+const PREVIOUS_VALUES = safeJSONParse(document.getElementById('previousFormData')?.textContent, {});
+const dynamicFieldsContainer = document.getElementById('dynamicFieldsContainer');
+const columnMappingsContainer = document.getElementById('columnMappingsContainer');
+const templateSelect = document.getElementById('advanced_template_select');
+const inputMethodRadios = document.querySelectorAll('input[name="input_method"]');
+const individualFields = document.getElementById('individualFields');
+const bulkFields = document.getElementById('bulkFields');
+const excelInput = document.getElementById('advanced_excel_file');
+const emailColumnInput = document.getElementById('advanced_email_column');
+const individualEmailInput = document.getElementById('advanced_individual_email');
+const individualEmailWrapper = document.getElementById('individualEmailWrapper');
+const courseDurationBlock = document.getElementById('courseDurationBlock');
+const courseNameGroup = document.getElementById('courseNameGroup');
+const durationGroup = document.getElementById('durationGroup');
+const courseNameInput = document.getElementById('id_course_name');
+const durationInput = document.getElementById('id_duration');
+const courseDurationNotice = document.getElementById('courseDurationNotice');
+
+function getPreviousValue(name) {
+    if (PREVIOUS_VALUES && Object.prototype.hasOwnProperty.call(PREVIOUS_VALUES, name)) {
+        return PREVIOUS_VALUES[name];
+    }
+    return '';
+}
+
+function hasExcelFile() {
+    return excelInput && excelInput.files && excelInput.files.length > 0;
+}
+
+function updateColumnInputsState() {
+    const disabled = !hasExcelFile();
+    document.querySelectorAll('.column-mapping-input').forEach(input => {
+        input.disabled = disabled;
+    });
+    if (emailColumnInput) {
+        emailColumnInput.disabled = disabled;
+        if (!disabled && getPreviousValue('email_column')) {
+            emailColumnInput.value = getPreviousValue('email_column');
+        }
+    }
+}
+
+function toggleSupplementaryGroup(groupEl, inputEl, shouldShow) {
+    if (!groupEl || !inputEl) {
+        return;
+    }
+    if (shouldShow) {
+        groupEl.classList.remove('d-none');
+        inputEl.disabled = false;
+        inputEl.setAttribute('required', 'required');
+    } else {
+        groupEl.classList.add('d-none');
+        inputEl.disabled = true;
+        inputEl.removeAttribute('required');
+        if (!getPreviousValue(inputEl.name)) {
+            inputEl.value = '';
+        }
+    }
+}
+
+function updateCourseDurationVisibility(templateId) {
+    if (!courseDurationBlock) {
+        return;
+    }
+    if (!templateId || !TEMPLATE_FIELDS[templateId]) {
+        courseDurationBlock.classList.add('d-none');
+        toggleSupplementaryGroup(courseNameGroup, courseNameInput, false);
+        toggleSupplementaryGroup(durationGroup, durationInput, false);
+        if (courseDurationNotice) {
+            courseDurationNotice.classList.add('d-none');
+        }
+        return;
+    }
+    const templateConfig = TEMPLATE_FIELDS[templateId];
+    const fields = templateConfig && templateConfig.fields ? templateConfig.fields : {};
+    const hasProgramField = Boolean(fields['program_name_ar']);
+    const hasDurationField = Boolean(fields['duration_ar']);
+    const showCourseSupplement = !hasProgramField;
+    const showDurationSupplement = !hasDurationField;
+    const shouldShowBlock = showCourseSupplement || showDurationSupplement;
+
+    if (shouldShowBlock) {
+        courseDurationBlock.classList.remove('d-none');
+    } else {
+        courseDurationBlock.classList.add('d-none');
+    }
+
+    toggleSupplementaryGroup(courseNameGroup, courseNameInput, showCourseSupplement);
+    toggleSupplementaryGroup(durationGroup, durationInput, showDurationSupplement);
+
+    if (courseDurationNotice) {
+        if (shouldShowBlock) {
+            let messageText = '';
+            if (showCourseSupplement && showDurationSupplement) {
+                messageText = 'القالب الحالي لا يحتوي على حقلي اسم البرنامج والمدة.';
+            } else if (showCourseSupplement) {
+                messageText = 'القالب الحالي لا يحتوي على حقل اسم البرنامج باللغة العربية.';
+            } else if (showDurationSupplement) {
+                messageText = 'القالب الحالي لا يحتوي على حقل المدة باللغة العربية.';
+            }
+            const alertBox = courseDurationNotice.querySelector('.alert');
+            if (alertBox) {
+                alertBox.innerHTML = `<i class="ti ti-alert-circle me-2"></i> ${messageText} سيتم استخدام القيم المدخلة هنا في البريد الإلكتروني وصفحة التحقق.`;
+            }
+            courseDurationNotice.classList.remove('d-none');
+        } else {
+            courseDurationNotice.classList.add('d-none');
+        }
+    }
+}
+
+function updateInputMethodVisibility() {
+    const selected = document.querySelector('input[name="input_method"]:checked');
+    const method = selected ? selected.value : 'individual';
+    const isBulk = method === 'bulk';
+
+    if (isBulk) {
+        individualFields.classList.add('d-none');
+        bulkFields.classList.remove('d-none');
+    } else {
+        individualFields.classList.remove('d-none');
+        bulkFields.classList.add('d-none');
+    }
+
+    updateIndividualEmailVisibility();
+}
+
+function updateIndividualEmailVisibility() {
+    if (!individualEmailInput || !individualEmailWrapper) {
+        return;
+    }
+    const selectedTemplate = templateSelect ? templateSelect.value : '';
+    const selectedMethod = document.querySelector('input[name="input_method"]:checked');
+    const method = selectedMethod ? selectedMethod.value : 'individual';
+    const shouldShow = Boolean(selectedTemplate) && method === 'individual';
+
+    if (shouldShow) {
+        individualEmailWrapper.classList.remove('d-none');
+        individualEmailInput.disabled = false;
+        individualEmailInput.setAttribute('required', 'required');
+    } else {
+        individualEmailWrapper.classList.add('d-none');
+        individualEmailInput.disabled = true;
+        individualEmailInput.removeAttribute('required');
+        if (!selectedTemplate) {
+            individualEmailInput.value = '';
+        }
+    }
+}
+
+function renderEmptyState() {
+    dynamicFieldsContainer.innerHTML = '<div class="col-12"><p class="text-muted mb-0">اختر القالب لعرض الحقول المتاحة.</p></div>';
+    columnMappingsContainer.innerHTML = '<div class="col-12"><p class="text-muted mb-0">اختر القالب لعرض أعمدة التطابق.</p></div>';
+    updateIndividualEmailVisibility();
+    updateCourseDurationVisibility(null);
+}
+
+function generateDynamicFields(templateId) {
+    const templateConfig = TEMPLATE_FIELDS[templateId];
+    if (!templateConfig || !templateConfig.fields || Object.keys(templateConfig.fields).length === 0) {
+        renderEmptyState();
+        return;
+    }
+    
+    dynamicFieldsContainer.innerHTML = '';
+    columnMappingsContainer.innerHTML = '';
+    
+    Object.entries(templateConfig.fields).forEach(([fieldKey, config]) => {
+        const fieldCol = document.createElement('div');
+        fieldCol.className = 'col-lg-6 col-md-6 col-sm-12';
+        
+        const label = document.createElement('label');
+        label.className = 'form-label';
+        label.textContent = config.label;
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'form-control';
+        input.name = `single_${fieldKey}`;
+        input.placeholder = config.placeholder || '';
+        input.dir = config.direction === 'ltr' ? 'ltr' : 'rtl';
+        input.value = getPreviousValue(`single_${fieldKey}`);
+        
+        fieldCol.appendChild(label);
+        fieldCol.appendChild(input);
+        dynamicFieldsContainer.appendChild(fieldCol);
+        
+        const columnCol = document.createElement('div');
+        columnCol.className = 'col-lg-6 col-md-6 col-sm-12';
+        
+        const columnLabel = document.createElement('label');
+        columnLabel.className = 'form-label';
+        columnLabel.textContent = `عمود ${config.label}`;
+        
+        const columnInput = document.createElement('input');
+        columnInput.type = 'text';
+        columnInput.className = 'form-control column-mapping-input';
+        columnInput.name = `column_${fieldKey}`;
+        columnInput.placeholder = `اسم العمود لـ ${config.label}`;
+        columnInput.value = getPreviousValue(`column_${fieldKey}`);
+        
+        columnCol.appendChild(columnLabel);
+        columnCol.appendChild(columnInput);
+        columnMappingsContainer.appendChild(columnCol);
+    });
+    
+    updateColumnInputsState();
+    updateIndividualEmailVisibility();
+}
+
+if (templateSelect) {
+    templateSelect.addEventListener('change', function() {
+        generateDynamicFields(this.value);
+        updateIndividualEmailVisibility();
+        updateCourseDurationVisibility(this.value);
+    });
+}
+
+inputMethodRadios.forEach(radio => {
+    radio.addEventListener('change', updateInputMethodVisibility);
+});
+
+if (excelInput) {
+    excelInput.addEventListener('change', updateColumnInputsState);
+}
+
+function initializeAdvancedForm() {
+    updateInputMethodVisibility();
+    if (templateSelect && templateSelect.value) {
+        generateDynamicFields(templateSelect.value);
+    } else {
+        renderEmptyState();
+    }
+    updateColumnInputsState();
+    updateIndividualEmailVisibility();
+    updateCourseDurationVisibility(templateSelect ? templateSelect.value : null);
+}
+
+initializeAdvancedForm();
+
+// Form submission with loading indicator
+document.getElementById('advancedCertForm').addEventListener('submit', function() {
+    document.getElementById('loading').style.display = 'flex';
+});
+</script>
+{% endblock %}
