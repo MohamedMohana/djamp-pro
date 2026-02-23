@@ -1,0 +1,19 @@
+[package]
+name = "djangoforge"
+version = "0.1.0"
+description = "Local Django Development Environment Manager"
+authors = ["DJANGOForge Team"]
+license = "MIT"
+repository = "https://github.com/MohamedMohana/djangoforge"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.8", features = ["shell-open"] }
+serde = { version = "1.0", features = ["derive"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

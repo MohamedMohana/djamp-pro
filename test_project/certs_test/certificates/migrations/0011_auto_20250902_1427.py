@@ -12,8 +12,8 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             # Forward SQL - removes the column
-            "ALTER TABLE certificates_certificatetemplate DROP COLUMN text_alignment_method;",
+            "ALTER TABLE certificates_certificatetemplate DROP COLUMN IF EXISTS text_alignment_method;",
             # Reverse SQL - adds the column back (for rollback)
-            "ALTER TABLE certificates_certificatetemplate ADD COLUMN text_alignment_method VARCHAR(50) DEFAULT 'left';"
+            "ALTER TABLE certificates_certificatetemplate ADD COLUMN IF NOT EXISTS text_alignment_method VARCHAR(50) DEFAULT 'left';"
         ),
     ]
