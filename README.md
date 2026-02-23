@@ -1,104 +1,208 @@
-# DJANGOForge 🦀
+# DJAMP PRO
 
-> **Local Django Development Environment Manager**  
-> Transform your Django development with automated domain management, trusted HTTPS certificates, bundled databases, and seamless project orchestration.
+DJAMP PRO is a desktop local environment manager for Django projects, inspired by MAMP PRO. It gives you one place to run multiple Django apps with local domains, HTTPS, managed services, and quick project actions.
 
-## 🚀 What is DJANGOForge?
+## Current scope
 
-DJANGOForge is a desktop application that provides a one-click local development environment for Django projects, similar to MAMP PRO but for Django. It handles all the complexity so you can focus on coding.
+- Desktop app: Tauri + React (`apps/desktop`)
+- Local controller: FastAPI sidecar (`services/controller`)
+- Privileged helper (macOS): Rust launch daemon for `/etc/hosts` + 80/443 forwarding (`services/priv-helper`)
 
-### ✨ Key Features
+## Implemented features
 
-- **One-Click Project Setup** - Import existing Django projects or scaffold new ones instantly
-- **Custom Local Domains** - Use `myapp.test` instead of `localhost:8000`
-- **Trusted HTTPS** - Automatic certificate generation with browser-trusted Root CA
-- **Bundled Services** - Postgres, MySQL, and Redis included
-- **Reverse Proxy** - Caddy handles routing and HTTPS automatically
-- **Developer Tools** - One-click migrations, collectstatic, shell, and VS Code integration
-- **Cross-Platform** - macOS and Windows support (Linux coming soon)
+- Add and detect Django projects (`manage.py`, settings module)
+- Start / stop / restart per project
+- Runtime modes:
+  - `uv` (recommended)
+  - `conda`
+  - `system`
+  - `custom interpreter`
+- Local domain routing through Caddy
+- Local HTTPS certificates signed by DJAMP Root CA
+- Managed hosts file block:
+  - `# BEGIN DJAMP PRO MANAGED`
+  - `# END DJAMP PRO MANAGED`
+- macOS helper for MAMP-style behavior:
+  - one-time admin install
+  - no repeated password prompts for hosts + standard ports
+- Postgres/MySQL managed service wiring (when binaries exist)
+- DB credentials sourced from project `.env`
+- Automatic DB role/database creation for Postgres
+- One-click actions:
+  - migrate
+  - collectstatic
+  - shell
+  - DB shell
+  - open in VS Code
+- Logs tab:
+  - django
+  - proxy
+  - database
+- Environment tab reads `.env` and masks sensitive values
 
-## 📋 Requirements
+## Architecture
 
-- macOS 11+ or Windows 10+
-- Node.js 18+ and npm
-- Rust toolchain (for building)
-- Python 3.9+ (included in bundled service)
-
-## 🏗️ Architecture
-
+```text
+apps/
+  desktop/             # Tauri host + React UI
+services/
+  controller/          # FastAPI sidecar (orchestration)
+  priv-helper/         # macOS privileged helper daemon
+bundles/               # optional local binaries (e.g., Caddy)
+legacy/                # archived previous implementation
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     DJANGOForge Desktop App                     │
-├─────────────────────────────────────────────────────────────────┤
-│  React Frontend (Tauri) → Rust Backend → Python FastAPI Service │
-│        ↓                   ↓                ↓                   │
-│    Project UI      Config & Process    Django & DB Mgmt         │
-│                     Management         Certificate Generation  │
-└─────────────────────────────────────────────────────────────────┘
-```
 
-## 📦 Installation
+## Requirements (macOS)
 
-### Development
+- Node.js + npm
+- Python 3
+- Rust toolchain (for Tauri + helper builds)
+- OpenSSL
+- Optional but recommended:
+  - `uv`
+  - `psql` / `pg_isready`
+  - `mysql` / `mysqladmin`
+  - `code` CLI for VS Code
+
+## Dev setup
+
+### 1) Install desktop dependencies
 
 ```bash
-# Clone repository
-git clone https://github.com/yourorg/djangoforge.git
-cd djangoforge
-
-# Install dependencies
 npm install
-cd service && pip install -r requirements.txt
+npm --prefix apps/desktop install
+```
 
-# Run in development mode
+### 2) Install controller dependencies
+
+```bash
+python3 -m venv services/controller/.venv
+services/controller/.venv/bin/python -m pip install -r services/controller/requirements.txt
+```
+
+### 3) Run app
+
+```bash
 npm run dev
 ```
 
-### Production Builds
+The Tauri app starts the controller automatically on `127.0.0.1:8765`.
 
-See [BUILD.md](docs/BUILD.md) for detailed build instructions.
+## Validation commands
 
-## 🎯 Quick Start
+```bash
+npm --prefix apps/desktop run typecheck
+cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+python3 -m compileall -q services/controller/djamp_controller
+```
 
-1. **Launch DJANGOForge** and complete the onboarding wizard
-2. **Add a Django project** or create one from template
-3. **Configure your domain** (e.g., `myapp.test`)
-4. **Click "Start"** - DJANGOForge handles everything else:
-   - Updates hosts file
-   - Generates HTTPS certificate
-   - Starts database
-   - Starts Django server
-   - Configures reverse proxy
+## Domain and HTTPS behavior
 
-5. **Open your browser** at `https://myapp.test` 🔒
+- Preferred local domains: `.test` / `.localhost`
+- Public-domain override is available, but risky and policy-limited by browser HSTS/preload
+- Root CA trust is managed from Settings
+- Per-domain certs are generated locally by DJAMP
 
-## 📚 Documentation
+## Database behavior
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Build Instructions](docs/BUILD.md)
-- [Troubleshooting](docs/TROUBLESHOOTING.md)
-- [FAQs](docs/FAQs.md)
+DJAMP reads DB values from your project `.env` (for example `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DATABASE_URL`).
 
-## 🛠️ Tech Stack
+- If DB/user does not exist, DJAMP creates them (Postgres flow)
+- DJAMP appends a managed `.env` block to keep `DB_HOST`/`DB_PORT` aligned with local managed services
+- Environment tab shows `.env` values with masking for sensitive keys
+- Use **DB Shell** quick action to open `psql`/`mysql` command shell for the active project
 
-- **Frontend**: React + TypeScript + Vite
-- **Desktop Framework**: Tauri (Rust + WebView)
-- **Backend Service**: Python FastAPI
-- **Reverse Proxy**: Caddy
-- **Databases**: Postgres, MySQL, Redis (bundled binaries)
+## Security model
 
-## 🤝 Contributing
+- Main app + controller run unprivileged
+- Admin rights required only for system operations:
+  - trust store updates
+  - `/etc/hosts` updates (without helper fallback)
+  - binding/forwarding standard ports 80/443
+- macOS helper is optional but recommended to avoid repeated prompts
+- Restore-on-quit can remove DJAMP host entries and release 80/443
 
-Contributions welcome! Please read our contributing guidelines.
+## Troubleshooting
 
-## 📄 License
+### Start button appears to do nothing
 
-MIT License - see [LICENSE](LICENSE) for details.
+- Open **Logs > Django** and **Logs > Proxy**
+- Check the project status API:
 
-## 🙏 Acknowledgments
+```bash
+curl -s http://127.0.0.1:8765/api/projects
+```
 
-Inspired by MAMP PRO and Laravel Valet.
+- Verify app server port is listening:
 
----
+```bash
+lsof -nP -iTCP:8001 -sTCP:LISTEN
+```
 
-**Made with ❤️ for Django developers**
+### Domain does not resolve (`ERR_NAME_NOT_RESOLVED`)
+
+- Sync hosts from Settings
+- Verify hosts block contains your domain:
+
+```bash
+grep -n "DJAMP PRO MANAGED" /etc/hosts
+```
+
+- Flush DNS cache (macOS):
+
+```bash
+sudo dscacheutil -flushcache
+sudo killall -HUP mDNSResponder
+```
+
+### HTTPS certificate error
+
+- Install Root CA from Settings
+- Regenerate cert for the project domain
+- Restart project/proxy
+
+### Static files return 404
+
+- Run **Collectstatic**
+- Confirm your project serves static under DJAMP override settings
+- Verify with:
+
+```bash
+curl -k -I https://<domain>/static/<path-to-file>
+```
+
+### Helper install stuck / not running
+
+- Re-run install from Settings
+- Check helper files:
+  - `/Library/PrivilegedHelperTools/com.djamp.pro.helperd`
+  - `/Library/LaunchDaemons/com.djamp.pro.helperd.plist`
+- Check helper log:
+
+```bash
+sudo tail -n 200 /var/log/djamp-pro-helper.log
+```
+
+## Build notes
+
+- Dev build:
+
+```bash
+npm run dev
+```
+
+- Production bundle:
+
+```bash
+npm run build
+```
+
+Tauri bundling outputs platform installers according to `apps/desktop/src-tauri/tauri.conf.json`.
+
+## Notes for `certs_test`
+
+This repo includes a test project at:
+
+- `test_project/certs_test`
+
+DJAMP now correctly serves static assets for this project through local HTTPS domain routing.

@@ -1,0 +1,38 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "DJANGOForge",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": true
+    },
+    "bundle": {
+      "active": true,
+      "category": "Developer Tool",
+      "copyright": "2024 DJANGOForge Team",
+      "identifier": "com.djangoforge.app",
+      "longDescription": "Local Django Development Environment Manager",
+      "shortDescription": "Django Development Environment Manager",
+      "targets": "all"
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 900,
+        "resizable": true,
+        "title": "DJANGOForge - Django Development Manager",
+        "width": 1400,
+        "minWidth": 1200,
+        "minHeight": 700
+      }
+    ]
+  }
+}
