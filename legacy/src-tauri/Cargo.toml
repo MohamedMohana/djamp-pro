@@ -1,0 +1,28 @@
+[package]
+name = "djangoforge"
+version = "0.1.0"
+description = "Local Django Development Environment Manager"
+authors = ["DJANGOForge Team"]
+license = "MIT"
+repository = "https://github.com/MohamedMohana/djangoforge"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.8", features = [ "fs-remove-file", "fs-exists", "fs-remove-dir", "process-relaunch", "process-exit", "fs-read-file", "fs-read-dir", "fs-create-dir", "fs-write-file", "shell-open"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["winuser", "securitybaseapi", "processthreadsapi"] }
+
+[profile.release]
+lto = true
+opt-level = "z"
+
+[[bin]]
+name = "djangoforge"
+path = "src/main.rs"

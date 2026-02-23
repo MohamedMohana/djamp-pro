@@ -1,46 +1,14 @@
 {
-  "name": "djangoforge",
-  "version": "0.1.0",
-  "description": "Local Django Development Environment Manager",
+  "name": "djamp-pro",
+  "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "apps"
-  ],
+  "description": "DJAMP PRO monorepo",
   "scripts": {
-    "dev": "npm run tauri:dev",
-    "tauri:dev": "cd apps && npm run tauri:dev",
-    "tauri:build": "cd apps && npm run tauri:build",
-    "tauri:build:debug": "cd apps && npm run tauri:build:debug",
-    "service:dev": "cd service && uvicorn djamp_service.main:app --reload --port 8765",
-    "service:start": "cd service && uvicorn djamp_service.main:app --host 127.0.0.1 --port 8765",
-    "install:ca:mac": "bash scripts/install-ca.sh",
-    "install:ca:win": "powershell -ExecutionPolicy Bypass -File scripts/install-ca.ps1",
-    "bundle:binaries": "bash scripts/bundle-binaries.sh",
-    "setup:dev": "bash scripts/setup-dev.sh",
-    "lint": "cd apps && npm run lint",
-    "typecheck": "cd apps && npm run typecheck",
-    "test": "cd apps && npm run test"
-  },
-  "devDependencies": {
-    "@tauri-apps/cli": "^1.5.0",
-    "typescript": "^5.3.0"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "keywords": [
-    "django",
-    "python",
-    "local-development",
-    "https",
-    "certificate-authority",
-    "postgres",
-    "mysql",
-    "redis",
-    "caddy",
-    "reverse-proxy"
-  ],
-  "author": "DJANGOForge Team",
-  "license": "MIT"
+    "dev": "npm --prefix apps/desktop run tauri:dev",
+    "build": "npm --prefix apps/desktop run tauri:build",
+    "build:web": "npm --prefix apps/desktop run build",
+    "typecheck": "npm --prefix apps/desktop run typecheck",
+    "controller:dev": "services/controller/.venv/bin/python services/controller/run_service.py",
+    "priv-helper:check": "cargo check --manifest-path services/priv-helper/Cargo.toml"
+  }
 }

@@ -1,0 +1,12 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="djamp-bg" x1="16" y1="16" x2="112" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2DC0ED"/>
+      <stop offset="1" stop-color="#2B57CE"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#djamp-bg)"/>
+  <rect x="8" y="8" width="112" height="112" rx="26" stroke="#0B1E4C" stroke-width="2"/>
+  <path d="M42.5 35.5H58.5C69.5457 35.5 78.5 44.4543 78.5 55.5V72.5C78.5 83.5457 69.5457 92.5 58.5 92.5H42.5V35.5ZM55 48C50.5817 48 47 51.5817 47 56V72C47 76.4183 50.5817 80 55 80H58.5C62.9183 80 66.5 76.4183 66.5 72V56C66.5 51.5817 62.9183 48 58.5 48H55Z" fill="#EEF3FF"/>
+  <path d="M87 35.5H99.5V76.5C99.5 87.5457 90.5457 96.5 79.5 96.5C72.0442 96.5 66 90.4558 66 83C66 75.5442 72.0442 69.5 79.5 69.5H82.5V82C82.5 83.6569 81.1569 85 79.5 85C77.8431 85 76.5 83.6569 76.5 82C76.5 80.3431 77.8431 79 79.5 79H87V35.5Z" fill="#EEF3FF"/>
+</svg>
