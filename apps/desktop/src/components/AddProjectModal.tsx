@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, FolderOpen, Plus, Globe, Database, Check } from 'lucide-react';
+import { open as openDialog } from '@tauri-apps/api/dialog';
 import { api } from '../services/api';
 
 interface AddProjectModalProps {
@@ -87,6 +88,26 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
       setSubmitError(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBrowseDirectory = async () => {
+    setSubmitError('');
+    try {
+      const selected = await openDialog({
+        directory: true,
+        multiple: false,
+        title: 'Select Django Project Directory',
+      });
+
+      if (typeof selected === 'string' && selected.trim()) {
+        setProjectPath(selected.trim());
+        setHasDetected(false);
+      }
+    } catch (error) {
+      console.error('Folder picker failed:', error);
+      const message = error instanceof Error ? error.message : 'Could not open folder picker.';
+      setSubmitError(message);
     }
   };
 
@@ -218,13 +239,26 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Project Directory Path</label>
-                <input
-                  type="text"
-                  value={projectPath}
-                  onChange={(e) => { setProjectPath(e.target.value); setHasDetected(false); }}
-                  placeholder="/Users/dev/projects/my-django-app"
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={projectPath}
+                    onChange={(e) => { setProjectPath(e.target.value); setHasDetected(false); }}
+                    placeholder="/Users/dev/projects/my-django-app"
+                    className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleBrowseDirectory}
+                    disabled={loading}
+                    className="shrink-0 rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <span className="flex items-center gap-2">
+                      <FolderOpen size={18} />
+                      Browse
+                    </span>
+                  </button>
+                </div>
               </div>
               <button
                 onClick={handlePathSelect}
