@@ -183,6 +183,17 @@ function App() {
     }
   };
 
+  const handleOpenDatabaseAdmin = async (project: Project) => {
+    if (project.database.type === 'none') return;
+    try {
+      const { url } = await api.getDatabaseAdminUrl(project.id);
+      await api.openInBrowser(url);
+    } catch (error) {
+      console.error('Failed to open database admin:', error);
+      alert(`Failed to open database admin: ${extractErrorMessage(error, 'Unknown error')}`);
+    }
+  };
+
   const isSelectedBusy = Boolean(selectedProject && actionProjectId === selectedProject.id);
 
   return (
@@ -256,10 +267,15 @@ function App() {
                           {selectedProject.httpsEnabled ? 'https://' : 'http://'}{selectedProject.domain}
                         </span>
                         {selectedProject.database.type !== 'none' && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/35 px-3 py-1 uppercase ring-1 ring-inset ring-white/10">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDatabaseAdmin(selectedProject)}
+                            className="inline-flex items-center gap-1 rounded-full bg-slate-700/35 px-3 py-1 uppercase ring-1 ring-inset ring-white/10 transition hover:bg-slate-600/60"
+                            title="Open Database Admin"
+                          >
                             <Database size={14} />
                             {selectedProject.database.type}
-                          </span>
+                          </button>
                         )}
                       </div>
                     </div>
@@ -366,9 +382,9 @@ function App() {
                     ) : (
                       <div className="space-y-3">
                         {Object.entries(selectedProject.environmentVars).map(([key, value]) => (
-                          <div key={key} className="flex items-center gap-4">
-                            <span className="w-56 shrink-0 font-mono text-sm text-slate-400">{key}</span>
-                            <span className="flex-1 break-all rounded-lg bg-slate-700/70 px-3 py-2 font-mono text-sm text-slate-100">
+                          <div key={key} className="grid grid-cols-[minmax(0,14rem)_minmax(0,1fr)] items-start gap-4">
+                            <span className="break-all font-mono text-sm leading-relaxed text-slate-400">{key}</span>
+                            <span className="min-w-0 break-all whitespace-pre-wrap rounded-lg bg-slate-700/70 px-3 py-2 font-mono text-sm leading-relaxed text-slate-100">
                               {value}
                             </span>
                           </div>

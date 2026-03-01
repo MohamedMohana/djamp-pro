@@ -160,6 +160,10 @@ export const api = {
     return invoke('test_database_connection', { projectId });
   },
 
+  getDatabaseAdminUrl: async (projectId: string): Promise<{ url: string }> => {
+    return invoke('get_database_admin_url', { projectId });
+  },
+
   // Logs
   getLogs: async (projectId: string, source: 'django' | 'proxy' | 'database'): Promise<string> => {
     return invoke('get_logs', { projectId, source });
