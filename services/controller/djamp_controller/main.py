@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import html
 import json
 import os
 import platform
@@ -21,6 +22,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from urllib.parse import urlparse
 
@@ -2656,6 +2658,122 @@ def _ensure_postgres_db_and_role(project: Project) -> CommandResult:
     return CommandResult(success=True, output="Postgres database ready")
 
 
+def _run_postgres_query_text(project: Project, query: str) -> CommandResult:
+    psql = shutil.which("psql")
+    if not psql:
+        return CommandResult(success=False, error="psql is not installed or not in PATH")
+
+    db_name = (project.database.name or "postgres").strip() or "postgres"
+    db_user = (project.database.username or "postgres").strip() or "postgres"
+    db_password = project.database.password or ""
+    db_port = int(project.database.port or MANAGED_POSTGRES_PORT)
+
+    env = os.environ.copy()
+    if db_password:
+        env["PGPASSWORD"] = db_password
+
+    command = [
+        psql,
+        "-X",
+        "-h",
+        "127.0.0.1",
+        "-p",
+        str(db_port),
+        "-U",
+        db_user,
+        "-d",
+        db_name,
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-P",
+        "pager=off",
+        "-c",
+        query,
+    ]
+
+    return _run_blocking(command, Path(project.path), env=env)
+
+
+def _render_postgres_admin_html(
+    project: Project,
+    tables_output: str,
+    query: str = "",
+    query_output: str = "",
+    query_error: str = "",
+) -> str:
+    project_name = html.escape(project.name)
+    db_name = html.escape((project.database.name or "postgres").strip() or "postgres")
+    db_user = html.escape((project.database.username or "postgres").strip() or "postgres")
+    db_port = int(project.database.port or MANAGED_POSTGRES_PORT)
+    safe_query = html.escape(query)
+    safe_tables = html.escape((tables_output or "No tables found").strip() or "No tables found")
+
+    result_block = ""
+    if query.strip():
+        if query_error:
+            result_block = (
+                "<h2>Query Error</h2>"
+                + "<pre class='result error'>"
+                + html.escape(query_error.strip() or "Query failed")
+                + "</pre>"
+            )
+        else:
+            result_block = (
+                "<h2>Query Result</h2>"
+                + "<pre class='result'>"
+                + html.escape((query_output or "(No output)").strip() or "(No output)")
+                + "</pre>"
+            )
+
+    return f"""<!doctype html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1' />
+  <title>DJAMP DB Admin - {project_name}</title>
+  <style>
+    :root {{ color-scheme: dark; }}
+    body {{ margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace; background: #0b1220; color: #e2e8f0; }}
+    .wrap {{ max-width: 1080px; margin: 0 auto; padding: 22px; }}
+    .card {{ background: #182339; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 16px; }}
+    h1 {{ margin: 0 0 8px; font-size: 24px; }}
+    h2 {{ margin: 0 0 10px; font-size: 18px; }}
+    .meta {{ color: #93c5fd; margin-bottom: 12px; }}
+    textarea {{ width: 100%; min-height: 140px; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 10px; padding: 10px; resize: vertical; box-sizing: border-box; }}
+    button {{ margin-top: 10px; border: 1px solid #1d4ed8; background: #2563eb; color: white; border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; }}
+    button:hover {{ background: #1d4ed8; }}
+    pre {{ margin: 0; white-space: pre-wrap; word-break: break-word; background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; }}
+    .result {{ margin-top: 8px; }}
+    .error {{ border-color: #7f1d1d; color: #fecaca; background: #450a0a; }}
+    a {{ color: #93c5fd; text-decoration: none; }}
+  </style>
+</head>
+<body>
+  <div class='wrap'>
+    <div class='card'>
+      <h1>DJAMP Database Admin</h1>
+      <div class='meta'>Project: <strong>{project_name}</strong> | PostgreSQL @ 127.0.0.1:{db_port} | DB: {db_name} | User: {db_user}</div>
+      <div style='color:#94a3b8'>MAMP-style web access for local PostgreSQL. Use carefully on development data.</div>
+    </div>
+
+    <div class='card'>
+      <h2>Run SQL</h2>
+      <form method='get'>
+        <textarea name='query' placeholder='SELECT NOW();'>{safe_query}</textarea>
+        <div><button type='submit'>Run Query</button></div>
+      </form>
+      {result_block}
+    </div>
+
+    <div class='card'>
+      <h2>Tables</h2>
+      <pre>{safe_tables}</pre>
+    </div>
+  </div>
+</body>
+</html>"""
+
+
 async def _refresh_runtime_states(registry: Registry) -> Registry:
     changed = False
     projects = []
@@ -3495,6 +3613,60 @@ async def test_database_connection(project_id: str) -> CommandResult:
         cmd = ["redis-cli", "-p", str(project.cache.port or 6389), "ping"]
 
     return await asyncio.to_thread(_run_blocking, cmd, Path(project.path))
+
+@app.get("/api/databases/{project_id}/admin-url")
+async def get_database_admin_url(project_id: str) -> Dict[str, str]:
+    registry = await read_registry()
+    project = _get_project_or_404(registry, project_id)
+
+    if project.database.type != "postgres":
+        raise HTTPException(status_code=400, detail="Web database admin currently supports PostgreSQL projects only")
+
+    return {"url": f"http://127.0.0.1:8765/api/databases/{project_id}/admin"}
+
+
+@app.get("/api/databases/{project_id}/admin", response_class=HTMLResponse)
+async def open_database_admin(project_id: str, query: str = "") -> HTMLResponse:
+    registry = await read_registry()
+    project = _get_project_or_404(registry, project_id)
+
+    if project.database.type != "postgres":
+        raise HTTPException(status_code=400, detail="Web database admin currently supports PostgreSQL projects only")
+
+    start_result = await _start_service("postgres")
+    if not start_result.success:
+        raise HTTPException(status_code=500, detail=start_result.error or "Failed to start managed Postgres service")
+
+    tables_sql = (
+        "SELECT table_schema || '.' || table_name AS table_name "
+        "FROM information_schema.tables "
+        "WHERE table_schema NOT IN ('pg_catalog', 'information_schema') "
+        "ORDER BY 1"
+    )
+    tables_result = await asyncio.to_thread(_run_postgres_query_text, project, tables_sql)
+
+    query_output = ""
+    query_error = ""
+    normalized_query = (query or "").strip()
+    if normalized_query:
+        run_result = await asyncio.to_thread(_run_postgres_query_text, project, normalized_query)
+        if run_result.success:
+            query_output = run_result.output
+        else:
+            query_error = run_result.error or run_result.output or "Query failed"
+
+    tables_output = tables_result.output if tables_result.success else (tables_result.error or tables_result.output or "Unable to read table list")
+
+    return HTMLResponse(
+        _render_postgres_admin_html(
+            project=project,
+            tables_output=tables_output,
+            query=normalized_query,
+            query_output=query_output,
+            query_error=query_error,
+        )
+    )
+
 
 
 @app.get("/api/logs/{project_id}/{source}")
