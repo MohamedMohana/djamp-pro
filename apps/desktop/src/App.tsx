@@ -9,7 +9,7 @@ import ProjectCard from './components/ProjectCard';
 import ProjectAvatar from './components/ProjectAvatar';
 import AddProjectModal from './components/AddProjectModal';
 import SettingsPanel from './components/SettingsPanel';
-import djampMark from './assets/djamp-mark.svg';
+import djampMark from './assets/djamp-mark.png';
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -194,7 +194,7 @@ function App() {
               <img
                 src={djampMark}
                 alt="DJAMP PRO"
-                className="h-14 w-14 rounded-2xl border border-white/10 bg-slate-950/40 p-1 shadow-[0_12px_35px_rgba(8,22,66,0.35)]"
+                className="h-14 w-14 object-contain"
               />
               <div>
                 <h1 className="text-[2rem] font-extrabold leading-none tracking-tight text-brand-300">DJAMP PRO</h1>
