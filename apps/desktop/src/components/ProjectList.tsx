@@ -14,50 +14,51 @@ export default function ProjectList({ projects, selectedId, onSelect, loading }:
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-gray-500">Loading projects...</div>
+        <div className="text-slate-400">Loading projects...</div>
       </div>
     );
   }
 
   if (projects.length === 0) {
     return (
-      <div className="text-center py-8">
-        <Folder size={48} className="mx-auto text-gray-600 mb-3" />
-        <p className="text-gray-500">No projects yet</p>
-        <p className="text-sm text-gray-600 mt-1">Add your first Django project</p>
+      <div className="rounded-xl border border-white/10 bg-slate-900/40 px-4 py-8 text-center">
+        <Folder size={44} className="mx-auto mb-3 text-slate-500" />
+        <p className="text-slate-300">No projects yet</p>
+        <p className="mt-1 text-sm text-slate-500">Add your first Django project</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {projects.map((project) => (
-        <button
-          key={project.id}
-          onClick={() => onSelect(project)}
-          className={`w-full text-left p-3 rounded-lg transition-colors ${
-            selectedId === project.id
-              ? 'bg-brand-600 text-white'
-              : 'bg-gray-700 hover:bg-gray-600'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <ProjectAvatar name={project.name} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="font-medium truncate">{project.name}</span>
-                <span className={getStatusColor(project.status)}>
-                  {getStatusIcon(project.status)}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-xs opacity-80 truncate">
-                <Globe size={12} />
-                {project.domain}
+    <div className="space-y-2.5">
+      {projects.map((project) => {
+        const isSelected = selectedId === project.id;
+        return (
+          <button
+            key={project.id}
+            onClick={() => onSelect(project)}
+            className={`w-full rounded-xl border p-3 text-left transition ${
+              isSelected
+                ? 'border-brand-400/60 bg-gradient-to-r from-brand-600/55 to-brand-500/40 text-white shadow-[0_10px_26px_rgba(36,105,224,0.35)]'
+                : 'border-white/10 bg-slate-800/65 text-slate-100 hover:border-white/20 hover:bg-slate-700/70'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <ProjectAvatar name={project.name} />
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="truncate font-semibold tracking-tight">{project.name}</span>
+                  <span className={getStatusColor(project.status)}>{getStatusIcon(project.status)}</span>
+                </div>
+                <div className="flex items-center gap-1 truncate text-xs opacity-80">
+                  <Globe size={12} />
+                  {project.domain}
+                </div>
               </div>
             </div>
-          </div>
-        </button>
-      ))}
+          </button>
+        );
+      })}
     </div>
   );
 }

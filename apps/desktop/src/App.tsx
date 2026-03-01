@@ -109,7 +109,6 @@ function App() {
       if (result?.message && result.message !== 'Project started') {
         alert(result.message);
       }
-      // Backend may return a warning if cert/CA steps failed but the Django server started.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const certWarning = (result as any)?.certificateWarning as string | undefined;
       if (certWarning) {
@@ -184,34 +183,35 @@ function App() {
     }
   };
 
-  const handleAddProject = () => {
-    setShowAddModal(true);
-  };
-
   const isSelectedBusy = Boolean(selectedProject && actionProjectId === selectedProject.id);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div className="flex h-screen">
-        {/* Sidebar */}
-        <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
-          <div className="p-4 border-b border-gray-700">
+    <div className="app-bg min-h-screen text-slate-100">
+      <div className="flex h-screen gap-3 p-3">
+        <aside className="glass-panel flex w-80 flex-col overflow-hidden rounded-2xl border border-white/10">
+          <div className="border-b border-white/10 px-4 py-5">
             <div className="flex items-center gap-3">
-              <img src={djampMark} alt="DJAMP PRO" className="h-10 w-10 rounded-xl ring-1 ring-white/10" />
+              <img
+                src={djampMark}
+                alt="DJAMP PRO"
+                className="h-14 w-14 rounded-2xl border border-white/10 bg-slate-950/40 p-1 shadow-[0_12px_35px_rgba(8,22,66,0.35)]"
+              />
               <div>
-                <h1 className="text-2xl font-bold text-brand-400">DJAMP PRO</h1>
-                <p className="text-sm text-gray-400 mt-1">Django Local Environment Manager</p>
+                <h1 className="text-[2rem] font-extrabold leading-none tracking-tight text-brand-300">DJAMP PRO</h1>
+                <p className="mt-1 text-sm text-slate-400">Django Local Environment Manager</p>
               </div>
             </div>
           </div>
 
-          <div className="p-4 border-b border-gray-700">
+          <div className="border-b border-white/10 px-4 py-4">
             <button
-              onClick={handleAddProject}
-              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+              onClick={() => setShowAddModal(true)}
+              className="w-full rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_25px_rgba(23,116,230,0.35)] transition hover:brightness-110"
             >
-              <Plus size={18} />
-              Add Project
+              <span className="inline-flex items-center justify-center gap-2">
+                <Plus size={17} />
+                Add Project
+              </span>
             </button>
           </div>
 
@@ -224,146 +224,151 @@ function App() {
             />
           </div>
 
-          <div className="p-4 border-t border-gray-700">
+          <div className="border-t border-white/10 p-4">
             <button
               onClick={() => setShowSettings(true)}
-              className="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700/80"
             >
-              <Settings size={18} />
-              Settings
+              <span className="inline-flex items-center justify-center gap-2">
+                <Settings size={17} />
+                Settings
+              </span>
             </button>
           </div>
-        </div>
+        </aside>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <main className="glass-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10">
           {selectedProject ? (
             <>
-              {/* Project Header */}
-              <div className="bg-gray-800 border-b border-gray-700 p-6">
-                <div className="flex items-start justify-between">
+              <header className="border-b border-white/10 bg-slate-900/55 px-7 py-6">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <ProjectAvatar name={selectedProject.name} size="md" className="mt-1" />
+                    <ProjectAvatar name={selectedProject.name} size="md" className="mt-0.5" />
                     <div>
-                      <h2 className="text-3xl font-bold">{selectedProject.name}</h2>
-                    <div className="flex items-center gap-4 mt-2 text-gray-400">
-                      <span className={cn('flex items-center gap-1', getStatusColor(selectedProject.status))}>
-                        <span>{getStatusIcon(selectedProject.status)}</span>
-                        {selectedProject.status}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Globe size={16} />
-                        {selectedProject.httpsEnabled ? 'https://' : 'http://'}{selectedProject.domain}
-                      </span>
-                      {selectedProject.database.type !== 'none' && (
-                        <span className="flex items-center gap-1">
-                          <Database size={16} />
-                          {selectedProject.database.type}
+                      <h2 className="text-4xl font-bold leading-tight tracking-tight">{selectedProject.name}</h2>
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-300">
+                        <span className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 ring-1 ring-inset', getStatusColor(selectedProject.status), selectedProject.status === 'running' ? 'bg-emerald-500/10 ring-emerald-500/20' : 'bg-slate-700/35 ring-white/10')}>
+                          <span>{getStatusIcon(selectedProject.status)}</span>
+                          {selectedProject.status}
                         </span>
-                      )}
-                    </div>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/35 px-3 py-1 ring-1 ring-inset ring-white/10">
+                          <Globe size={14} />
+                          {selectedProject.httpsEnabled ? 'https://' : 'http://'}{selectedProject.domain}
+                        </span>
+                        {selectedProject.database.type !== 'none' && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/35 px-3 py-1 uppercase ring-1 ring-inset ring-white/10">
+                            <Database size={14} />
+                            {selectedProject.database.type}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleRestartProject(selectedProject.id)}
                       disabled={isSelectedBusy}
-                      className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
+                      className="rounded-xl border border-white/10 bg-slate-700/80 p-2.5 text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Restart"
                     >
-                      <RefreshCw size={20} />
+                      <RefreshCw size={18} />
                     </button>
                     {selectedProject.status === 'running' ? (
                       <button
                         onClick={() => handleStopProject(selectedProject.id)}
                         disabled={isSelectedBusy}
-                        className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                        className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <Square size={18} />
-                        {isSelectedBusy && actionKind === 'stop' ? 'Stopping...' : 'Stop'}
+                        <span className="inline-flex items-center gap-2">
+                          <Square size={16} />
+                          {isSelectedBusy && actionKind === 'stop' ? 'Stopping...' : 'Stop'}
+                        </span>
                       </button>
                     ) : (
                       <button
                         onClick={() => handleStartProject(selectedProject.id)}
                         disabled={isSelectedBusy}
-                        className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                        className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <Play size={18} />
-                        {isSelectedBusy && actionKind === 'start' ? 'Starting...' : 'Start'}
+                        <span className="inline-flex items-center gap-2">
+                          <Play size={16} />
+                          {isSelectedBusy && actionKind === 'start' ? 'Starting...' : 'Start'}
+                        </span>
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-4 mt-6 border-b border-gray-700">
+                <div className="mt-6 inline-flex rounded-xl border border-white/10 bg-slate-900/80 p-1">
                   {(['projects', 'logs', 'environment'] as const).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
                       className={cn(
-                        'pb-3 px-2 font-medium transition-colors capitalize',
+                        'rounded-lg px-4 py-2 text-sm font-semibold capitalize transition',
                         activeTab === tab
-                          ? 'text-brand-400 border-b-2 border-brand-400'
-                          : 'text-gray-400 hover:text-white'
+                          ? 'bg-brand-500 text-white shadow-[0_8px_22px_rgba(38,131,255,0.35)]'
+                          : 'text-slate-300 hover:bg-slate-700/70 hover:text-white',
                       )}
                     >
                       {tab}
                     </button>
                   ))}
                 </div>
-              </div>
+              </header>
 
-              {/* Tab Content */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <section className="flex-1 overflow-y-auto p-6">
                 {activeTab === 'projects' && (
                   <ProjectCard
                     project={selectedProject}
                     onDelete={() => handleDeleteProject(selectedProject.id)}
                   />
                 )}
+
                 {activeTab === 'logs' && (
-                  <div className="bg-gray-800 rounded-lg p-4 h-full min-h-0 flex flex-col gap-3">
-                    <div className="flex gap-2">
+                  <div className="flex h-full min-h-0 flex-col gap-3 rounded-xl border border-white/10 bg-slate-900/70 p-4">
+                    <div className="flex items-center gap-2">
                       {(['django', 'proxy', 'database'] as const).map((source) => (
                         <button
                           key={source}
                           onClick={() => setLogsSource(source)}
                           className={cn(
-                            'px-3 py-1 rounded font-medium capitalize transition-colors',
+                            'rounded-lg px-3 py-1.5 text-sm font-semibold capitalize transition',
                             logsSource === source
-                              ? 'bg-brand-600 text-white'
-                              : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                              ? 'bg-brand-500 text-white'
+                              : 'bg-slate-700/70 text-slate-200 hover:bg-slate-600/80',
                           )}
                         >
                           {source}
                         </button>
                       ))}
                       <div className="flex-1" />
-                      <span className="text-sm text-gray-400">
-                        {logsLoading ? 'Loading...' : 'Auto-refreshing'}
-                      </span>
+                      <span className="text-xs text-slate-400">{logsLoading ? 'Loading...' : 'Auto-refreshing'}</span>
                     </div>
 
-                    <pre className="flex-1 min-h-0 overflow-auto rounded-lg border border-gray-700 bg-gray-900/80 p-3 font-mono text-xs text-gray-200 whitespace-pre-wrap">
+                    <pre className="flex-1 min-h-0 overflow-auto rounded-lg border border-white/10 bg-slate-950/80 p-3 font-mono text-xs leading-relaxed text-slate-200 whitespace-pre-wrap">
                       {logsText ? logsText : 'No logs yet.'}
                     </pre>
                   </div>
                 )}
+
                 {activeTab === 'environment' && (
-                  <div className="bg-gray-800 rounded-lg p-6">
-                    <h3 className="text-xl font-semibold mb-2">Environment Variables</h3>
-                    <p className="text-sm text-gray-400 mb-4">Loaded from project <code>.env</code> (sensitive values are masked).</p>
+                  <div className="rounded-xl border border-white/10 bg-slate-900/70 p-6">
+                    <h3 className="mb-2 text-xl font-semibold">Environment Variables</h3>
+                    <p className="mb-4 text-sm text-slate-400">
+                      Loaded from project <code>.env</code> (sensitive values are masked).
+                    </p>
                     {Object.entries(selectedProject.environmentVars || {}).length === 0 ? (
-                      <div className="rounded-lg border border-gray-700 bg-gray-900/50 p-4 text-sm text-gray-400">
+                      <div className="rounded-lg border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-400">
                         No environment variables were found in the project <code>.env</code> file.
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {Object.entries(selectedProject.environmentVars).map(([key, value]) => (
                           <div key={key} className="flex items-center gap-4">
-                            <span className="w-56 shrink-0 text-gray-400 font-mono text-sm">{key}</span>
-                            <span className="flex-1 bg-gray-700 px-3 py-2 rounded font-mono text-sm break-all">
+                            <span className="w-56 shrink-0 font-mono text-sm text-slate-400">{key}</span>
+                            <span className="flex-1 break-all rounded-lg bg-slate-700/70 px-3 py-2 font-mono text-sm text-slate-100">
                               {value}
                             </span>
                           </div>
@@ -372,27 +377,22 @@ function App() {
                     )}
                   </div>
                 )}
-              </div>
+              </section>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex flex-1 items-center justify-center">
               <div className="text-center">
-                <Globe size={64} className="mx-auto text-gray-600 mb-4" />
-                <h2 className="text-2xl font-semibold text-gray-400 mb-2">No Project Selected</h2>
-                <p className="text-gray-500">Select a project from the sidebar or add a new one</p>
+                <Globe size={64} className="mx-auto mb-4 text-slate-500" />
+                <h2 className="mb-2 text-2xl font-semibold text-slate-300">No Project Selected</h2>
+                <p className="text-slate-400">Select a project from the sidebar or add a new one</p>
               </div>
             </div>
           )}
-        </div>
+        </main>
       </div>
 
-      {showAddModal && (
-        <AddProjectModal onClose={() => setShowAddModal(false)} onAdd={loadProjects} />
-      )}
-
-      {showSettings && (
-        <SettingsPanel onClose={() => setShowSettings(false)} />
-      )}
+      {showAddModal && <AddProjectModal onClose={() => setShowAddModal(false)} onAdd={loadProjects} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
