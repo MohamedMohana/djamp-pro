@@ -255,6 +255,11 @@ pub async fn test_database_connection(project_id: String) -> Result<CommandResul
 }
 
 #[tauri::command]
+pub async fn get_database_admin_url(project_id: String) -> Result<Value, String> {
+    sidecar::get_json(&format!("/api/databases/{project_id}/admin-url")).await
+}
+
+#[tauri::command]
 pub async fn get_logs(project_id: String, source: String) -> Result<String, String> {
     sidecar::get_json(&format!("/api/logs/{project_id}/{source}")).await
 }

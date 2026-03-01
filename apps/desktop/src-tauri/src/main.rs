@@ -52,6 +52,7 @@ async fn main() {
             commands::start_database,
             commands::stop_database,
             commands::test_database_connection,
+            commands::get_database_admin_url,
             commands::get_logs,
             commands::detect_django_project,
             commands::create_venv,
