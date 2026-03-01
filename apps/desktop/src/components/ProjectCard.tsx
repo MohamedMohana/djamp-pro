@@ -97,26 +97,26 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
     <div className="space-y-6">
       {/* Project Info */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gray-800 rounded-lg p-4">
+        <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
           <h3 className="text-sm font-medium text-gray-400 mb-2">Project Path</h3>
           <div className="flex items-center gap-2">
             <FolderOpen size={18} className="text-brand-400" />
             <span className="font-mono text-sm truncate">{project.path}</span>
           </div>
         </div>
-        <div className="bg-gray-800 rounded-lg p-4">
+        <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
           <h3 className="text-sm font-medium text-gray-400 mb-2">Settings Module</h3>
           <span className="font-mono text-sm">{project.settingsModule}</span>
         </div>
-        <div className="bg-gray-800 rounded-lg p-4">
+        <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
           <h3 className="text-sm font-medium text-gray-400 mb-2">Python Version</h3>
           <span className="font-mono text-sm">{project.pythonVersion}</span>
         </div>
-        <div className="bg-gray-800 rounded-lg p-4">
+        <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
           <h3 className="text-sm font-medium text-gray-400 mb-2">Runtime Mode</h3>
           <span className="font-mono text-sm uppercase">{project.runtimeMode || 'uv'}</span>
         </div>
-        <div className="bg-gray-800 rounded-lg p-4">
+        <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
           <h3 className="text-sm font-medium text-gray-400 mb-2">Debug Mode</h3>
           <span className={`px-2 py-1 rounded text-xs font-medium ${project.debug ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
             {project.debug ? 'ON' : 'OFF'}
@@ -125,7 +125,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
       </div>
 
       {/* Domain & HTTPS */}
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Shield size={20} className="text-brand-400" />
           Domain & HTTPS
@@ -139,7 +139,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
             <button
               onClick={handleOpenBrowser}
               disabled={project.status !== 'running'}
-              className="bg-brand-600 hover:bg-brand-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              className="rounded-xl bg-brand-500 hover:bg-brand-400 disabled:bg-slate-700 disabled:cursor-not-allowed text-white px-4 py-2.5 flex items-center gap-2 transition-colors"
             >
               <ExternalLink size={18} />
               {project.status === 'running' ? 'Open' : 'Start First'}
@@ -150,7 +150,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
               <div className="text-sm text-gray-400 mb-2">Aliases</div>
               <div className="flex flex-wrap gap-2">
                 {project.aliases.map((alias) => (
-                  <span key={alias} className="bg-gray-700 px-3 py-1 rounded text-sm font-mono">
+                  <span key={alias} className="rounded-lg border border-white/10 bg-slate-700/70 px-3 py-1 text-sm font-mono">
                     {alias}
                   </span>
                 ))}
@@ -174,7 +174,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
       </div>
 
       {/* Database */}
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Database size={20} className="text-brand-400" />
           Database
@@ -201,7 +201,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
               <button
                 onClick={handleOpenDbShell}
                 disabled={project.status !== 'running'}
-                className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-2 flex items-center gap-2 transition-colors"
               >
                 <Database size={16} className="text-brand-400" />
                 Open DB Shell
@@ -214,13 +214,13 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
         <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <button
             onClick={handleMigrate}
             disabled={project.status !== 'running'}
-            className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 rounded-lg flex flex-col items-center gap-2 transition-colors"
+            className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 flex flex-col items-center gap-2 transition-colors"
           >
             <PlayCircle size={24} className="text-green-400" />
             <span className="text-sm font-medium">Migrate</span>
@@ -228,7 +228,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
           <button
             onClick={handleCollectstatic}
             disabled={project.status !== 'running'}
-            className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 rounded-lg flex flex-col items-center gap-2 transition-colors"
+            className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 flex flex-col items-center gap-2 transition-colors"
           >
             <ExternalLink size={24} className="text-blue-400" />
             <span className="text-sm font-medium">Collectstatic</span>
@@ -236,7 +236,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
           <button
             onClick={handleOpenShell}
             disabled={project.status !== 'running'}
-            className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 rounded-lg flex flex-col items-center gap-2 transition-colors"
+            className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 flex flex-col items-center gap-2 transition-colors"
           >
             <Terminal size={24} className="text-purple-400" />
             <span className="text-sm font-medium">Shell</span>
@@ -244,14 +244,14 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
           <button
             onClick={handleOpenDbShell}
             disabled={project.status !== 'running' || project.database.type === 'none'}
-            className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 rounded-lg flex flex-col items-center gap-2 transition-colors"
+            className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 flex flex-col items-center gap-2 transition-colors"
           >
             <Database size={24} className="text-brand-400" />
             <span className="text-sm font-medium">DB Shell</span>
           </button>
           <button
             onClick={handleOpenVSCode}
-            className="bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-lg flex flex-col items-center gap-2 transition-colors"
+            className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 text-white p-3 flex flex-col items-center gap-2 transition-colors"
           >
             <Code size={24} className="text-brand-400" />
             <span className="text-sm font-medium">VS Code</span>
@@ -260,11 +260,11 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
+      <div className="rounded-xl border border-red-700/50 bg-red-950/30 p-4">
         <h3 className="text-lg font-semibold text-red-400 mb-4">Danger Zone</h3>
         <button
           onClick={onDelete}
-          className="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          className="rounded-xl bg-red-700 hover:bg-red-600 text-white px-4 py-2.5 flex items-center gap-2 transition-colors"
         >
           <Trash2 size={18} />
           Delete Project

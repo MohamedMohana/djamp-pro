@@ -3,12 +3,10 @@
 @tailwind utilities;
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Avenir Next', 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
   color-scheme: dark;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -23,6 +21,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: radial-gradient(1200px 700px at 10% -5%, #193564 0%, rgba(25, 53, 100, 0) 55%),
+    radial-gradient(900px 560px at 90% 0%, rgba(32, 95, 203, 0.35) 0%, rgba(32, 95, 203, 0) 58%),
+    linear-gradient(150deg, #020715 0%, #081428 48%, #060f1f 100%);
 }
 
 #root {
@@ -30,22 +31,43 @@ body {
   height: 100vh;
 }
 
+.app-bg {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(circle at 2px 2px, rgba(171, 203, 255, 0.12) 1px, transparent 0);
+  background-size: 24px 24px;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.glass-panel {
+  background: linear-gradient(175deg, rgba(25, 35, 58, 0.86) 0%, rgba(12, 19, 38, 0.84) 100%);
+  backdrop-filter: blur(9px);
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: rgba(30, 42, 68, 0.45);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 4px;
+  background: linear-gradient(180deg, #2f5fcc 0%, #2343a1 100%);
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: linear-gradient(180deg, #3d74eb 0%, #2850bb 100%);
 }
 
 @layer utilities {
