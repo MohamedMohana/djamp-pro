@@ -58,6 +58,24 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
     }
   };
 
+  const handleOpenDbAdmin = async () => {
+    try {
+      const { url } = await api.getDatabaseAdminUrl(project.id);
+      try {
+        await api.openInBrowser(url);
+      } catch (error) {
+        console.error('Failed to open DB admin via native open, fallback to window.open:', error);
+        const opened = window.open(url, '_blank');
+        if (!opened) {
+          alert(`Unable to open DB admin automatically. Open this URL manually: ${url}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to open database admin:', error);
+      alert('Failed to open database admin. This is currently supported for PostgreSQL projects only.');
+    }
+  };
+
   const handleOpenVSCode = async () => {
     try {
       await api.openVSCode(project.id);
@@ -197,15 +215,29 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
               <div className="text-sm text-gray-400">Username</div>
               <div className="font-mono text-sm">{project.database.username}</div>
             </div>
-            <div className="col-span-2 pt-2 border-t border-gray-700">
-              <button
-                onClick={handleOpenDbShell}
-                disabled={project.status !== 'running'}
-                className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-2 flex items-center gap-2 transition-colors"
-              >
-                <Database size={16} className="text-brand-400" />
-                Open DB Shell
-              </button>
+            <div className="col-span-2 border-t border-gray-700 pt-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleOpenDbShell}
+                  disabled={project.status !== 'running'}
+                  className="rounded-xl border border-white/10 bg-slate-700/65 px-3 py-2 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <Database size={16} className="text-brand-400" />
+                    Open DB Shell
+                  </span>
+                </button>
+                <button
+                  onClick={handleOpenDbAdmin}
+                  disabled={project.database.type !== 'postgres'}
+                  className="rounded-xl border border-white/10 bg-slate-700/65 px-3 py-2 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <ExternalLink size={16} className="text-brand-400" />
+                    Open DB Admin
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
