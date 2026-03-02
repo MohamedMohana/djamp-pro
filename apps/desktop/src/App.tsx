@@ -187,7 +187,15 @@ function App() {
     if (project.database.type === 'none') return;
     try {
       const { url } = await api.getDatabaseAdminUrl(project.id);
-      await api.openInBrowser(url);
+      try {
+        await api.openInBrowser(url);
+      } catch (openError) {
+        console.error('Tauri open failed, falling back to window.open:', openError);
+        const opened = window.open(url, '_blank');
+        if (!opened) {
+          throw openError;
+        }
+      }
     } catch (error) {
       console.error('Failed to open database admin:', error);
       alert(`Failed to open database admin: ${extractErrorMessage(error, 'Unknown error')}`);
