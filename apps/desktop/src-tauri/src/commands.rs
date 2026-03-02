@@ -295,24 +295,33 @@ pub async fn open_in_browser(url: String) -> Result<(), String> {
 
 fn open_with_os(target: &str) -> Result<(), String> {
     if cfg!(target_os = "macos") {
-        Command::new("open")
+        let status = Command::new("open")
             .arg(target)
             .status()
             .map_err(|err| format!("open failed: {err}"))?;
+        if !status.success() {
+            return Err(format!("open exited with status: {status}"));
+        }
         return Ok(());
     }
 
     if cfg!(target_os = "windows") {
-        Command::new("cmd")
+        let status = Command::new("cmd")
             .args(["/C", "start", "", target])
             .status()
             .map_err(|err| format!("start failed: {err}"))?;
+        if !status.success() {
+            return Err(format!("start exited with status: {status}"));
+        }
         return Ok(());
     }
 
-    Command::new("xdg-open")
+    let status = Command::new("xdg-open")
         .arg(target)
         .status()
         .map_err(|err| format!("xdg-open failed: {err}"))?;
+    if !status.success() {
+        return Err(format!("xdg-open exited with status: {status}"));
+    }
     Ok(())
 }
