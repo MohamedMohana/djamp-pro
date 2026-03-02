@@ -23,6 +23,9 @@ function App() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [actionProjectId, setActionProjectId] = useState<string | null>(null);
   const [actionKind, setActionKind] = useState<'start' | 'stop' | 'restart' | null>(null);
+  const [deleteModalProject, setDeleteModalProject] = useState<Project | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const extractErrorMessage = (error: unknown, fallback: string): string => {
     if (error instanceof Error && error.message.trim()) {
@@ -168,18 +171,41 @@ function App() {
     }
   };
 
-  const handleDeleteProject = async (id: string) => {
-    if (confirm('Are you sure you want to delete this project?')) {
-      try {
-        await api.deleteProject(id);
-        await loadProjects();
-        if (selectedProject?.id === id) {
-          setSelectedProject(null);
-        }
-      } catch (error) {
-        console.error('Failed to delete project:', error);
-        alert(`Failed to delete project: ${extractErrorMessage(error, 'Unknown error')}`);
+  const handleDeleteProject = (project: Project) => {
+    setDeleteModalProject(project);
+    setDeleteConfirmName('');
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteSubmitting) return;
+    setDeleteModalProject(null);
+    setDeleteConfirmName('');
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    if (!deleteModalProject) return;
+
+    const expectedName = deleteModalProject.name.trim();
+    if (deleteConfirmName.trim() !== expectedName) {
+      alert(`Type "${expectedName}" exactly to confirm deletion.`);
+      return;
+    }
+
+    setDeleteSubmitting(true);
+    try {
+      const id = deleteModalProject.id;
+      await api.deleteProject(id);
+      await loadProjects();
+      if (selectedProject?.id === id) {
+        setSelectedProject(null);
       }
+      setDeleteModalProject(null);
+      setDeleteConfirmName('');
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      alert(`Failed to delete project: ${extractErrorMessage(error, 'Unknown error')}`);
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
@@ -322,7 +348,7 @@ function App() {
                 {activeTab === 'projects' && (
                   <ProjectCard
                     project={selectedProject}
-                    onDelete={() => handleDeleteProject(selectedProject.id)}
+                    onDelete={() => handleDeleteProject(selectedProject)}
                   />
                 )}
 
@@ -393,6 +419,48 @@ function App() {
 
       {showAddModal && <AddProjectModal onClose={() => setShowAddModal(false)} onAdd={loadProjects} />}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+
+      {deleteModalProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/40 bg-slate-900 p-5 shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
+            <h3 className="text-xl font-semibold text-red-300">Delete Project</h3>
+            <p className="mt-3 text-sm text-slate-300">
+              This will remove <span className="font-semibold text-white">{deleteModalProject.name}</span> from DJAMP PRO.
+            </p>
+            <p className="mt-2 text-sm text-slate-400">
+              Project files on disk will stay untouched. This action cannot be undone in the app.
+            </p>
+
+            <label className="mt-4 block text-sm font-medium text-slate-300">
+              Type <span className="font-mono text-white">{deleteModalProject.name}</span> to confirm
+            </label>
+            <input
+              autoFocus
+              value={deleteConfirmName}
+              onChange={(event) => setDeleteConfirmName(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-white/15 bg-slate-800/80 px-3 py-2 text-sm text-white outline-none transition focus:border-red-400/70"
+              placeholder={deleteModalProject.name}
+            />
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                onClick={closeDeleteModal}
+                disabled={deleteSubmitting}
+                className="rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteProject}
+                disabled={deleteSubmitting || deleteConfirmName.trim() !== deleteModalProject.name.trim()}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deleteSubmitting ? 'Deleting...' : 'Delete Project'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
