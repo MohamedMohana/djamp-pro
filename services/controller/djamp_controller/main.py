@@ -4097,6 +4097,9 @@ async def get_database_admin_url(project_id: str) -> Dict[str, str]:
     if project.database.type != "postgres":
         raise HTTPException(status_code=400, detail="Web database admin currently supports PostgreSQL projects only")
 
+    if not _is_port_open(project.port):
+        raise HTTPException(status_code=409, detail="Project is not running. Start project first to open DB Admin.")
+
     protocol = "https" if project.httpsEnabled else "http"
     url = f"{protocol}://{project.domain}"
 
@@ -4116,6 +4119,9 @@ async def open_database_admin(project_id: str, query: str = "") -> HTMLResponse:
 
     if project.database.type != "postgres":
         raise HTTPException(status_code=400, detail="Web database admin currently supports PostgreSQL projects only")
+
+    if not _is_port_open(project.port):
+        raise HTTPException(status_code=409, detail="Project is not running. Start project first to open DB Admin.")
 
     start_result = await _start_service("postgres")
     if not start_result.success:
