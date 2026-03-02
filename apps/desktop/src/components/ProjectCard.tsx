@@ -59,20 +59,37 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
   };
 
   const handleOpenDbAdmin = async () => {
+    // Open synchronously first so browser pop-up blockers do not block it after async work.
+    const fallbackUrl = `http://127.0.0.1:8765/api/databases/${project.id}/admin`;
+    const openedImmediately = window.open(fallbackUrl, '_blank');
+    if (openedImmediately) {
+      return;
+    }
+
     try {
+      // Keep backend-derived URL support in case endpoint shape changes later.
       const { url } = await api.getDatabaseAdminUrl(project.id);
       try {
         await api.openInBrowser(url);
+        return;
       } catch (error) {
-        console.error('Failed to open DB admin via native open, fallback to window.open:', error);
-        const opened = window.open(url, '_blank');
-        if (!opened) {
-          alert(`Unable to open DB admin automatically. Open this URL manually: ${url}`);
-        }
+        console.error('Native open failed for DB admin:', error);
       }
+
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch (_error) {
+        // Clipboard may be unavailable; continue with manual URL alert.
+      }
+      alert(`Unable to open DB admin automatically. Open this URL manually:\n\n${url}`);
     } catch (error) {
       console.error('Failed to open database admin:', error);
-      alert('Failed to open database admin. This is currently supported for PostgreSQL projects only.');
+      try {
+        await navigator.clipboard.writeText(fallbackUrl);
+      } catch (_error) {
+        // ignore
+      }
+      alert(`Failed to resolve DB admin URL from backend. Try this URL manually:\n\n${fallbackUrl}`);
     }
   };
 
