@@ -59,38 +59,40 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
   };
 
   const handleOpenDbAdmin = async () => {
-    // Open synchronously first so browser pop-up blockers do not block it after async work.
-    const fallbackUrl = `http://127.0.0.1:8765/api/databases/${project.id}/admin`;
-    const openedImmediately = window.open(fallbackUrl, '_blank');
-    if (openedImmediately) {
+    const dbType = (project.database.type || '').toLowerCase();
+    if (dbType !== 'postgres') {
+      alert('Web DB Admin is currently supported for PostgreSQL projects only.');
       return;
     }
 
-    try {
-      // Keep backend-derived URL support in case endpoint shape changes later.
-      const { url } = await api.getDatabaseAdminUrl(project.id);
-      try {
-        await api.openInBrowser(url);
-        return;
-      } catch (error) {
-        console.error('Native open failed for DB admin:', error);
-      }
+    const fallbackUrl = `http://127.0.0.1:8765/api/databases/${project.id}/admin`;
+    let url = fallbackUrl;
 
-      try {
-        await navigator.clipboard.writeText(url);
-      } catch (_error) {
-        // Clipboard may be unavailable; continue with manual URL alert.
+    try {
+      const response = await api.getDatabaseAdminUrl(project.id);
+      if (response?.url) {
+        url = response.url;
       }
-      alert(`Unable to open DB admin automatically. Open this URL manually:\n\n${url}`);
     } catch (error) {
-      console.error('Failed to open database admin:', error);
-      try {
-        await navigator.clipboard.writeText(fallbackUrl);
-      } catch (_error) {
-        // ignore
-      }
-      alert(`Failed to resolve DB admin URL from backend. Try this URL manually:\n\n${fallbackUrl}`);
+      console.error('Failed to resolve DB admin URL from backend, using fallback URL:', error);
     }
+
+    try {
+      // Use native open first (same path used by the working Domain & HTTPS Open button).
+      await api.openInBrowser(url);
+      return;
+    } catch (error) {
+      console.error('Native open failed for DB admin, trying window.open fallback:', error);
+    }
+
+    window.open(url, '_blank');
+
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (_error) {
+      // Clipboard may be unavailable; continue with manual URL alert.
+    }
+    alert(`Unable to open DB admin automatically. Open this URL manually:\n\n${url}`);
   };
 
   const handleOpenVSCode = async () => {
@@ -246,7 +248,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
                 </button>
                 <button
                   onClick={handleOpenDbAdmin}
-                  disabled={project.database.type !== 'postgres'}
+                  disabled={(project.database.type || '').toLowerCase() !== 'postgres'}
                   className="rounded-xl border border-white/10 bg-slate-700/65 px-3 py-2 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="flex items-center gap-2">
