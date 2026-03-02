@@ -6,6 +6,7 @@ import html
 import json
 import os
 import platform
+import re
 import shlex
 import shutil
 import signal
@@ -2700,52 +2701,105 @@ def _run_postgres_query_text(project: Project, query: str) -> CommandResult:
     return _run_blocking(command, Path(project.path), env=env)
 
 
-def _render_psql_result_table(output: str) -> str:
+def _parse_psql_result(output: str) -> Optional[Dict[str, Any]]:
     lines = [line.rstrip() for line in output.splitlines() if line.strip()]
-    if len(lines) < 3:
-        return ""
+    if len(lines) < 2:
+        return None
 
     header_line = lines[0]
     if "|" not in header_line:
-        return ""
-
-    separator = lines[1].replace("+", "").replace("|", "").replace("-", "").replace(" ", "")
-    if separator:
-        return ""
+        return None
 
     headers = [part.strip() for part in header_line.split("|")]
     if not any(headers):
-        return ""
+        return None
 
     rows: List[List[str]] = []
+    row_count: Optional[int] = None
+
     for line in lines[2:]:
         stripped = line.strip()
         if stripped.startswith("(") and "row" in stripped:
+            m = re.search(r"\((\d+)\s+rows?\)", stripped)
+            if m:
+                row_count = int(m.group(1))
             break
+
         if "|" not in line:
             continue
 
         cells = [part.strip() for part in line.split("|")]
-        if len(cells) != len(headers):
-            continue
+        if len(cells) < len(headers):
+            cells = cells + [""] * (len(headers) - len(cells))
+        elif len(cells) > len(headers):
+            cells = cells[: len(headers) - 1] + ["|".join(cells[len(headers) - 1 :]).strip()]
         rows.append(cells)
 
-    if not rows:
-        return ""
+    if row_count is None:
+        row_count = len(rows)
 
-    head = "".join(f"<th>{html.escape(col)}</th>" for col in headers)
-    body = "".join(
-        "<tr>" + "".join(f"<td>{html.escape(cell)}</td>" for cell in row) + "</tr>"
-        for row in rows
+    return {
+        "headers": headers,
+        "rows": rows,
+        "row_count": row_count,
+    }
+
+
+def _render_psql_result_table(output: str) -> Tuple[str, int]:
+    parsed = _parse_psql_result(output)
+    if not parsed:
+        return "", 0
+
+    headers: List[str] = parsed["headers"]
+    rows: List[List[str]] = parsed["rows"]
+    row_count = int(parsed["row_count"])
+
+    head = "<th class='col-actions'>Actions</th>" + "".join(f"<th>{html.escape(col)}</th>" for col in headers)
+
+    if rows:
+        body = ""
+        for idx, row in enumerate(rows, start=1):
+            row_actions = (
+                "<td class='row-actions'>"
+                "<a href='#'>Edit</a>"
+                "<a href='#'>Copy</a>"
+                "<a href='#'>Delete</a>"
+                "</td>"
+            )
+            cells = "".join(f"<td>{html.escape(cell)}</td>" for cell in row)
+            body += f"<tr><td class='row-index'>{idx}</td>{row_actions}{cells}</tr>"
+    else:
+        body = (
+            "<tr><td class='row-index'>-</td><td class='row-actions empty'>No row actions</td>"
+            + f"<td class='empty-cell' colspan='{max(len(headers), 1)}'>No rows returned.</td></tr>"
+        )
+
+    shown_from = 0
+    shown_to = max(len(rows) - 1, 0) if row_count > 0 else 0
+    summary = (
+        "<div class='query-ok'>"
+        + f"Showing rows {shown_from} - {shown_to} ({row_count} total)."
+        + "</div>"
     )
 
-    return (
+    tools = (
+        "<div class='result-tools'>"
+        "<span class='tool-chip'>Rows: 25</span>"
+        "<span class='tool-chip'>Filter: table</span>"
+        "<span class='tool-chip'>Sort: none</span>"
+        "</div>"
+    )
+
+    table_html = (
         "<div class='result-table-wrap'><table class='result-table'><thead><tr>"
+        + "<th class='row-index-head'>#</th>"
         + head
         + "</tr></thead><tbody>"
         + body
         + "</tbody></table></div>"
     )
+
+    return summary + tools + table_html, row_count
 
 
 def _render_postgres_admin_html(
@@ -2807,7 +2861,7 @@ def _render_postgres_admin_html(
             )
         else:
             output_text = (query_output or "(No output)").strip() or "(No output)"
-            parsed_table = _render_psql_result_table(output_text)
+            parsed_table, _row_count = _render_psql_result_table(output_text)
             if parsed_table:
                 result_block = (
                     "<div class='result-card'><div class='result-title'>Query Result</div>"
@@ -3054,11 +3108,43 @@ def _render_postgres_admin_html(
       font-size: 13px;
     }}
 
+    .query-ok {{
+      border: 1px solid #c6d67a;
+      background: linear-gradient(180deg, #eef5bf 0%, #d8e89a 100%);
+      color: #4a5d1f;
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }}
+
+    .result-tools {{ display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }}
+    .tool-chip {{
+      border: 1px solid var(--line-soft);
+      background: #f5f8fc;
+      color: #4d6078;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }}
+
     .result-table-wrap {{ overflow: auto; border: 1px solid var(--line-soft); border-radius: 8px; background: #fff; }}
-    .result-table {{ border-collapse: collapse; width: 100%; min-width: 480px; font-size: 12px; }}
-    .result-table th {{ background: #eef3f9; color: #32465d; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }}
-    .result-table td {{ padding: 8px 10px; border-bottom: 1px solid #eef2f7; color: #25374c; vertical-align: top; }}
+    .result-table {{ border-collapse: collapse; width: 100%; min-width: 640px; font-size: 12px; }}
+    .result-table th {{ background: #eef3f9; color: #32465d; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); border-right: 1px solid #e5ebf3; white-space: nowrap; }}
+    .result-table td {{ padding: 8px 10px; border-bottom: 1px solid #eef2f7; border-right: 1px solid #f0f3f8; color: #25374c; vertical-align: top; }}
     .result-table tr:nth-child(even) td {{ background: #fbfdff; }}
+    .result-table th:last-child, .result-table td:last-child {{ border-right: 0; }}
+
+    .row-index-head, .row-index {{ width: 40px; text-align: center; color: #6e7d90; background: #f7f9fc; }}
+    .row-index {{ font-weight: 600; }}
+    .col-actions {{ min-width: 160px; }}
+    .row-actions {{ white-space: nowrap; min-width: 160px; }}
+    .row-actions a {{ color: #2e6aa9; text-decoration: none; margin-right: 10px; font-size: 11px; font-weight: 600; }}
+    .row-actions a:hover {{ text-decoration: underline; }}
+    .row-actions.empty {{ color: #8695a8; font-size: 11px; }}
+    .empty-cell {{ color: #7a8798; font-style: italic; }}
 
     .raw-toggle {{ margin-top: 10px; }}
     .raw-toggle > summary {{ cursor: pointer; color: #516378; font-size: 12px; font-weight: 600; }}
