@@ -24,7 +24,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 APP_NAME = "DJAMP PRO"
 MANAGED_HOSTS_BEGIN = "# BEGIN DJAMP PRO MANAGED"
@@ -2309,7 +2309,7 @@ def _render_caddyfile(projects: List[Project]) -> str:
             key_path = project.certificatePath.replace(".crt", ".key")
             lines.append(f"  tls {q(project.certificatePath)} {q(key_path)}")
         if project.database.type == "postgres":
-            lines.append("  @dbadmin path /phpmyadmin /phpmyadmin/")
+            lines.append("  @dbadmin path /phpmyadmin /phpmyadmin/ /phpMyAdmin /phpMyAdmin/ /phpMyAdmin5 /phpMyAdmin5/")
             lines.append("  handle @dbadmin {")
             lines.append(f"    rewrite * /api/databases/{project.id}/admin")
             lines.append("    reverse_proxy 127.0.0.1:8765")
@@ -2700,6 +2700,54 @@ def _run_postgres_query_text(project: Project, query: str) -> CommandResult:
     return _run_blocking(command, Path(project.path), env=env)
 
 
+def _render_psql_result_table(output: str) -> str:
+    lines = [line.rstrip() for line in output.splitlines() if line.strip()]
+    if len(lines) < 3:
+        return ""
+
+    header_line = lines[0]
+    if "|" not in header_line:
+        return ""
+
+    separator = lines[1].replace("+", "").replace("|", "").replace("-", "").replace(" ", "")
+    if separator:
+        return ""
+
+    headers = [part.strip() for part in header_line.split("|")]
+    if not any(headers):
+        return ""
+
+    rows: List[List[str]] = []
+    for line in lines[2:]:
+        stripped = line.strip()
+        if stripped.startswith("(") and "row" in stripped:
+            break
+        if "|" not in line:
+            continue
+
+        cells = [part.strip() for part in line.split("|")]
+        if len(cells) != len(headers):
+            continue
+        rows.append(cells)
+
+    if not rows:
+        return ""
+
+    head = "".join(f"<th>{html.escape(col)}</th>" for col in headers)
+    body = "".join(
+        "<tr>" + "".join(f"<td>{html.escape(cell)}</td>" for cell in row) + "</tr>"
+        for row in rows
+    )
+
+    return (
+        "<div class='result-table-wrap'><table class='result-table'><thead><tr>"
+        + head
+        + "</tr></thead><tbody>"
+        + body
+        + "</tbody></table></div>"
+    )
+
+
 def _render_postgres_admin_html(
     project: Project,
     tables_output: str,
@@ -2714,22 +2762,74 @@ def _render_postgres_admin_html(
     safe_query = html.escape(query)
     safe_tables = html.escape((tables_output or "No tables found").strip() or "No tables found")
 
-    result_block = ""
+    table_names: List[str] = []
+    seen: set[str] = set()
+    for raw_line in (tables_output or "").splitlines():
+        line = raw_line.strip()
+        if not line or line.lower() == "table_name":
+            continue
+        if set(line) <= {"-", "+", "|", " "}:
+            continue
+        if line.startswith("(") and line.endswith("rows)"):
+            continue
+
+        candidate = line
+        if "|" in candidate:
+            candidate = candidate.split("|", 1)[0].strip()
+        if not candidate or "." not in candidate:
+            continue
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        table_names.append(candidate)
+
+    if table_names:
+        table_links = "".join(
+            (
+                "<a class='table-link' href='?query="
+                + quote_plus(f"SELECT * FROM {table} LIMIT 100;")
+                + "'>"
+                + html.escape(table)
+                + "</a>"
+            )
+            for table in table_names
+        )
+    else:
+        table_links = "<div class='empty-note'>No tables detected yet.</div>"
+
+    result_block = "<div class='result-empty'>Run a SQL query to preview results.</div>"
     if query.strip():
         if query_error:
             result_block = (
-                "<h2>Query Error</h2>"
-                + "<pre class='result error'>"
+                "<div class='result-card error'><div class='result-title'>Query Error</div><pre class='result-raw'>"
                 + html.escape(query_error.strip() or "Query failed")
-                + "</pre>"
+                + "</pre></div>"
             )
         else:
-            result_block = (
-                "<h2>Query Result</h2>"
-                + "<pre class='result'>"
-                + html.escape((query_output or "(No output)").strip() or "(No output)")
-                + "</pre>"
-            )
+            output_text = (query_output or "(No output)").strip() or "(No output)"
+            parsed_table = _render_psql_result_table(output_text)
+            if parsed_table:
+                result_block = (
+                    "<div class='result-card'><div class='result-title'>Query Result</div>"
+                    + parsed_table
+                    + "<details class='raw-toggle'><summary>Raw output</summary><pre class='result-raw'>"
+                    + html.escape(output_text)
+                    + "</pre></details></div>"
+                )
+            else:
+                result_block = (
+                    "<div class='result-card'><div class='result-title'>Query Result</div><pre class='result-raw'>"
+                    + html.escape(output_text)
+                    + "</pre></div>"
+                )
+
+    now_query = quote_plus("SELECT NOW();")
+    tables_query = quote_plus(
+        "SELECT table_schema || '.' || table_name AS table_name "
+        "FROM information_schema.tables "
+        "WHERE table_schema NOT IN ('pg_catalog', 'information_schema') "
+        "ORDER BY 1;"
+    )
 
     return f"""<!doctype html>
 <html lang='en'>
@@ -2738,43 +2838,326 @@ def _render_postgres_admin_html(
   <meta name='viewport' content='width=device-width, initial-scale=1' />
   <title>DJAMP DB Admin - {project_name}</title>
   <style>
-    :root {{ color-scheme: dark; }}
-    body {{ margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace; background: #0b1220; color: #e2e8f0; }}
-    .wrap {{ max-width: 1080px; margin: 0 auto; padding: 22px; }}
-    .card {{ background: #182339; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 16px; }}
-    h1 {{ margin: 0 0 8px; font-size: 24px; }}
-    h2 {{ margin: 0 0 10px; font-size: 18px; }}
-    .meta {{ color: #93c5fd; margin-bottom: 12px; }}
-    textarea {{ width: 100%; min-height: 140px; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 10px; padding: 10px; resize: vertical; box-sizing: border-box; }}
-    button {{ margin-top: 10px; border: 1px solid #1d4ed8; background: #2563eb; color: white; border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; }}
-    button:hover {{ background: #1d4ed8; }}
-    pre {{ margin: 0; white-space: pre-wrap; word-break: break-word; background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; }}
-    .result {{ margin-top: 8px; }}
-    .error {{ border-color: #7f1d1d; color: #fecaca; background: #450a0a; }}
-    a {{ color: #93c5fd; text-decoration: none; }}
+    :root {{
+      --bg: #eceff3;
+      --panel: #ffffff;
+      --line: #ccd4df;
+      --line-soft: #e5e9f0;
+      --text: #283341;
+      --muted: #6b7584;
+      --brand: #3d6ea7;
+      --brand-2: #2f557f;
+      --accent: #f2f5f9;
+      --danger-bg: #fff0f0;
+      --danger-line: #efb0b0;
+      --danger-text: #7d2525;
+    }}
+
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+    }}
+
+    .topbar {{
+      background: linear-gradient(180deg, #f9fafc 0%, #edf1f6 100%);
+      border-bottom: 1px solid var(--line);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }}
+
+    .brand {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 700;
+      color: #2f3c4d;
+      letter-spacing: 0.2px;
+    }}
+
+    .brand-badge {{
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: linear-gradient(145deg, #5aa6ff 0%, #2d4eb3 100%);
+      color: #fff;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+    }}
+
+    .meta {{
+      font-size: 13px;
+      color: var(--muted);
+      text-align: right;
+    }}
+
+    .tabs {{
+      display: flex;
+      gap: 6px;
+      padding: 10px 18px 0;
+      background: #f4f6fa;
+      border-bottom: 1px solid var(--line);
+    }}
+
+    .tab {{
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line-soft);
+      border-bottom-color: var(--line);
+      background: #f7f9fc;
+      color: #54657b;
+      border-radius: 8px 8px 0 0;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+    }}
+
+    .tab.active {{
+      background: #fff;
+      color: var(--brand-2);
+      border-color: var(--line);
+      border-bottom-color: #fff;
+    }}
+
+    .layout {{
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 14px;
+      padding: 14px;
+    }}
+
+    .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 0 rgba(0,0,0,.02);
+    }}
+
+    .panel-head {{
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line-soft);
+      background: linear-gradient(180deg, #f8fafd 0%, #eef2f8 100%);
+      font-size: 14px;
+      font-weight: 700;
+      color: #334359;
+    }}
+
+    .panel-body {{ padding: 12px 14px; }}
+
+    .kv {{
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 6px 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }}
+    .kv .k {{ color: var(--muted); }}
+    .kv .v {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; color: #3d4c5f; }}
+
+    .table-list {{
+      max-height: calc(100vh - 270px);
+      overflow: auto;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }}
+
+    .table-link {{
+      display: block;
+      padding: 8px 10px;
+      color: #3f5064;
+      text-decoration: none;
+      border-bottom: 1px solid #eef2f7;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }}
+
+    .table-link:hover {{ background: #edf3fb; color: #214c80; }}
+    .table-link:last-child {{ border-bottom: 0; }}
+
+    .empty-note {{ padding: 10px; color: #7a8798; font-size: 12px; }}
+
+    .action-row {{ display: flex; gap: 8px; margin-bottom: 10px; }}
+    .chip {{
+      text-decoration: none;
+      border: 1px solid var(--line);
+      background: var(--accent);
+      color: #425469;
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }}
+    .chip:hover {{ background: #e6edf7; }}
+
+    textarea {{
+      width: 100%;
+      min-height: 180px;
+      resize: vertical;
+      border: 1px solid #c5ceda;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      color: #243345;
+      background: #ffffff;
+    }}
+
+    .btn {{
+      margin-top: 10px;
+      border: 1px solid #2a5d98;
+      background: linear-gradient(180deg, #4f81be 0%, #2f5d95 100%);
+      color: #fff;
+      border-radius: 7px;
+      padding: 9px 13px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }}
+    .btn:hover {{ filter: brightness(1.04); }}
+
+    .result-card {{
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: #fbfcfe;
+      padding: 10px;
+    }}
+
+    .result-card.error {{
+      background: var(--danger-bg);
+      border-color: var(--danger-line);
+      color: var(--danger-text);
+    }}
+
+    .result-title {{ font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #3c4d62; }}
+    .result-card.error .result-title {{ color: var(--danger-text); }}
+
+    .result-empty {{
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      color: #78879b;
+      background: #fafcff;
+      font-size: 13px;
+    }}
+
+    .result-table-wrap {{ overflow: auto; border: 1px solid var(--line-soft); border-radius: 8px; background: #fff; }}
+    .result-table {{ border-collapse: collapse; width: 100%; min-width: 480px; font-size: 12px; }}
+    .result-table th {{ background: #eef3f9; color: #32465d; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }}
+    .result-table td {{ padding: 8px 10px; border-bottom: 1px solid #eef2f7; color: #25374c; vertical-align: top; }}
+    .result-table tr:nth-child(even) td {{ background: #fbfdff; }}
+
+    .raw-toggle {{ margin-top: 10px; }}
+    .raw-toggle > summary {{ cursor: pointer; color: #516378; font-size: 12px; font-weight: 600; }}
+
+    .result-raw {{
+      margin: 8px 0 0;
+      padding: 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: #fff;
+      color: #2a384a;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      max-height: 330px;
+      overflow: auto;
+    }}
+
+    .footer-raw {{
+      margin-top: 12px;
+      color: #7f8ca0;
+      font-size: 11px;
+      border-top: 1px solid var(--line-soft);
+      padding-top: 10px;
+    }}
+
+    @media (max-width: 1080px) {{
+      .layout {{ grid-template-columns: 1fr; }}
+      .table-list {{ max-height: 240px; }}
+      .meta {{ text-align: left; }}
+      .topbar {{ flex-direction: column; align-items: flex-start; }}
+    }}
   </style>
 </head>
 <body>
-  <div class='wrap'>
-    <div class='card'>
-      <h1>DJAMP Database Admin</h1>
-      <div class='meta'>Project: <strong>{project_name}</strong> | PostgreSQL @ 127.0.0.1:{db_port} | DB: {db_name} | User: {db_user}</div>
-      <div style='color:#94a3b8'>MAMP-style web access for local PostgreSQL. Use carefully on development data.</div>
+  <header class='topbar'>
+    <div class='brand'>
+      <span class='brand-badge'>DJ</span>
+      <span>DJAMP Database Admin</span>
     </div>
+    <div class='meta'>
+      <div><strong>Project:</strong> {project_name}</div>
+      <div><strong>PostgreSQL:</strong> 127.0.0.1:{db_port} &nbsp;|&nbsp; <strong>DB:</strong> {db_name} &nbsp;|&nbsp; <strong>User:</strong> {db_user}</div>
+    </div>
+  </header>
 
-    <div class='card'>
-      <h2>Run SQL</h2>
-      <form method='get'>
-        <textarea name='query' placeholder='SELECT NOW();'>{safe_query}</textarea>
-        <div><button type='submit'>Run Query</button></div>
-      </form>
-      {result_block}
-    </div>
+  <nav class='tabs'>
+    <a class='tab active' href='?'>Databases</a>
+    <a class='tab' href='?query={now_query}'>SQL</a>
+    <a class='tab' href='?query={tables_query}'>Structure</a>
+    <a class='tab' href='?'>Status</a>
+    <a class='tab' href='?'>Settings</a>
+  </nav>
 
-    <div class='card'>
-      <h2>Tables</h2>
-      <pre>{safe_tables}</pre>
-    </div>
+  <div class='layout'>
+    <aside class='panel'>
+      <div class='panel-head'>Database Overview</div>
+      <div class='panel-body'>
+        <div class='kv'>
+          <div class='k'>Engine</div><div class='v'>PostgreSQL</div>
+          <div class='k'>Host</div><div class='v'>127.0.0.1:{db_port}</div>
+          <div class='k'>Database</div><div class='v'>{db_name}</div>
+          <div class='k'>User</div><div class='v'>{db_user}</div>
+        </div>
+        <div class='panel-head' style='margin:0 -14px 10px; border-left:0; border-right:0; border-radius:0;'>Tables</div>
+        <div class='table-list'>
+          {table_links}
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <section class='panel'>
+        <div class='panel-head'>Run SQL</div>
+        <div class='panel-body'>
+          <div class='action-row'>
+            <a class='chip' href='?query={now_query}'>SELECT NOW()</a>
+            <a class='chip' href='?query={tables_query}'>List Tables</a>
+          </div>
+          <form method='get'>
+            <textarea name='query' placeholder='SELECT * FROM public.auth_user LIMIT 20;'>{safe_query}</textarea>
+            <div><button class='btn' type='submit'>Run Query</button></div>
+          </form>
+        </div>
+      </section>
+
+      <section class='panel' style='margin-top: 14px;'>
+        <div class='panel-head'>Results</div>
+        <div class='panel-body'>
+          {result_block}
+          <details class='raw-toggle'>
+            <summary>Raw table listing output</summary>
+            <pre class='result-raw'>{safe_tables}</pre>
+          </details>
+          <div class='footer-raw'>This UI is PostgreSQL-backed and intentionally local-only for development.</div>
+        </div>
+      </section>
+    </main>
   </div>
 </body>
 </html>"""
@@ -3637,7 +4020,7 @@ async def get_database_admin_url(project_id: str) -> Dict[str, str]:
         port = registry.settings.proxyPort if project.httpsEnabled else registry.settings.proxyHttpPort
         url = f"{url}:{port}"
 
-    return {"url": f"{url}/phpmyadmin/"}
+    return {"url": f"{url}/phpMyAdmin5/"}
 
 
 @app.get("/api/databases/{project_id}/admin", response_class=HTMLResponse)
