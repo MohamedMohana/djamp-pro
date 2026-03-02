@@ -65,6 +65,11 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
       return;
     }
 
+    if (project.status !== 'running') {
+      alert('Start the project first, then open DB Admin.');
+      return;
+    }
+
     const protocol = project.httpsEnabled ? 'https' : 'http';
     let url = `${protocol}://${project.domain}/phpmyadmin/`;
 
@@ -263,7 +268,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
                 </button>
                 <button
                   onClick={handleOpenDbAdmin}
-                  disabled={(project.database.type || '').toLowerCase() !== 'postgres'}
+                  disabled={project.status !== 'running' || (project.database.type || '').toLowerCase() !== 'postgres'}
                   className="rounded-xl border border-white/10 bg-slate-700/65 px-3 py-2 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="flex items-center gap-2">
