@@ -183,25 +183,6 @@ function App() {
     }
   };
 
-  const handleOpenDatabaseAdmin = async (project: Project) => {
-    if (project.database.type === 'none') return;
-    try {
-      const { url } = await api.getDatabaseAdminUrl(project.id);
-      try {
-        await api.openInBrowser(url);
-      } catch (openError) {
-        console.error('Tauri open failed, falling back to window.open:', openError);
-        const opened = window.open(url, '_blank');
-        if (!opened) {
-          throw openError;
-        }
-      }
-    } catch (error) {
-      console.error('Failed to open database admin:', error);
-      alert(`Failed to open database admin: ${extractErrorMessage(error, 'Unknown error')}`);
-    }
-  };
-
   const isSelectedBusy = Boolean(selectedProject && actionProjectId === selectedProject.id);
 
   return (
@@ -275,15 +256,10 @@ function App() {
                           {selectedProject.httpsEnabled ? 'https://' : 'http://'}{selectedProject.domain}
                         </span>
                         {selectedProject.database.type !== 'none' && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDatabaseAdmin(selectedProject)}
-                            className="inline-flex items-center gap-1 rounded-full bg-slate-700/35 px-3 py-1 uppercase ring-1 ring-inset ring-white/10 transition hover:bg-slate-600/60"
-                            title="Open Database Admin"
-                          >
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/35 px-3 py-1 uppercase ring-1 ring-inset ring-white/10">
                             <Database size={14} />
                             {selectedProject.database.type}
-                          </button>
+                          </span>
                         )}
                       </div>
                     </div>
