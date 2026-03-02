@@ -65,8 +65,21 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
       return;
     }
 
-    const fallbackUrl = `http://127.0.0.1:8765/api/databases/${project.id}/admin`;
-    let url = fallbackUrl;
+    const protocol = project.httpsEnabled ? 'https' : 'http';
+    let url = `${protocol}://${project.domain}/phpmyadmin/`;
+
+    try {
+      const status = await api.getProxyStatus();
+      const proxyActive = project.httpsEnabled ? status.proxyHttpsActive : status.proxyHttpActive;
+      const standardActive = project.httpsEnabled ? status.standardHttpsActive : status.standardHttpActive;
+
+      if (!proxyActive || !standardActive) {
+        const port = project.httpsEnabled ? status.proxyPort : status.proxyHttpPort;
+        url = `${protocol}://${project.domain}:${port}/phpmyadmin/`;
+      }
+    } catch (error) {
+      console.error('Failed to detect proxy status for DB admin URL:', error);
+    }
 
     try {
       const response = await api.getDatabaseAdminUrl(project.id);
@@ -74,25 +87,29 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
         url = response.url;
       }
     } catch (error) {
-      console.error('Failed to resolve DB admin URL from backend, using fallback URL:', error);
+      console.error('Failed to resolve DB admin URL from backend, using computed URL:', error);
     }
 
     try {
-      // Use native open first (same path used by the working Domain & HTTPS Open button).
       await api.openInBrowser(url);
       return;
     } catch (error) {
       console.error('Native open failed for DB admin, trying window.open fallback:', error);
     }
 
-    window.open(url, '_blank');
+    const opened = window.open(url, '_blank');
+    if (opened) {
+      return;
+    }
 
     try {
       await navigator.clipboard.writeText(url);
     } catch (_error) {
       // Clipboard may be unavailable; continue with manual URL alert.
     }
-    alert(`Unable to open DB admin automatically. Open this URL manually:\n\n${url}`);
+    alert(`Unable to open DB admin automatically. Open this URL manually:
+
+${url}`);
   };
 
   const handleOpenVSCode = async () => {
