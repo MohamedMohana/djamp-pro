@@ -107,9 +107,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
     } catch (_error) {
       // Clipboard may be unavailable; continue with manual URL alert.
     }
-    alert(`Unable to open DB admin automatically. Open this URL manually:
-
-${url}`);
+    alert(`Unable to open DB admin automatically. Open this URL manually:\n\n${url}`);
   };
 
   const handleOpenVSCode = async () => {
