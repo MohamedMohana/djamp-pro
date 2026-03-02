@@ -109,6 +109,69 @@ async fn healthcheck() -> bool {
     }
 }
 
+async fn sidecar_supports_required_routes() -> bool {
+    let response = match HEALTH_CLIENT
+        .get(format!("{SIDECAR_BASE}/openapi.json"))
+        .send()
+        .await
+    {
+        Ok(resp) if resp.status().is_success() => resp,
+        _ => return false,
+    };
+
+    let payload: Value = match response.json().await {
+        Ok(value) => value,
+        Err(_) => return false,
+    };
+
+    let Some(paths) = payload.get("paths").and_then(|v| v.as_object()) else {
+        return false;
+    };
+
+    paths.contains_key("/api/databases/{project_id}/admin-url")
+        && paths.contains_key("/api/databases/{project_id}/admin")
+}
+
+fn kill_stale_sidecar_listener_best_effort() {
+    if cfg!(target_os = "windows") {
+        let ps = "Get-NetTCPConnection -LocalPort 8765 -State Listen | Select-Object -ExpandProperty OwningProcess -Unique";
+        let output = match Command::new("powershell")
+            .args(["-NoProfile", "-Command", ps])
+            .output()
+        {
+            Ok(out) => out,
+            Err(_) => return,
+        };
+
+        if !output.status.success() {
+            return;
+        }
+
+        let pids = String::from_utf8_lossy(&output.stdout);
+        for pid in pids.split_whitespace() {
+            let _ = Command::new("taskkill").args(["/PID", pid, "/T", "/F"]).status();
+        }
+        return;
+    }
+
+    let output = match Command::new("lsof")
+        .args(["-ti", "tcp:8765", "-sTCP:LISTEN"])
+        .output()
+    {
+        Ok(out) => out,
+        Err(_) => return,
+    };
+
+    if !output.status.success() {
+        return;
+    }
+
+    let pids = String::from_utf8_lossy(&output.stdout);
+    for pid in pids.split_whitespace() {
+        let _ = Command::new("kill").args(["-TERM", pid]).status();
+    }
+}
+
 fn sidecar_process_running() -> Result<bool, String> {
     let mut guard = SIDECAR_PROCESS
         .lock()
@@ -162,7 +225,17 @@ async fn request_json(
 
 pub async fn ensure_sidecar_started() -> Result<(), String> {
     if healthcheck().await {
-        return Ok(());
+        if sidecar_supports_required_routes().await {
+            return Ok(());
+        }
+
+        // A stale controller may still be listening on 8765 from an older run.
+        // Restart it so the desktop app always talks to the current API shape.
+        if sidecar_process_running()? {
+            stop_sidecar_best_effort();
+        } else {
+            kill_stale_sidecar_listener_best_effort();
+        }
     }
 
     if !sidecar_process_running()? {
@@ -170,7 +243,7 @@ pub async fn ensure_sidecar_started() -> Result<(), String> {
     }
 
     for _ in 0..20 {
-        if healthcheck().await {
+        if healthcheck().await && sidecar_supports_required_routes().await {
             return Ok(());
         }
         sleep(Duration::from_millis(200)).await;
