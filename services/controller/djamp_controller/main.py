@@ -2308,6 +2308,12 @@ def _render_caddyfile(projects: List[Project]) -> str:
         if project.httpsEnabled and project.certificatePath:
             key_path = project.certificatePath.replace(".crt", ".key")
             lines.append(f"  tls {q(project.certificatePath)} {q(key_path)}")
+        if project.database.type == "postgres":
+            lines.append("  @dbadmin path /phpmyadmin /phpmyadmin/")
+            lines.append("  handle @dbadmin {")
+            lines.append(f"    rewrite * /api/databases/{project.id}/admin")
+            lines.append("    reverse_proxy 127.0.0.1:8765")
+            lines.append("  }")
         lines.append(f"  reverse_proxy 127.0.0.1:{project.port}")
         lines.append("}")
         lines.append("")
@@ -3622,7 +3628,16 @@ async def get_database_admin_url(project_id: str) -> Dict[str, str]:
     if project.database.type != "postgres":
         raise HTTPException(status_code=400, detail="Web database admin currently supports PostgreSQL projects only")
 
-    return {"url": f"http://127.0.0.1:8765/api/databases/{project_id}/admin"}
+    protocol = "https" if project.httpsEnabled else "http"
+    url = f"{protocol}://{project.domain}"
+
+    proxy_active = _is_port_open(registry.settings.proxyPort if project.httpsEnabled else registry.settings.proxyHttpPort)
+    standard_active = _is_port_open(443 if project.httpsEnabled else 80)
+    if not proxy_active or not standard_active:
+        port = registry.settings.proxyPort if project.httpsEnabled else registry.settings.proxyHttpPort
+        url = f"{url}:{port}"
+
+    return {"url": f"{url}/phpmyadmin/"}
 
 
 @app.get("/api/databases/{project_id}/admin", response_class=HTMLResponse)
