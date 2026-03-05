@@ -57,6 +57,7 @@ logs/
 .djamp/
 djamp-projects/
 djamp-venvs/
+test_project/certs_test/
 
 # Temporary
 *.tmp
