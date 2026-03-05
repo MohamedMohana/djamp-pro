@@ -333,19 +333,63 @@ async def mutate_registry(mutator) -> Registry:
         return updated
 
 
+def _is_relative_to(path: Path, base: Path) -> bool:
+    try:
+        path.relative_to(base)
+        return True
+    except ValueError:
+        return False
+
+
+def _canonical_project_id(project_id: str) -> Optional[str]:
+    raw = (project_id or "").strip()
+    if not raw:
+        return None
+    try:
+        return str(uuid.UUID(raw))
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def _require_project_id(project_id: str) -> str:
+    parsed = _canonical_project_id(project_id)
+    if not parsed:
+        raise HTTPException(status_code=400, detail="Invalid project ID")
+    return parsed
+
+
+def _safe_log_path(path: Path) -> Path:
+    candidate = path.expanduser().resolve()
+    for key in ("django_logs", "proxy_logs", "db_logs"):
+        root = paths()[key].expanduser().resolve()
+        if _is_relative_to(candidate, root):
+            return candidate
+    raise RuntimeError("Invalid log path")
+
+
 def project_log_path(project_id: str) -> Path:
-    return paths()["django_logs"] / f"{project_id}.log"
+    safe_project_id = _canonical_project_id(project_id)
+    if not safe_project_id:
+        raise ValueError("Invalid project ID")
+    return paths()["django_logs"] / f"{safe_project_id}.log"
 
 
 def service_log_path(service_name: str) -> Path:
-    return paths()["db_logs"] / f"{service_name}.log"
+    safe_name = (service_name or "").strip().lower()
+    if not safe_name or not re.fullmatch(r"[a-z0-9_-]+", safe_name):
+        raise ValueError("Invalid service name")
+    return paths()["db_logs"] / f"{safe_name}.log"
 
 
 def _tail_file(path: Path, max_chars: int = 2000) -> str:
-    if not path.exists():
+    try:
+        safe_path = _safe_log_path(path)
+    except Exception:
+        return ""
+    if not safe_path.exists():
         return ""
     try:
-        data = path.read_text(encoding="utf-8", errors="ignore")
+        data = safe_path.read_text(encoding="utf-8", errors="ignore")
         return data[-max_chars:]
     except Exception:
         return ""
@@ -710,12 +754,82 @@ def _apply_djamp_project_env(project: Project, env: Dict[str, str]) -> Dict[str,
     return out
 
 
+def _sanitize_subprocess_command(command: List[str], cwd: Path) -> List[str]:
+    if not command:
+        raise RuntimeError("Command is empty")
+
+    safe_cwd = cwd.expanduser().resolve()
+    allowed_roots = [
+        safe_cwd,
+        paths()["home"].expanduser().resolve(),
+        Path.home().expanduser().resolve(),
+        Path("/bin"),
+        Path("/sbin"),
+        Path("/usr/bin"),
+        Path("/usr/sbin"),
+        Path("/usr/local/bin"),
+        Path("/opt/homebrew"),
+        Path("/opt/homebrew/bin"),
+        Path("/opt/homebrew/opt"),
+    ]
+
+    sanitized: List[str] = []
+    for raw in command:
+        token = str(raw)
+        if not token:
+            raise RuntimeError("Command contains an empty argument")
+        if "\x00" in token or "\r" in token or "\n" in token:
+            raise RuntimeError("Command contains invalid characters")
+        sanitized.append(token)
+
+    executable = sanitized[0].strip()
+    if not executable:
+        raise RuntimeError("Executable is empty")
+
+    if "/" in executable or "\\" in executable or executable.startswith(("~", ".")):
+        resolved_executable = Path(executable).expanduser().resolve()
+        if not resolved_executable.exists():
+            raise RuntimeError(f"Executable not found: {resolved_executable}")
+        if not any(_is_relative_to(resolved_executable, root) for root in allowed_roots):
+            raise RuntimeError("Executable path is outside allowed roots")
+        sanitized[0] = str(resolved_executable)
+    else:
+        if not re.fullmatch(r"[A-Za-z0-9._+-]+", executable):
+            raise RuntimeError("Executable contains unsupported characters")
+        resolved = shutil.which(executable)
+        if not resolved:
+            raise RuntimeError(f"Executable not found in PATH: {executable}")
+        sanitized[0] = resolved
+
+    return sanitized
+
+
 def _run_blocking(command: List[str], cwd: Path, env: Optional[Dict[str, str]] = None) -> CommandResult:
     try:
+        safe_cwd = cwd.expanduser().resolve()
+    except Exception as exc:
+        return CommandResult(success=False, output="", error=f"Invalid command working directory: {exc}")
+
+    try:
+        safe_command = _sanitize_subprocess_command(command, safe_cwd)
+    except Exception as exc:
+        return CommandResult(success=False, output="", error=f"Unsafe command rejected: {exc}")
+
+    safe_env: Optional[Dict[str, str]] = None
+    if env is not None:
+        safe_env = {}
+        for key, value in env.items():
+            k = str(key)
+            v = str(value)
+            if "\x00" in k or "\x00" in v:
+                continue
+            safe_env[k] = v
+
+    try:
         result = subprocess.run(
-            command,
-            cwd=str(cwd),
-            env=env,
+            safe_command,
+            cwd=str(safe_cwd),
+            env=safe_env,
             text=True,
             capture_output=True,
             check=False,
@@ -1966,14 +2080,15 @@ def _get_cert_expiration(cert_path: Path) -> str:
 
 
 def _check_certificate(domain: str) -> CertificateInfo:
-    cert, key, _ = _certificate_paths(domain)
+    safe_domain = _sanitize_hostname(domain)
+    cert, key, _ = _certificate_paths(safe_domain)
     if not cert.exists() or not key.exists():
-        return CertificateInfo(domain=domain, certificatePath=str(cert), keyPath=str(key), isValid=False)
+        return CertificateInfo(domain=safe_domain, certificatePath=str(cert), keyPath=str(key), isValid=False)
 
     openssl = shutil.which("openssl")
     if not openssl:
         return CertificateInfo(
-            domain=domain,
+            domain=safe_domain,
             certificatePath=str(cert),
             keyPath=str(key),
             expiresAt="",
@@ -1982,7 +2097,7 @@ def _check_certificate(domain: str) -> CertificateInfo:
 
     validity = _run_blocking([openssl, "x509", "-checkend", "0", "-in", str(cert)], paths()["home"])
     return CertificateInfo(
-        domain=domain,
+        domain=safe_domain,
         certificatePath=str(cert),
         keyPath=str(key),
         expiresAt=_get_cert_expiration(cert),
@@ -3414,6 +3529,7 @@ async def add_project(payload: AddProjectPayload) -> Project:
     incoming.setdefault("status", "stopped")
 
     project = Project.model_validate(incoming)
+    project.id = _require_project_id(project.id)
     try:
         project.domain = _sanitize_hostname(project.domain)
         project.aliases = [_sanitize_hostname(a) for a in project.aliases]
@@ -3509,6 +3625,7 @@ async def patch_project(project_id: str, payload: Dict[str, Any]) -> Project:
 async def delete_project(project_id: str) -> Dict[str, str]:
     registry = await read_registry()
     project = _get_project_or_404(registry, project_id)
+    project_id = project.id
 
     if project_id in PROJECT_PROCESSES:
         proc, handle = PROJECT_PROCESSES.pop(project_id)
@@ -3537,8 +3654,9 @@ async def delete_project(project_id: str) -> Dict[str, str]:
 
 
 def _get_project_or_404(registry: Registry, project_id: str) -> Project:
+    safe_project_id = _require_project_id(project_id)
     for project in registry.projects:
-        if project.id == project_id:
+        if _canonical_project_id(project.id) == safe_project_id:
             return project
     raise HTTPException(status_code=404, detail="Project not found")
 
@@ -3554,10 +3672,56 @@ async def _update_project(registry: Registry, updated_project: Project) -> None:
     await mutate_registry(mutator)
 
 
+def _sanitize_error_for_client(message: str) -> str:
+    if not message:
+        return ""
+    lines = [line.strip() for line in message.replace("\r", "\n").splitlines() if line.strip()]
+    sensitive_markers = ("traceback", 'file "', " line ", "stack")
+    filtered = [line for line in lines if not any(marker in line.lower() for marker in sensitive_markers)]
+    if not filtered:
+        return "Operation failed. Check DJAMP PRO logs for details."
+    return "\n".join(filtered[:5])[:1200]
+
+
+def _public_command_result(result: CommandResult) -> Dict[str, Any]:
+    if result.success:
+        return {
+            "success": True,
+            "output": (result.output or "")[:1200],
+            "error": "",
+        }
+    return {
+        "success": False,
+        "output": "",
+        "error": _sanitize_error_for_client(result.error or result.output),
+    }
+
+
+def _sanitize_user_project_path(raw_path: str) -> Path:
+    raw = (raw_path or "").strip()
+    if not raw or "\x00" in raw:
+        raise HTTPException(status_code=400, detail="Invalid project path")
+
+    candidate = Path(raw).expanduser()
+    if not candidate.is_absolute():
+        raise HTTPException(status_code=400, detail="Project path must be an absolute path")
+
+    project = candidate.resolve()
+    if not project.exists() or not project.is_dir():
+        raise HTTPException(status_code=400, detail="Project directory does not exist")
+
+    restricted_roots = [Path("/System"), Path("/Library"), Path("/bin"), Path("/sbin"), Path("/usr")]
+    if any(_is_relative_to(project, root) for root in restricted_roots):
+        raise HTTPException(status_code=400, detail="Project path points to a restricted system directory")
+
+    return project
+
+
 @app.post("/api/projects/{project_id}/start")
 async def start_project(project_id: str) -> Dict[str, Any]:
     registry = await read_registry()
     project = _get_project_or_404(registry, project_id)
+    project_id = project.id
 
     # Ensure paths are absolute for reliable process spawning.
     try:
@@ -3682,7 +3846,7 @@ async def start_project(project_id: str) -> Dict[str, Any]:
     )
     env = _apply_djamp_project_env(project, env)
 
-    log_path = project_log_path(project_id)
+    log_path = project_log_path(project.id)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_handle = open(log_path, "a", encoding="utf-8")
     try:
@@ -3760,8 +3924,8 @@ async def start_project(project_id: str) -> Dict[str, Any]:
 
     return {
         "message": "Project started",
-        "hosts": hosts_result.model_dump(),
-        "proxy": caddy_result.model_dump(),
+        "hosts": _public_command_result(hosts_result),
+        "proxy": _public_command_result(caddy_result),
         "certificateWarning": cert_warning or "",
     }
 
@@ -3770,6 +3934,7 @@ async def start_project(project_id: str) -> Dict[str, Any]:
 async def stop_project(project_id: str) -> Dict[str, str]:
     registry = await read_registry()
     project = _get_project_or_404(registry, project_id)
+    project_id = project.id
 
     if project_id in PROJECT_PROCESSES:
         proc, handle = PROJECT_PROCESSES.pop(project_id)
@@ -3802,6 +3967,7 @@ async def restart_project(project_id: str) -> Dict[str, str]:
 async def _run_project_task(project_id: str, django_args: List[str], extra_env: Optional[Dict[str, str]] = None) -> CommandResult:
     registry = await read_registry()
     project = _get_project_or_404(registry, project_id)
+    project_id = project.id
     manage_py = _find_manage_py(project)
 
     def runner() -> CommandResult:
@@ -4161,8 +4327,11 @@ async def open_database_admin(project_id: str, query: str = "") -> HTMLResponse:
 
 @app.get("/api/logs/{project_id}/{source}")
 async def get_logs(project_id: str, source: str) -> str:
+    registry = await read_registry()
+    project = _get_project_or_404(registry, project_id)
+
     if source == "django":
-        path = project_log_path(project_id)
+        path = project_log_path(project.id)
     elif source == "proxy":
         path = paths()["proxy_logs"] / "caddy.log"
     elif source == "database":
@@ -4170,10 +4339,15 @@ async def get_logs(project_id: str, source: str) -> str:
     else:
         raise HTTPException(status_code=400, detail="Unknown log source")
 
-    if not path.exists():
+    try:
+        safe_path = _safe_log_path(path)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not safe_path.exists():
         return ""
 
-    data = path.read_text(encoding="utf-8", errors="ignore")
+    data = safe_path.read_text(encoding="utf-8", errors="ignore")
     return data[-20000:]
 
 
@@ -4185,7 +4359,7 @@ async def detect_django_project(payload: Dict[str, str]) -> DetectionResult:
 
 @app.post("/api/utilities/create-venv")
 async def create_venv(payload: CreateVenvPayload) -> Dict[str, str]:
-    project = Path(payload.path).expanduser().resolve()
+    project = _sanitize_user_project_path(payload.path)
     venv = project / ".venv"
 
     uv_bin = shutil.which("uv")
