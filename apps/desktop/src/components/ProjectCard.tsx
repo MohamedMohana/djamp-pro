@@ -109,7 +109,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
 
     try {
       await navigator.clipboard.writeText(url);
-    } catch (_error) {
+    } catch {
       // Clipboard may be unavailable; continue with manual URL alert.
     }
     alert(`Unable to open DB admin automatically. Open this URL manually:\n\n${url}`);
