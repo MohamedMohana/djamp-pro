@@ -43,7 +43,37 @@ jobs:
       - name: Build frontend
         run: npm --prefix apps/desktop run build
 
-  rust-check:
+  rust-check-tauri:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/desktop/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build web assets required by Tauri context
+        run: |
+          npm ci
+          npm --prefix apps/desktop ci
+          npm --prefix apps/desktop run build
+
+      - name: Check Tauri host (macOS target)
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+
+  rust-check-helper:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -54,9 +84,6 @@ jobs:
 
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
-
-      - name: Check Tauri host
-        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 
       - name: Check helper
         run: cargo check --manifest-path services/priv-helper/Cargo.toml
