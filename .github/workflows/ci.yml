@@ -49,11 +49,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/desktop/package-lock.json
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
+
+      - name: Build web assets required by Tauri context
+        run: |
+          npm ci
+          npm --prefix apps/desktop ci
+          npm --prefix apps/desktop run build
 
       - name: Check Tauri host (macOS target)
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
