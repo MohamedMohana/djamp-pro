@@ -48,7 +48,7 @@ function App() {
           return detail;
         }
       }
-    } catch (_ignored) {
+    } catch {
       // Keep raw string fallback below.
     }
 
