@@ -1,0 +1,73 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply triage labels
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const labels = [
+              { name: "needs-triage", color: "fbca04", description: "Needs maintainer triage" },
+              { name: "priority:p0", color: "b60205", description: "Critical priority" },
+              { name: "priority:p1", color: "d93f0b", description: "High priority" },
+              { name: "priority:p2", color: "fbca04", description: "Normal priority" },
+              { name: "release", color: "5319e7", description: "Release management work" }
+            ];
+
+            async function ensureLabel(label) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name
+                });
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description
+                  });
+                  return;
+                }
+                throw error;
+              }
+            }
+
+            for (const label of labels) {
+              await ensureLabel(label);
+            }
+
+            const issue = context.payload.issue;
+            const existing = (issue.labels || []).map((l) =>
+              typeof l === "string" ? l : l.name
+            );
+            const toAdd = [];
+            if (!existing.includes("needs-triage")) {
+              toAdd.push("needs-triage");
+            }
+            const hasPriority = existing.some((name) => name.startsWith("priority:"));
+            if (!hasPriority) {
+              toAdd.push("priority:p2");
+            }
+
+            if (toAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: toAdd
+              });
+            }
+

@@ -1,0 +1,110 @@
+name: Release Cadence
+
+on:
+  schedule:
+    # Monday 05:15 Asia/Riyadh (UTC+3)
+    - cron: "15 2 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check-release-cadence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure release reminder issue exists when needed
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const cadenceDays = 21;
+            const title = "release: publish next DJAMP PRO version";
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({ owner, repo, name, color, description });
+                  return;
+                }
+                throw error;
+              }
+            }
+
+            await ensureLabel("release", "5319e7", "Release management work");
+            await ensureLabel("needs-triage", "fbca04", "Needs maintainer triage");
+
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100
+            });
+
+            const published = releases
+              .filter((r) => !r.draft && !r.prerelease)
+              .sort((a, b) => {
+                const aDate = Date.parse(a.published_at || a.created_at);
+                const bDate = Date.parse(b.published_at || b.created_at);
+                return bDate - aDate;
+              });
+
+            const latest = published[0] || null;
+            const latestPublishedAt = latest ? (latest.published_at || latest.created_at) : null;
+            const daysSince = latestPublishedAt
+              ? Math.floor((Date.now() - Date.parse(latestPublishedAt)) / 86400000)
+              : 9999;
+
+            if (daysSince < cadenceDays) {
+              core.info(`Latest release is ${daysSince} days old; cadence OK.`);
+              return;
+            }
+
+            const draft = releases.find((r) => r.draft);
+            const issueBody = [
+              "Release cadence reminder.",
+              "",
+              `- Days since last published release: **${daysSince}**`,
+              `- Last published release: ${latest ? latest.tag_name : "none yet"}`,
+              draft
+                ? `- Draft release ready: ${draft.html_url}`
+                : "- No draft release currently open. Run Release Drafter and prepare notes.",
+              "",
+              "Checklist:",
+              "- [ ] Confirm macOS install path still works end-to-end",
+              "- [ ] Verify CI + CodeQL are green on main",
+              "- [ ] Finalize changelog and version tag (`vMAJOR.MINOR.PATCH`)",
+              "- [ ] Publish release and announce in discussions"
+            ].join("\n");
+
+            const openReleaseIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              labels: "release",
+              per_page: 100
+            });
+
+            const existing = openReleaseIssues.find((issue) => issue.title === title);
+            if (existing) {
+              core.info(`Release reminder already open: #${existing.number}`);
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body: issueBody
+              });
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body: issueBody,
+              labels: ["release", "needs-triage", "chore"]
+            });
+

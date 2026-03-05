@@ -49,6 +49,23 @@ services/controller/.venv/bin/python -m pytest services/controller/tests -q
 - Include clear reproduction or rationale.
 - Update docs when behavior changes.
 - Do not include unrelated refactors.
+- Link an issue whenever possible (`Closes #123`).
+
+## Labels and Triage
+
+DJAMP PRO uses a lightweight triage model:
+
+- `needs-triage` on new issues by default
+- priority labels: `priority:p0`, `priority:p1`, `priority:p2`
+- area labels on PRs: `area:desktop`, `area:controller`, `area:helper`, `area:ci`
+
+Maintainers may relabel issues/PRs to keep release notes and planning clean.
+
+## Release Cadence
+
+- Release drafter updates continuously on `main`.
+- A cadence workflow opens a reminder issue when no release has shipped recently.
+- Version tags must follow semantic format: `vMAJOR.MINOR.PATCH`.
 
 ## Good First Contributions
 

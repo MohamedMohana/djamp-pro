@@ -15,6 +15,7 @@ It gives you one control panel to run multiple Django apps with custom domains, 
 - 5-minute start: [`docs/QUICKSTART_5_MIN.md`](docs/QUICKSTART_5_MIN.md)
 - Troubleshooting: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
 - Contributing: [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)
+- Maintainer playbook: [`docs/MAINTAINER_PLAYBOOK.md`](docs/MAINTAINER_PLAYBOOK.md)
 
 ## Product Preview
 

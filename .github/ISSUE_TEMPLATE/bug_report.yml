@@ -5,6 +5,15 @@ body:
   - type: markdown
     attributes:
       value: "Thanks for reporting a bug in DJAMP PRO."
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I removed private machine details (paths, certs, secrets) from logs.
+          required: true
   - type: input
     id: version
     attributes:
@@ -45,6 +54,16 @@ body:
     id: logs
     attributes:
       label: Logs and screenshots
-      description: Paste relevant controller/proxy logs.
+      description: Paste relevant controller/proxy logs. Redact private paths and hostnames if needed.
+    validations:
+      required: false
+  - type: textarea
+    id: diagnostic
+    attributes:
+      label: Environment details
+      placeholder: |
+        Runtime mode: uv / conda / system / custom
+        Project domain: *.test / localhost / other
+        Database type: postgres / mysql / none
     validations:
       required: false

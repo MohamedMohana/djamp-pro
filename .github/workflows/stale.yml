@@ -20,3 +20,5 @@ jobs:
           days-before-close: 14
           stale-issue-label: stale
           stale-pr-label: stale
+          exempt-issue-labels: "security,priority:p0,priority:p1,release,pinned"
+          exempt-pr-labels: "security,priority:p0,priority:p1,pinned"

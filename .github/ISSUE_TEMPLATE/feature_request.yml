@@ -2,6 +2,13 @@ name: Feature request
 description: Propose an improvement for DJAMP PRO
 labels: [enhancement]
 body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and discussions for similar requests.
+          required: true
   - type: input
     id: problem
     attributes:
@@ -28,3 +35,23 @@ body:
       description: Explain who benefits and any risks.
     validations:
       required: false
+  - type: dropdown
+    id: macos_scope
+    attributes:
+      label: macOS relevance
+      options:
+        - Core macOS workflow
+        - Optional macOS improvement
+        - Cross-platform future work
+    validations:
+      required: true
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Can you help implement this?
+      options:
+        - Yes, I can open a PR
+        - I can help test
+        - Not right now
+    validations:
+      required: true
