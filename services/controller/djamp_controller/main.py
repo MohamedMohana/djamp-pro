@@ -3800,10 +3800,28 @@ def _sanitize_user_project_path(raw_path: str) -> Path:
     if resolved != home_root and not resolved.startswith(home_prefix):
         raise HTTPException(status_code=400, detail="Project path must be inside your home directory")
 
-    if not os.path.isdir(resolved):
+    relative = os.path.relpath(resolved, home_root)
+    if relative in ("", "."):
+        safe_parts: List[str] = []
+    else:
+        safe_parts = []
+        for part in Path(relative).parts:
+            if part in ("", ".", ".."):
+                raise HTTPException(status_code=400, detail="Invalid project path")
+            if not re.fullmatch(r"[A-Za-z0-9._ -]+", part):
+                raise HTTPException(status_code=400, detail="Project path contains unsupported characters")
+            safe_parts.append(part)
+
+    project = Path(home_root)
+    for part in safe_parts:
+        project = project / part
+    project = project.resolve()
+
+    if not _is_relative_to(project, Path(home_root)):
+        raise HTTPException(status_code=400, detail="Invalid project path")
+    if not project.is_dir():
         raise HTTPException(status_code=400, detail="Project directory does not exist")
 
-    project = Path(resolved)
     restricted_roots = [Path("/System"), Path("/Library"), Path("/bin"), Path("/sbin"), Path("/usr")]
     if any(_is_relative_to(project, root) for root in restricted_roots):
         raise HTTPException(status_code=400, detail="Project path points to a restricted system directory")
