@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, FolderOpen, Plus, Globe, Database, Check } from 'lucide-react';
-import { open as openDialog } from '@tauri-apps/api/dialog';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { api } from '../services/api';
 
 interface AddProjectModalProps {

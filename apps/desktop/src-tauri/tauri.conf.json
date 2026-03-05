@@ -1,38 +1,32 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist"
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420"
   },
-  "package": {
-    "productName": "DJAMP PRO",
-    "version": "1.0.1"
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "Django local environment manager",
+    "longDescription": "DJAMP PRO is a local development environment manager for Django projects with custom domains, HTTPS, and service orchestration."
   },
-  "tauri": {
-    "allowlist": {
-      "shell": {
-        "open": true
-      },
-      "dialog": {
-        "open": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "com.djamppro.app",
-      "category": "DeveloperTool",
-      "shortDescription": "Django local environment manager",
-      "longDescription": "DJAMP PRO is a local development environment manager for Django projects with custom domains, HTTPS, and service orchestration.",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ]
+  "productName": "DJAMP PRO",
+  "version": "1.0.1",
+  "identifier": "com.djamppro.app",
+  "plugins": {},
+  "app": {
+    "security": {
+      "csp": null
     },
     "windows": [
       {
@@ -41,11 +35,9 @@
         "height": 900,
         "minWidth": 1200,
         "minHeight": 700,
-        "resizable": true
+        "resizable": true,
+        "useHttpsScheme": true
       }
-    ],
-    "security": {
-      "csp": null
-    }
+    ]
   }
 }
