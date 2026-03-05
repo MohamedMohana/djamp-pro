@@ -710,6 +710,16 @@ def _base_env(project: Project) -> Dict[str, str]:
     return env
 
 
+def _prepend_path_env(env: Dict[str, str], prefix: Path) -> None:
+    try:
+        resolved = str(prefix.expanduser().resolve())
+    except Exception:
+        return
+
+    current = env.get("PATH", "")
+    env["PATH"] = f"{resolved}{os.pathsep}{current}" if current else resolved
+
+
 def _apply_djamp_project_env(project: Project, env: Dict[str, str]) -> Dict[str, str]:
     out = dict(env)
 
@@ -754,11 +764,80 @@ def _apply_djamp_project_env(project: Project, env: Dict[str, str]) -> Dict[str,
     return out
 
 
-def _sanitize_subprocess_command(command: List[str], cwd: Path) -> List[str]:
+_ALLOWED_SUBPROCESS_EXECUTABLES = {
+    "caddy",
+    "caddy.exe",
+    "cargo",
+    "cargo.exe",
+    "certutil",
+    "cmd",
+    "cmd.exe",
+    "conda",
+    "conda.exe",
+    "djamp-priv-helper",
+    "djamp-priv-helper.exe",
+    "initdb",
+    "initdb.exe",
+    "openssl",
+    "openssl.exe",
+    "osascript",
+    "pg_isready",
+    "pg_isready.exe",
+    "powershell",
+    "powershell.exe",
+    "psql",
+    "psql.exe",
+    "python",
+    "python.exe",
+    "security",
+    "uv",
+    "uv.exe",
+}
+
+
+def _sanitize_subprocess_command(command: List[str], cwd: Path, env: Optional[Dict[str, str]] = None) -> List[str]:
     if not command:
         raise RuntimeError("Command is empty")
 
     safe_cwd = cwd.expanduser().resolve()
+
+    sanitized: List[str] = []
+    for raw in command:
+        token = str(raw)
+        if not token:
+            raise RuntimeError("Command contains an empty argument")
+        if "\x00" in token or "\r" in token or "\n" in token:
+            raise RuntimeError("Command contains invalid characters")
+        if len(token) > 8192:
+            raise RuntimeError("Command argument is too long")
+        sanitized.append(token)
+
+    executable_token = sanitized[0].strip()
+    executable = executable_token.replace("\\", "/").rsplit("/", 1)[-1]
+    if not executable:
+        raise RuntimeError("Executable is empty")
+
+    if not re.fullmatch(r"[A-Za-z0-9._+-]+", executable):
+        raise RuntimeError("Executable contains unsupported characters")
+
+    allowed_name = executable in _ALLOWED_SUBPROCESS_EXECUTABLES or re.fullmatch(
+        r"python([0-9]+(\.[0-9]+)*)?(\.exe)?",
+        executable,
+    )
+    if not allowed_name:
+        raise RuntimeError(f"Executable is not permitted: {executable}")
+
+    search_path = None
+    if env:
+        search_path = env.get("PATH")
+    if not search_path:
+        search_path = os.environ.get("PATH")
+
+    resolved = shutil.which(executable, path=search_path)
+    if not resolved:
+        raise RuntimeError(f"Executable not found in PATH: {executable}")
+    resolved_path = Path(resolved).expanduser().resolve()
+
     allowed_roots = [
         safe_cwd,
         paths()["home"].expanduser().resolve(),
@@ -768,52 +847,28 @@ def _sanitize_subprocess_command(command: List[str], cwd: Path) -> List[str]:
         Path("/usr/bin"),
         Path("/usr/sbin"),
         Path("/usr/local/bin"),
+        Path("/opt"),
         Path("/opt/homebrew"),
         Path("/opt/homebrew/bin"),
         Path("/opt/homebrew/opt"),
     ]
-
-    sanitized: List[str] = []
-    for raw in command:
-        token = str(raw)
-        if not token:
-            raise RuntimeError("Command contains an empty argument")
-        if "\x00" in token or "\r" in token or "\n" in token:
-            raise RuntimeError("Command contains invalid characters")
-        sanitized.append(token)
-
-    executable = sanitized[0].strip()
-    if not executable:
-        raise RuntimeError("Executable is empty")
-
-    if "/" in executable or "\\" in executable or executable.startswith(("~", ".")):
-        resolved_executable = Path(executable).expanduser().resolve()
-        if not resolved_executable.exists():
-            raise RuntimeError(f"Executable not found: {resolved_executable}")
-        if not any(_is_relative_to(resolved_executable, root) for root in allowed_roots):
-            raise RuntimeError("Executable path is outside allowed roots")
-        sanitized[0] = str(resolved_executable)
-    else:
-        if not re.fullmatch(r"[A-Za-z0-9._+-]+", executable):
-            raise RuntimeError("Executable contains unsupported characters")
-        resolved = shutil.which(executable)
-        if not resolved:
-            raise RuntimeError(f"Executable not found in PATH: {executable}")
-        sanitized[0] = resolved
+    if not any(_is_relative_to(resolved_path, root) for root in allowed_roots):
+        raise RuntimeError("Executable path is outside allowed roots")
+    sanitized[0] = str(resolved_path)
 
     return sanitized
 
 
-def _run_blocking(command: List[str], cwd: Path, env: Optional[Dict[str, str]] = None) -> CommandResult:
+def _run_blocking(
+    command: List[str],
+    cwd: Path,
+    env: Optional[Dict[str, str]] = None,
+    input_text: Optional[str] = None,
+) -> CommandResult:
     try:
         safe_cwd = cwd.expanduser().resolve()
     except Exception as exc:
         return CommandResult(success=False, output="", error=f"Invalid command working directory: {exc}")
-
-    try:
-        safe_command = _sanitize_subprocess_command(command, safe_cwd)
-    except Exception as exc:
-        return CommandResult(success=False, output="", error=f"Unsafe command rejected: {exc}")
 
     safe_env: Optional[Dict[str, str]] = None
     if env is not None:
@@ -826,10 +881,16 @@ def _run_blocking(command: List[str], cwd: Path, env: Optional[Dict[str, str]] =
             safe_env[k] = v
 
     try:
+        safe_command = _sanitize_subprocess_command(command, safe_cwd, safe_env)
+    except Exception as exc:
+        return CommandResult(success=False, output="", error=f"Unsafe command rejected: {exc}")
+
+    try:
         result = subprocess.run(
             safe_command,
             cwd=str(safe_cwd),
             env=safe_env,
+            input=input_text,
             text=True,
             capture_output=True,
             check=False,
@@ -1217,7 +1278,8 @@ def _build_manage_command(project: Project, manage_py: Path, django_args: List[s
             raise RuntimeError(runtime_result.error or "Failed to initialize uv runtime")
 
         python_bin = _platform_python(project)
-        return [str(python_bin), str(manage_py), *django_args], env
+        _prepend_path_env(env, python_bin.parent)
+        return ["python", str(manage_py), *django_args], env
 
     if mode == "conda":
         env_name = project.condaEnv.strip()
@@ -1227,32 +1289,43 @@ def _build_manage_command(project: Project, manage_py: Path, django_args: List[s
         # Avoid `conda run` for long-lived processes; it often wraps execution in temp scripts
         # and can leave orphaned shells. Resolve the env prefix and run the env's Python directly.
         prefix = _conda_env_prefix(env_name)
-        python_bin = project.customInterpreter.strip()
-        if python_bin:
-            python_path = Path(shlex.split(python_bin)[0]).expanduser()
-            python_exec = str(python_path) if python_path.is_absolute() else python_bin
-        else:
-            python_exec = str(_conda_python_from_prefix(prefix))
+        _ = _conda_python_from_prefix(prefix)
 
         env["CONDA_DEFAULT_ENV"] = env_name
         env["CONDA_PREFIX"] = str(prefix)
         if platform.system() != "Windows":
-            env["PATH"] = f"{prefix / 'bin'}:{env.get('PATH', '')}"
+            _prepend_path_env(env, prefix / "bin")
 
-        return [python_exec, str(manage_py), *django_args], env
+        return ["python", str(manage_py), *django_args], env
 
     if mode == "custom":
         custom = project.customInterpreter.strip()
         if not custom:
             raise RuntimeError("Custom runtime selected but customInterpreter is empty")
         parts = shlex.split(custom)
-        return [*parts, str(manage_py), *django_args], env
+        if len(parts) != 1:
+            raise RuntimeError("Custom runtime must be a single Python executable path")
+        custom_exec = parts[0].strip()
+        if not custom_exec:
+            raise RuntimeError("Custom runtime executable is empty")
 
-    interpreter = project.customInterpreter.strip() or shutil.which("python3") or shutil.which("python")
+        exec_name = custom_exec
+        if "/" in custom_exec or "\\" in custom_exec:
+            custom_path = Path(custom_exec).expanduser().resolve()
+            if not custom_path.exists() or not custom_path.is_file():
+                raise RuntimeError(f"Custom interpreter not found: {custom_path}")
+            _prepend_path_env(env, custom_path.parent)
+            exec_name = custom_path.name
+
+        if not re.fullmatch(r"[A-Za-z0-9._+-]+", exec_name):
+            raise RuntimeError("Custom interpreter contains unsupported characters")
+        return [exec_name, str(manage_py), *django_args], env
+
+    interpreter = shutil.which("python3") or shutil.which("python")
     if not interpreter:
         raise RuntimeError("No Python interpreter found")
 
-    return [interpreter, str(manage_py), *django_args], env
+    return [Path(interpreter).name, str(manage_py), *django_args], env
 
 
 def _flush_macos_dns_cache() -> None:
@@ -1315,8 +1388,9 @@ def _sync_domains_for_registry_impl(registry: Registry) -> CommandResult:
             if not helper_domains
             else [str(helper), "hosts", "apply", *helper_domains]
         )
-
-        helper_run = _run_blocking(helper_command, paths()["home"])
+        helper_env = os.environ.copy()
+        _prepend_path_env(helper_env, helper.parent)
+        helper_run = _run_blocking(helper_command, paths()["home"], helper_env)
         if helper_run.success:
             _flush_macos_dns_cache()
             return CommandResult(success=True, output="Hosts file updated via privileged helper")
@@ -1404,7 +1478,9 @@ def _clear_hosts_block_impl() -> CommandResult:
     helper = _priv_helper_binary()
     if helper:
         helper_command = [str(helper), "hosts", "clear"]
-        helper_run = _run_blocking(helper_command, paths()["home"])
+        helper_env = os.environ.copy()
+        _prepend_path_env(helper_env, helper.parent)
+        helper_run = _run_blocking(helper_command, paths()["home"], helper_env)
         if helper_run.success:
             _flush_macos_dns_cache()
             return CommandResult(success=True, output="Hosts file cleared via privileged helper")
@@ -1852,9 +1928,10 @@ def _certificate_paths(domain: str) -> Tuple[Path, Path, Path]:
     cert_dir = paths()["certs"]
     cert_dir.mkdir(parents=True, exist_ok=True)
     safe = _sanitize_hostname(domain)
-    cert = cert_dir / f"{safe}.crt"
-    key = cert_dir / f"{safe}.key"
-    conf = cert_dir / f"{safe}.cnf"
+    safe_hash = hashlib.sha256(safe.encode("utf-8")).hexdigest()
+    cert = cert_dir / f"{safe_hash}.crt"
+    key = cert_dir / f"{safe_hash}.key"
+    conf = cert_dir / f"{safe_hash}.cnf"
     return cert, key, conf
 
 
@@ -2497,7 +2574,9 @@ async def _reload_caddy(projects: List[Project], allow_privileged: bool = True) 
 
     # Prefer reload when Caddy is already running.
     reload_cmd = [caddy, "reload", "--config", str(caddy_file), "--adapter", "caddyfile"]
-    reload_result = _run_blocking(reload_cmd, paths()["home"])
+    reload_env = os.environ.copy()
+    _prepend_path_env(reload_env, Path(caddy).parent)
+    reload_result = _run_blocking(reload_cmd, paths()["home"], reload_env)
     if reload_result.success:
         std_warning = await _sync_standard_ports(settings)
         if std_warning:
@@ -2785,6 +2864,12 @@ def _run_postgres_query_text(project: Project, query: str) -> CommandResult:
     if not psql:
         return CommandResult(success=False, error="psql is not installed or not in PATH")
 
+    safe_query = (query or "").strip()
+    if not safe_query:
+        return CommandResult(success=False, error="Query is empty")
+    if len(safe_query) > 20000:
+        return CommandResult(success=False, error="Query is too long")
+
     db_name = (project.database.name or "postgres").strip() or "postgres"
     db_user = (project.database.username or "postgres").strip() or "postgres"
     db_password = project.database.password or ""
@@ -2809,11 +2894,11 @@ def _run_postgres_query_text(project: Project, query: str) -> CommandResult:
         "ON_ERROR_STOP=1",
         "-P",
         "pager=off",
-        "-c",
-        query,
+        "-f",
+        "-",
     ]
 
-    return _run_blocking(command, Path(project.path), env=env)
+    return _run_blocking(command, Path(project.path), env=env, input_text=safe_query)
 
 
 def _parse_psql_result(output: str) -> Optional[Dict[str, Any]]:
@@ -3475,7 +3560,9 @@ async def shutdown() -> None:
     try:
         caddy = _caddy_binary()
         if caddy:
-            _ = _run_blocking([caddy, "stop"], paths()["home"])
+            stop_env = os.environ.copy()
+            _prepend_path_env(stop_env, Path(caddy).parent)
+            _ = _run_blocking([caddy, "stop"], paths()["home"], stop_env)
     except Exception:
         pass
 
@@ -3535,6 +3622,7 @@ async def add_project(payload: AddProjectPayload) -> Project:
         project.aliases = [_sanitize_hostname(a) for a in project.aliases]
         _enforce_domain_policy(project, load_registry_sync().settings)
         project.allowedHosts = sorted(set(_project_domains(project) + ["localhost", "127.0.0.1"]))
+        project.path = str(_sanitize_user_project_path(project.path))
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     # Make DB credentials consistent with the project .env (common in Django projects).
@@ -3702,11 +3790,19 @@ def _sanitize_user_project_path(raw_path: str) -> Path:
     if not raw or "\x00" in raw:
         raise HTTPException(status_code=400, detail="Invalid project path")
 
-    candidate = Path(raw).expanduser()
-    if not candidate.is_absolute():
+    expanded = os.path.expanduser(raw)
+    if not os.path.isabs(expanded):
         raise HTTPException(status_code=400, detail="Project path must be an absolute path")
 
-    project = candidate.resolve()
+    resolved = os.path.realpath(expanded)
+    home_root = os.path.realpath(str(Path.home()))
+    try:
+        if os.path.commonpath([resolved, home_root]) != home_root:
+            raise HTTPException(status_code=400, detail="Project path must be inside your home directory")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid project path") from exc
+
+    project = Path(resolved)
     if not project.exists() or not project.is_dir():
         raise HTTPException(status_code=400, detail="Project directory does not exist")
 
@@ -3913,8 +4009,8 @@ async def start_project(project_id: str) -> Dict[str, Any]:
                     project.allowedHosts.append(www_alias)
             cert_info = await asyncio.to_thread(_generate_certificate, project.domain, alt_domains)
             project.certificatePath = cert_info.certificatePath
-        except Exception as exc:
-            cert_warning = str(exc)
+        except Exception:
+            cert_warning = "Certificate setup failed. Check DJAMP PRO logs for details."
 
     await _update_project(registry, project)
 
@@ -4166,7 +4262,7 @@ async def generate_certificate(payload: DomainPayload) -> CertificateInfo:
     try:
         return await asyncio.to_thread(_generate_certificate, payload.domain, [payload.domain, f"www.{payload.domain}"])
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=_sanitize_error_for_client(str(exc)))
 
 
 @app.get("/api/certificates/{domain}", response_model=CertificateInfo)
