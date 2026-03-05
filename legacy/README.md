@@ -1,6 +1,6 @@
 # Legacy Archive
 
-This folder contains the pre-reset DJAMP/DJANGOForge implementation that was archived during the clean rebuild.
+This folder contains the pre-reset DJAMP PRO implementation that was archived during the clean rebuild.
 
 - Not used by current build scripts
 - Kept for reference and migration context

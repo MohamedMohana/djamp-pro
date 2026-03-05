@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { X, Shield, Globe, RefreshCw, Lock } from 'lucide-react';
 import { api } from '../services/api';
 import type { AppSettings, ProxyStatus, HelperStatus } from '../types';
@@ -23,7 +23,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
     ]);
   };
 
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     const [ca, s, p, h] = await Promise.allSettled([
       withTimeout(api.checkRootCAStatus(), 8000, 'CA status request timed out.'),
       withTimeout(api.getSettings(), 8000, 'Settings request timed out.'),
@@ -47,11 +47,11 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
     if ([ca, s, p, h].some((result) => result.status === 'rejected')) {
       console.error('Failed to load one or more settings sections', { ca, s, p, h });
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadAll();
-  }, []);
+  }, [loadAll]);
 
   const handleInstallCA = async () => {
     if (

@@ -62,11 +62,13 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const selectedProjectId = selectedProject?.id;
+
     const loadLogs = async () => {
-      if (!selectedProject || activeTab !== 'logs') return;
+      if (!selectedProjectId || activeTab !== 'logs') return;
       setLogsLoading(true);
       try {
-        const text = await api.getLogs(selectedProject.id, logsSource);
+        const text = await api.getLogs(selectedProjectId, logsSource);
         setLogsText(text);
       } catch (error) {
         console.error('Failed to load logs:', error);
