@@ -1,0 +1,30 @@
+name: Feature request
+description: Propose an improvement for DJAMP PRO
+labels: [enhancement]
+body:
+  - type: input
+    id: problem
+    attributes:
+      label: Problem to solve
+      placeholder: What pain point are you solving?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: textarea
+    id: scope
+    attributes:
+      label: Impact and scope
+      description: Explain who benefits and any risks.
+    validations:
+      required: false

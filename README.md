@@ -100,7 +100,7 @@ legacy/                     # Archived old implementation
 
 ## Security Model
 
-DJAMP is designed for least privilege:
+DJAMP PRO is designed for least privilege:
 
 - Main app + sidecar run unprivileged
 - Privileged operations are isolated to specific flows:
@@ -113,7 +113,7 @@ DJAMP is designed for least privilege:
 
 Important:
 
-- DJAMP is for local development only.
+- DJAMP PRO is for local development only.
 - Do not use it as a public production hosting stack.
 
 ## Requirements (macOS)
@@ -188,12 +188,12 @@ When running, open:
 Domain handling:
 
 - Per-project primary domain + aliases
-- Hosts sync through DJAMP managed block
+- Hosts sync through DJAMP PRO managed block
 - Caddy routes domain -> Django port
 
 HTTPS handling:
 
-- Local root CA managed by DJAMP
+- Local root CA managed by DJAMP PRO
 - Per-domain certificates generated locally
 - Caddy serves TLS cert/key per project domain
 
@@ -205,13 +205,13 @@ Notes:
 
 ## Standard Ports (80/443)
 
-- DJAMP proxy defaults to internal ports (8080/8443)
+- DJAMP PRO proxy defaults to internal ports (8080/8443)
 - On macOS, helper path can enable standard port behavior (MAMP-style)
-- If standard ports are not active, DJAMP opens fallback URL with explicit proxy port
+- If standard ports are not active, DJAMP PRO opens fallback URL with explicit proxy port
 
 ## Database Behavior
 
-DJAMP reads DB credentials from project `.env` when available:
+DJAMP PRO reads DB credentials from project `.env` when available:
 
 - `DB_NAME`
 - `DB_USER`
@@ -317,7 +317,7 @@ Key files/folders:
 ### `ERR_NAME_NOT_RESOLVED`
 
 - Re-sync hosts from Settings
-- Verify DJAMP managed block in `/etc/hosts`
+- Verify DJAMP PRO managed block in `/etc/hosts`
 - Flush DNS cache on macOS:
 
 ```bash
@@ -374,6 +374,16 @@ Additional docs:
 - `docs/BUILD.md`
 - `docs/FAQs.md`
 - `docs/TROUBLESHOOTING.md`
+- `docs/INSTALL_MACOS.md`
+- `docs/QUICKSTART_5_MIN.md`
+- `docs/UNINSTALL.md`
+
+## Community
+
+- Contributing guide: `.github/CONTRIBUTING.md`
+- Security policy: `.github/SECURITY.md`
+- Support policy: `.github/SUPPORT.md`
+- Code of conduct: `.github/CODE_OF_CONDUCT.md`
 
 ## License
 

@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate semantic tag
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Tag must match vMAJOR.MINOR.PATCH"
+              exit 1
+            fi
+          else
+            echo "No tag ref (workflow_dispatch). Skipping semantic tag validation."
+          fi
+
+  build-macos:
+    runs-on: macos-14
+    needs: [validate-tag]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/desktop/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix apps/desktop ci
+
+      - name: Build app bundle
+        run: npm --prefix apps/desktop run tauri:build
+
+      - name: Create checksums
+        run: |
+          cd apps/desktop/src-tauri/target/release/bundle
+          find . -type f -maxdepth 4 | sort | while read -r f; do shasum -a 256 "$f"; done > SHA256SUMS.txt
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: djamp-pro-macos-bundle
+          path: apps/desktop/src-tauri/target/release/bundle
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: DJAMP PRO ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            apps/desktop/src-tauri/target/release/bundle/**

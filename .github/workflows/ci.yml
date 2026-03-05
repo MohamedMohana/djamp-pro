@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/desktop/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix apps/desktop ci
+
+      - name: Lint
+        run: npm --prefix apps/desktop run lint
+
+      - name: Typecheck
+        run: npm --prefix apps/desktop run typecheck
+
+      - name: Build frontend
+        run: npm --prefix apps/desktop run build
+
+  rust-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check Tauri host
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+
+      - name: Check helper
+        run: cargo check --manifest-path services/priv-helper/Cargo.toml
+
+  python-check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r services/controller/requirements.txt
+          python -m pip install pytest ruff
+
+      - name: Ruff
+        run: python -m ruff check services/controller
+
+      - name: Pytest
+        env:
+          PYTHONPATH: services/controller
+        run: python -m pytest services/controller/tests -q
+
+  repo-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enforce DJAMP PRO branding in docs
+        run: |
+          set -euo pipefail
+          if grep -RInE "DJANGOForge|DjangoForge" --exclude-dir=.git --exclude-dir=legacy --include='*.md' .; then
+            echo "Found old branding outside legacy/."
+            exit 1
+          fi
+
+      - name: Block absolute local paths in docs
+        run: |
+          set -euo pipefail
+          if grep -RInE "/Users/|C:\\\\Users\\\\" --exclude-dir=.git --include='*.md' .; then
+            echo "Found machine-specific absolute paths in docs."
+            exit 1
+          fi
+
+      - name: Verify required community files
+        run: |
+          test -f .github/CONTRIBUTING.md
+          test -f .github/SECURITY.md
+          test -f .github/SUPPORT.md
+          test -f .github/CODE_OF_CONDUCT.md
