@@ -4,35 +4,89 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 2
-    labels: ["dependencies"]
+      day: monday
+      time: "05:00"
+      timezone: "Asia/Riyadh"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "javascript"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      root-npm-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "npm"
     directory: "/apps/desktop"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 2
-    labels: ["dependencies"]
+      day: monday
+      time: "05:10"
+      timezone: "Asia/Riyadh"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "javascript"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      desktop-npm-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "cargo"
     directory: "/apps/desktop/src-tauri"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 2
-    labels: ["dependencies"]
+      day: monday
+      time: "05:20"
+      timezone: "Asia/Riyadh"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "rust"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      desktop-cargo-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "cargo"
     directory: "/services/priv-helper"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 2
-    labels: ["dependencies"]
+      day: monday
+      time: "05:30"
+      timezone: "Asia/Riyadh"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "rust"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      priv-helper-cargo-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "pip"
     directory: "/services/controller"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 2
-    labels: ["dependencies"]
+      day: monday
+      time: "05:40"
+      timezone: "Asia/Riyadh"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "python"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      controller-pip-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 2
-    labels: ["dependencies"]
+      day: monday
+      time: "05:50"
+      timezone: "Asia/Riyadh"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "github_actions"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      github-actions-dependencies:
+        patterns:
+          - "*"
