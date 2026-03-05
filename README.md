@@ -1,8 +1,24 @@
 # DJAMP PRO
 
+![GitHub stars](https://img.shields.io/github/stars/MohamedMohana/djamp-pro?style=for-the-badge)
+![GitHub release](https://img.shields.io/github/v/release/MohamedMohana/djamp-pro?style=for-the-badge)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/MohamedMohana/djamp-pro/ci.yml?style=for-the-badge&label=CI)
+![License](https://img.shields.io/github/license/MohamedMohana/djamp-pro?style=for-the-badge)
+
 DJAMP PRO is a desktop local development environment manager for Django projects, inspired by the “it just works” workflow of MAMP PRO.
 
 It gives you one control panel to run multiple Django apps with custom domains, local HTTPS, managed runtime modes (`uv`, `conda`, system/custom Python), database wiring from `.env`, project actions, and diagnostics.
+
+## Quick Links
+
+- macOS install: [`docs/INSTALL_MACOS.md`](docs/INSTALL_MACOS.md)
+- 5-minute start: [`docs/QUICKSTART_5_MIN.md`](docs/QUICKSTART_5_MIN.md)
+- Troubleshooting: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
+- Contributing: [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)
+
+## Product Preview
+
+![DJAMP PRO UI](docs/assets/djamp-pro-ui.png)
 
 ## Product Status
 
