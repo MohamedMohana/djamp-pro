@@ -69,4 +69,5 @@ jobs:
           name: DJAMP PRO ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            apps/desktop/src-tauri/target/release/bundle/**
+            apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg
+            apps/desktop/src-tauri/target/release/bundle/SHA256SUMS.txt
