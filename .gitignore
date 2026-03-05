@@ -58,6 +58,8 @@ logs/
 djamp-projects/
 djamp-venvs/
 test_project/certs_test/
+test-certs-test.sh
+setup-blockchain.sh
 
 # Temporary
 *.tmp
