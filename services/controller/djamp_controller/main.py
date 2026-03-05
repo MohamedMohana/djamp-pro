@@ -3796,16 +3796,14 @@ def _sanitize_user_project_path(raw_path: str) -> Path:
 
     resolved = os.path.realpath(expanded)
     home_root = os.path.realpath(str(Path.home()))
-    try:
-        if os.path.commonpath([resolved, home_root]) != home_root:
-            raise HTTPException(status_code=400, detail="Project path must be inside your home directory")
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid project path") from exc
+    home_prefix = home_root if home_root.endswith(os.sep) else f"{home_root}{os.sep}"
+    if resolved != home_root and not resolved.startswith(home_prefix):
+        raise HTTPException(status_code=400, detail="Project path must be inside your home directory")
 
-    project = Path(resolved)
-    if not project.exists() or not project.is_dir():
+    if not os.path.isdir(resolved):
         raise HTTPException(status_code=400, detail="Project directory does not exist")
 
+    project = Path(resolved)
     restricted_roots = [Path("/System"), Path("/Library"), Path("/bin"), Path("/sbin"), Path("/usr")]
     if any(_is_relative_to(project, root) for root in restricted_roots):
         raise HTTPException(status_code=400, detail="Project path points to a restricted system directory")
