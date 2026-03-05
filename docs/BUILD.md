@@ -23,7 +23,7 @@ python3 -m venv .venv
 Run desktop app (auto-starts controller sidecar):
 
 ```bash
-cd /Users/mohana/Documents/CODE/opencode/DJAMP
+cd <path-to-djamp-pro-repo>
 npm run dev
 ```
 
