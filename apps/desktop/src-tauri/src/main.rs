@@ -8,6 +8,7 @@ async fn main() {
     let context = tauri::generate_context!();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|_app| {
             tauri::async_runtime::spawn(async {
                 if let Err(err) = sidecar::ensure_sidecar_started().await {
