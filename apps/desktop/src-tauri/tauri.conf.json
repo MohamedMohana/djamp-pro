@@ -22,7 +22,7 @@
   },
   "productName": "DJAMP PRO",
   "version": "1.0.1",
-  "identifier": "com.djamppro.app",
+  "identifier": "com.djamppro.desktop",
   "plugins": {},
   "app": {
     "security": {
