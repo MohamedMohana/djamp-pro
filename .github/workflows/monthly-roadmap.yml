@@ -1,0 +1,97 @@
+name: Monthly Roadmap Issue
+
+on:
+  schedule:
+    # First day of each month at 05:20 Asia/Riyadh (UTC+3)
+    - cron: "20 2 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  open-roadmap-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update monthly roadmap issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const now = new Date();
+            const monthKey = now.toISOString().slice(0, 7);
+            const monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+            const title = `roadmap: ${monthKey}`;
+
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({ owner, repo, name, color, description });
+                  return;
+                }
+                throw error;
+              }
+            }
+
+            await ensureLabel("roadmap", "5319e7", "Monthly planning and product direction");
+            await ensureLabel("release", "5319e7", "Release management work");
+            await ensureLabel("needs-triage", "fbca04", "Needs maintainer triage");
+
+            const openRoadmap = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              labels: "roadmap",
+              per_page: 100
+            });
+
+            const existing = openRoadmap.find((issue) => issue.title === title);
+            if (existing) {
+              core.info(`Roadmap issue already exists: #${existing.number}`);
+              return;
+            }
+
+            const [latestRelease] = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 1
+            });
+
+            const issueBody = [
+              `Monthly roadmap for **${monthLabel}**.`,
+              "",
+              latestRelease
+                ? `Latest release: \`${latestRelease.tag_name}\` (${latestRelease.html_url})`
+                : "Latest release: none yet",
+              "",
+              "## Goals",
+              "- [ ]",
+              "",
+              "## High-priority fixes",
+              "- [ ]",
+              "",
+              "## macOS UX improvements",
+              "- [ ]",
+              "",
+              "## Docs and onboarding",
+              "- [ ]",
+              "",
+              "## Contributor tasks (`good first issue` / `help wanted`)",
+              "- [ ]",
+              "",
+              "## Release target",
+              "- [ ] Define target tag and release window"
+            ].join("\n");
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body: issueBody,
+              labels: ["roadmap", "release", "needs-triage"]
+            });
+

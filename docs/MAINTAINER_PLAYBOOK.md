@@ -15,6 +15,7 @@ This playbook defines how to run DJAMP PRO as a professional open-source project
 2. Review open PRs and unblock contributors quickly.
 3. Merge ready PRs and update docs in the same cycle.
 4. Check release draft and ship a version on cadence.
+5. Open a weekly maintainer checklist issue from template and track completion.
 
 ## Label Taxonomy
 
@@ -29,6 +30,7 @@ This playbook defines how to run DJAMP PRO as a professional open-source project
 - Use semantic version tags only: `vMAJOR.MINOR.PATCH`.
 - Publish regularly (target every 2-3 weeks for active development).
 - Include short, user-focused release notes with install and upgrade notes.
+- Keep one monthly roadmap issue open (`roadmap: YYYY-MM`) as execution anchor.
 
 ## Contributor Growth Tactics
 
@@ -52,4 +54,3 @@ Best practice: treat achievements as a side effect of good maintainer habits, no
 - Never commit local machine-specific scripts, certs, or absolute private paths.
 - Rotate any secret/cert if it was ever committed.
 - If sensitive data was previously tracked, purge history and contact GitHub Support for cached object purge.
-

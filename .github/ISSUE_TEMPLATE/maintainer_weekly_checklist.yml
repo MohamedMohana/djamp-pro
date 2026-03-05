@@ -1,0 +1,46 @@
+name: Weekly maintainer checklist
+description: Weekly operations checklist for DJAMP PRO maintainers
+title: "maintainer: weekly checklist (YYYY-MM-DD)"
+labels: [chore, release]
+assignees:
+  - MohamedMohana
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this checklist once per week to keep DJAMP PRO healthy, responsive, and release-ready.
+  - type: checkboxes
+    id: triage
+    attributes:
+      label: Triage and support
+      options:
+        - label: Reviewed all new issues and set `needs-triage` / priority labels.
+        - label: Marked at least one suitable issue as `good first issue` or `help wanted`.
+        - label: Closed duplicates/invalid reports with clear explanation.
+  - type: checkboxes
+    id: quality
+    attributes:
+      label: Quality and security
+      options:
+        - label: Confirmed CI and CodeQL are green on `main`.
+        - label: Checked open security alerts and addressed anything new.
+        - label: Verified no private local files or machine-specific paths are tracked.
+  - type: checkboxes
+    id: release
+    attributes:
+      label: Release and roadmap
+      options:
+        - label: Reviewed Release Drafter notes for next version.
+        - label: Reviewed open `release` and `roadmap` issues.
+        - label: Decided whether a release tag should be cut this week.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Weekly notes
+      placeholder: |
+        What improved this week?
+        What is blocked?
+        What should be prioritized next week?
+    validations:
+      required: false
+
