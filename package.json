@@ -9,7 +9,8 @@
     "build:web": "npm --prefix apps/desktop run build",
     "lint": "npm --prefix apps/desktop run lint",
     "typecheck": "npm --prefix apps/desktop run typecheck",
-    "test:controller": "python3 -m pytest services/controller/tests -q",
+    "controller:setup": "services/controller/.venv/bin/python -m pip install -r services/controller/requirements-dev.txt",
+    "test:controller": "services/controller/.venv/bin/python -m pytest services/controller/tests -q",
     "check": "npm run lint && npm run typecheck && npm --prefix apps/desktop run build && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml && cargo check --manifest-path services/priv-helper/Cargo.toml",
     "controller:dev": "services/controller/.venv/bin/python services/controller/run_service.py",
     "priv-helper:check": "cargo check --manifest-path services/priv-helper/Cargo.toml"

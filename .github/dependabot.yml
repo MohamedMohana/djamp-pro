@@ -26,10 +26,33 @@ updates:
     labels: ["dependencies", "javascript"]
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
     groups:
-      desktop-npm-dependencies:
+      desktop-npm-safe-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+          - "tailwindcss"
+          - "eslint"
   - package-ecosystem: "cargo"
     directory: "/apps/desktop/src-tauri"
     schedule:
