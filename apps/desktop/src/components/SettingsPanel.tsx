@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { X, Shield, Globe, RefreshCw, Lock } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { api } from '../services/api';
@@ -6,6 +6,53 @@ import type { AppSettings, ProxyStatus, HelperStatus } from '../types';
 
 interface SettingsPanelProps {
   onClose: () => void;
+}
+
+function SettingsSection({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof Shield;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="mamp-section">
+      <div className="mb-4 flex items-center gap-3">
+        <Icon size={20} className="text-[var(--mamp-accent-strong)]" />
+        <div className="mamp-section-title mb-0">{title}</div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ToggleCard({
+  title,
+  description,
+  checked,
+  onChange,
+}: {
+  title: string;
+  description: ReactNode;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-white/8 bg-black/12 p-4">
+      <div>
+        <div className="font-semibold text-[var(--mamp-text)]">{title}</div>
+        <div className="mt-1 text-sm text-[var(--mamp-text-muted)]">{description}</div>
+      </div>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-1 h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
+      />
+    </label>
+  );
 }
 
 export default function SettingsPanel({ onClose }: SettingsPanelProps) {
@@ -223,40 +270,34 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const helperOk = Boolean(helperStatus?.running);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-black/60 p-4 sm:items-center">
-      <div className="my-4 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-gray-800 sm:my-0 sm:max-h-[90vh]">
-        <div className="flex items-center justify-between border-b border-gray-700 p-6">
-          <h2 className="text-2xl font-bold">{t.settingsPanel.title}</h2>
-          <button onClick={onClose} className="text-gray-400 transition-colors hover:text-white">
-            <X size={24} />
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center">
+      <div className="mamp-modal my-4 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden sm:my-0 sm:max-h-[90vh]">
+        <div className="mamp-modal-header flex items-center justify-between px-6 py-5">
+          <div>
+            <h2 className="text-2xl font-semibold text-white">{t.settingsPanel.title}</h2>
+            <p className="mt-1 text-sm text-[var(--mamp-text-muted)]">{t.settingsPanel.proxyAndDomains}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/8 bg-white/5 text-[var(--mamp-text-muted)] transition hover:bg-white/10 hover:text-white"
+          >
+            <X size={20} />
           </button>
         </div>
 
-        <div className="modal-scroll min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-y-contain p-6">
-          <div className="rounded-lg bg-gray-900 p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <Shield size={24} className="text-brand-400" />
-              <h3 className="text-xl font-semibold">{t.settingsPanel.certificateAuthority}</h3>
-            </div>
-            <p className="mb-4 text-gray-400">{t.settingsPanel.certificateAuthorityDescription}</p>
+        <div className="modal-scroll min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-y-contain px-6 py-5">
+          <SettingsSection icon={Shield} title={t.settingsPanel.certificateAuthority}>
+            <p className="mb-4 text-sm text-[var(--mamp-text-muted)]">
+              {t.settingsPanel.certificateAuthorityDescription}
+            </p>
 
             {caStatus ? (
-              <div
-                className={`mb-4 rounded-lg p-4 ${
-                  caOk ? 'border border-green-800 bg-green-900/20' : 'border border-red-800 bg-red-900/20'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {caOk ? (
-                    <span className="font-medium text-green-400">✓ {t.settingsPanel.rootCaTrusted}</span>
-                  ) : (
-                    <span className="font-medium text-red-400">✗ {t.settingsPanel.rootCaNotTrusted}</span>
-                  )}
-                </div>
+              <div className={`mamp-note mb-4 ${caOk ? 'mamp-note-success' : 'mamp-note-danger'}`}>
+                {caOk ? `✓ ${t.settingsPanel.rootCaTrusted}` : `✗ ${t.settingsPanel.rootCaNotTrusted}`}
               </div>
             ) : (
-              <div className="mb-4 rounded-lg bg-gray-700 p-4">
-                <span className="text-gray-400">{t.settingsPanel.loadingCaStatus}</span>
+              <div className="mamp-note mb-4 border-white/8 bg-black/12 text-[var(--mamp-text-muted)]">
+                {t.settingsPanel.loadingCaStatus}
               </div>
             )}
 
@@ -264,31 +305,25 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
               <button
                 onClick={handleInstallCA}
                 disabled={busy || caOk}
-                className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-700"
+                className="mamp-button-primary"
               >
                 {busy ? t.common.working : caOk ? t.settingsPanel.alreadyInstalled : t.settingsPanel.installRootCa}
               </button>
-
               <button
                 onClick={handleUninstallCA}
                 disabled={busy || !caStatus?.installed}
-                className="rounded-lg bg-gray-700 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mamp-button-neutral"
               >
                 {busy ? t.common.working : t.settingsPanel.uninstallRootCa}
               </button>
             </div>
-          </div>
+          </SettingsSection>
 
-          <div className="rounded-lg bg-gray-900 p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <Globe size={24} className="text-brand-400" />
-              <h3 className="text-xl font-semibold">{t.settingsPanel.proxyAndDomains}</h3>
-            </div>
-
-            <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 text-sm text-gray-300">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">{t.settingsPanel.helperLabel}</span>
-                <span className={helperOk ? 'text-green-400' : 'text-yellow-400'}>
+          <SettingsSection icon={Globe} title={t.settingsPanel.proxyAndDomains}>
+            <div className="mb-4 rounded-xl border border-white/8 bg-black/12 p-4 text-sm text-[var(--mamp-text)]">
+              <div className="flex items-center justify-between gap-4">
+                <span className="font-semibold text-[var(--mamp-text-muted)]">{t.settingsPanel.helperLabel}</span>
+                <span className={helperOk ? 'text-green-300' : 'text-yellow-300'}>
                   {helperOk
                     ? t.settingsPanel.helperRunning
                     : helperStatus?.installed
@@ -296,20 +331,20 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                       : t.settingsPanel.helperNotInstalled}
                 </span>
               </div>
-              <div className="mt-2 text-gray-400">{t.settingsPanel.helperDescription}</div>
-              <div className="mt-3 flex flex-wrap gap-3">
+              <div className="mt-2 text-[var(--mamp-text-muted)]">{t.settingsPanel.helperDescription}</div>
+              <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   onClick={handleInstallHelper}
                   disabled={busy || helperOk}
-                  className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-700"
+                  className="mamp-button-primary"
                 >
-                  <Lock size={18} />
+                  <Lock size={16} />
                   {busy ? t.common.working : helperOk ? t.settingsPanel.helperRunningButton : t.settingsPanel.installHelper}
                 </button>
                 <button
                   onClick={handleUninstallHelper}
                   disabled={busy || !helperStatus?.installed}
-                  className="rounded-lg bg-gray-700 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mamp-button-neutral"
                 >
                   {busy ? t.common.working : t.settingsPanel.uninstallHelper}
                 </button>
@@ -317,74 +352,54 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
             </div>
 
             {proxyStatus ? (
-              <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 text-sm text-gray-300">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">{t.settingsPanel.standardPorts}</span>
-                  <span className={standardPortsOk ? 'text-green-400' : 'text-yellow-400'}>
+              <div className="mb-4 rounded-xl border border-white/8 bg-black/12 p-4 text-sm text-[var(--mamp-text)]">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-semibold text-[var(--mamp-text-muted)]">{t.settingsPanel.standardPorts}</span>
+                  <span className={standardPortsOk ? 'text-green-300' : 'text-yellow-300'}>
                     {standardPortsOk ? t.settingsPanel.active : t.settingsPanel.notActive}
                   </span>
                 </div>
-                <div className="mt-2 text-gray-400">
+                <div className="mt-2 text-[var(--mamp-text-muted)]">
                   {t.settingsPanel.proxyListening(proxyStatus.proxyHttpPort, proxyStatus.proxyPort)}
                 </div>
               </div>
             ) : (
-              <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 text-sm text-gray-400">
+              <div className="mamp-note mb-4 border-white/8 bg-black/12 text-[var(--mamp-text-muted)]">
                 {t.settingsPanel.loadingProxyStatus}
               </div>
             )}
 
-            <div className="mt-4 space-y-4">
-              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-gray-700 bg-gray-800 p-4">
-                <div>
-                  <div className="font-medium">{t.settingsPanel.enableStandardPorts}</div>
-                  <div className="text-sm text-gray-400">{t.settingsPanel.enableStandardPortsDescription}</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings?.standardPortsEnabled ?? true}
-                  onChange={(event) =>
-                    setSettings((prev) => (prev ? { ...prev, standardPortsEnabled: event.target.checked } : prev))
-                  }
-                  className="h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
-                />
-              </label>
+            <div className="space-y-4">
+              <ToggleCard
+                title={t.settingsPanel.enableStandardPorts}
+                description={t.settingsPanel.enableStandardPortsDescription}
+                checked={settings?.standardPortsEnabled ?? true}
+                onChange={(checked) =>
+                  setSettings((prev) => (prev ? { ...prev, standardPortsEnabled: checked } : prev))
+                }
+              />
 
-              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-gray-700 bg-gray-800 p-4">
-                <div>
-                  <div className="font-medium">{t.settingsPanel.restoreOnQuit}</div>
-                  <div className="text-sm text-gray-400">{t.settingsPanel.restoreOnQuitDescription}</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings?.restoreOnQuit ?? true}
-                  onChange={(event) =>
-                    setSettings((prev) => (prev ? { ...prev, restoreOnQuit: event.target.checked } : prev))
-                  }
-                  className="h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
-                />
-              </label>
+              <ToggleCard
+                title={t.settingsPanel.restoreOnQuit}
+                description={t.settingsPanel.restoreOnQuitDescription}
+                checked={settings?.restoreOnQuit ?? true}
+                onChange={(checked) =>
+                  setSettings((prev) => (prev ? { ...prev, restoreOnQuit: checked } : prev))
+                }
+              />
 
-              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-gray-700 bg-gray-800 p-4">
-                <div>
-                  <div className="font-medium">{t.settingsPanel.allowPublicDomainOverrides}</div>
-                  <div className="text-sm text-yellow-300">{t.settingsPanel.publicDomainRisk}</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings?.anyDomainOverrideEnabled ?? false}
-                  onChange={(event) =>
-                    setSettings((prev) =>
-                      prev ? { ...prev, anyDomainOverrideEnabled: event.target.checked } : prev,
-                    )
-                  }
-                  className="h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
-                />
-              </label>
+              <ToggleCard
+                title={t.settingsPanel.allowPublicDomainOverrides}
+                description={<span className="text-yellow-300">{t.settingsPanel.publicDomainRisk}</span>}
+                checked={settings?.anyDomainOverrideEnabled ?? false}
+                onChange={(checked) =>
+                  setSettings((prev) => (prev ? { ...prev, anyDomainOverrideEnabled: checked } : prev))
+                }
+              />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-400">{t.settingsPanel.proxyHttpPort}</label>
+                  <label className="mamp-field-label">{t.settingsPanel.proxyHttpPort}</label>
                   <input
                     type="number"
                     value={settings?.proxyHttpPort ?? 8080}
@@ -393,11 +408,11 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                     onChange={(event) =>
                       setSettings((prev) => (prev ? { ...prev, proxyHttpPort: Number(event.target.value) } : prev))
                     }
-                    className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white focus:border-brand-500 focus:outline-none"
+                    className="mamp-input"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-400">{t.settingsPanel.proxyHttpsPort}</label>
+                  <label className="mamp-field-label">{t.settingsPanel.proxyHttpsPort}</label>
                   <input
                     type="number"
                     value={settings?.proxyPort ?? 8443}
@@ -406,59 +421,39 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                     onChange={(event) =>
                       setSettings((prev) => (prev ? { ...prev, proxyPort: Number(event.target.value) } : prev))
                     }
-                    className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white focus:border-brand-500 focus:outline-none"
+                    className="mamp-input"
                   />
                 </div>
               </div>
 
-              <button
-                onClick={handleReloadProxy}
-                disabled={busy}
-                className="flex items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <RefreshCw size={18} />
-                {busy ? t.common.working : t.settingsPanel.reloadProxy}
-              </button>
-
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <button
-                  onClick={handleSyncHosts}
-                  disabled={busy}
-                  className="rounded-lg bg-gray-700 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button onClick={handleReloadProxy} disabled={busy} className="mamp-button-neutral">
+                  <RefreshCw size={16} />
+                  {busy ? t.common.working : t.settingsPanel.reloadProxy}
+                </button>
+                <button onClick={handleSyncHosts} disabled={busy} className="mamp-button-neutral">
                   {t.settingsPanel.syncHostsNow}
                 </button>
-                <button
-                  onClick={handleClearHosts}
-                  disabled={busy}
-                  className="rounded-lg bg-gray-700 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
+                <button onClick={handleClearHosts} disabled={busy} className="mamp-button-neutral">
                   {t.settingsPanel.clearHostsOverrides}
                 </button>
-                <button
-                  onClick={handleDisableStandardPorts}
-                  disabled={busy}
-                  className="rounded-lg bg-gray-700 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
+                <button onClick={handleDisableStandardPorts} disabled={busy} className="mamp-button-neutral">
                   {t.settingsPanel.releaseStandardPortsNow}
                 </button>
               </div>
             </div>
-          </div>
+          </SettingsSection>
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-gray-700 p-6">
+        <div className="flex items-center justify-end gap-3 border-t border-white/8 px-6 py-5">
           <button
             onClick={handleSaveAndApply}
             disabled={busy || !settings}
-            className="rounded-lg bg-brand-600 px-6 py-2 font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-700"
+            className="mamp-button-primary"
           >
             {busy ? t.common.working : t.common.saveAndApply}
           </button>
-          <button
-            onClick={onClose}
-            className="rounded-lg bg-gray-700 px-6 py-2 font-medium text-white transition-colors hover:bg-gray-600"
-          >
+          <button onClick={onClose} className="mamp-button-neutral">
             {t.common.close}
           </button>
         </div>

@@ -198,298 +198,304 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
     { id: 'database', title: t.addProject.steps.database, icon: Database },
   ] as const;
 
+  const activeStep = steps.find((item) => item.id === step);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-black/60 p-4 sm:items-center">
-      <div className="my-4 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-gray-800 sm:my-0 sm:max-h-[90vh]">
-        <div className="flex items-center justify-between border-b border-gray-700 p-6">
-          <h2 className="text-2xl font-bold">{t.addProject.title}</h2>
-          <button onClick={onClose} className="text-gray-400 transition-colors hover:text-white">
-            <X size={24} />
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center">
+      <div className="mamp-modal my-4 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden sm:my-0 sm:max-h-[90vh]">
+        <div className="mamp-modal-header flex items-center justify-between px-6 py-5">
+          <div>
+            <h2 className="text-2xl font-semibold text-white">{t.addProject.title}</h2>
+            <p className="mt-1 text-sm text-[var(--mamp-text-muted)]">{activeStep?.title}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/8 bg-white/5 text-[var(--mamp-text-muted)] transition hover:bg-white/10 hover:text-white"
+          >
+            <X size={20} />
           </button>
         </div>
 
-        <div className="border-b border-gray-700 p-6">
-          <div className="flex items-center justify-between">
+        <div className="border-b border-white/8 px-6 py-4">
+          <div className="flex flex-wrap items-center gap-3">
             {steps.map((item, index) => (
-              <div key={item.id} className="flex items-center gap-2">
-                <div className={`flex items-center gap-2 ${step === item.id ? 'text-brand-400' : 'text-gray-500'}`}>
-                  <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                      step === item.id ? 'bg-brand-600' : 'bg-gray-700'
-                    }`}
-                  >
-                    {step === item.id ? <Check size={18} /> : <item.icon size={18} />}
+              <div key={item.id} className="flex items-center gap-3">
+                <div className={`mamp-step ${step === item.id ? 'mamp-step-active' : ''}`}>
+                  <div className="mamp-step-badge">
+                    {step === item.id ? <Check size={16} /> : <item.icon size={16} />}
                   </div>
-                  <span className="font-medium">{item.title}</span>
+                  <span className="text-sm font-semibold">{item.title}</span>
                 </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={`h-0.5 w-12 ${
-                      index < steps.findIndex((currentStep) => currentStep.id === step) ? 'bg-brand-600' : 'bg-gray-700'
-                    }`}
-                  />
-                )}
+                {index < steps.length - 1 && <div className="mamp-step-line" />}
               </div>
             ))}
           </div>
         </div>
 
-        <div className="modal-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-6">
+        <div className="modal-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5">
           {step === 'path' && (
-            <div className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-400">{t.addProject.projectDirectoryPath}</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={projectPath}
-                    onChange={(event) => {
-                      setProjectPath(event.target.value);
-                      setHasDetected(false);
-                    }}
-                    placeholder="/Users/dev/projects/my-django-app"
-                    className="flex-1 rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
-                  />
+            <div className="space-y-5">
+              <section className="mamp-section">
+                <div className="mamp-section-title">{t.addProject.steps.path}</div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="mamp-field-label">{t.addProject.projectDirectoryPath}</label>
+                    <div className="flex flex-col gap-3 md:flex-row">
+                      <input
+                        type="text"
+                        value={projectPath}
+                        onChange={(event) => {
+                          setProjectPath(event.target.value);
+                          setHasDetected(false);
+                        }}
+                        placeholder="/Users/dev/projects/my-django-app"
+                        className="mamp-input flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleBrowseDirectory}
+                        disabled={loading}
+                        className="mamp-button-neutral shrink-0"
+                      >
+                        <FolderOpen size={17} />
+                        {t.addProject.browse}
+                      </button>
+                    </div>
+                  </div>
+
                   <button
-                    type="button"
-                    onClick={handleBrowseDirectory}
-                    disabled={loading}
-                    className="shrink-0 rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handlePathSelect}
+                    disabled={loading || !projectPath}
+                    className="mamp-button-primary w-full"
                   >
-                    <span className="flex items-center gap-2">
-                      <FolderOpen size={18} />
-                      {t.addProject.browse}
-                    </span>
+                    {loading ? t.addProject.detecting : t.addProject.detectProject}
                   </button>
                 </div>
-              </div>
-              <button
-                onClick={handlePathSelect}
-                disabled={loading || !projectPath}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-3 font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-700"
-              >
-                {loading ? t.addProject.detecting : t.addProject.detectProject}
-              </button>
+              </section>
+
               {detectionResult.found ? (
-                <div className="rounded-lg border border-green-800 bg-green-900/20 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-green-400">
-                    <Check size={20} />
-                    <span className="font-medium">{t.addProject.projectFound}</span>
+                <div className="mamp-note mamp-note-success">
+                  <div className="mb-2 flex items-center gap-2 font-semibold">
+                    <Check size={18} />
+                    {t.addProject.projectFound}
                   </div>
-                  <div className="text-sm text-gray-300">
+                  <div className="space-y-1 text-sm">
                     <div>
-                      {t.addProject.managePy}: {detectionResult.managePyPath}
+                      {t.addProject.managePy}: <span className="font-mono">{detectionResult.managePyPath}</span>
                     </div>
                     <div>
-                      {t.addProject.settings}: {detectionResult.settingsModules?.join(', ')}
+                      {t.addProject.settings}: <span className="font-mono">{detectionResult.settingsModules?.join(', ')}</span>
                     </div>
                   </div>
                 </div>
               ) : hasDetected && !loading && detectionResult.found === false && projectPath ? (
-                <div className="rounded-lg border border-red-800 bg-red-900/20 p-4 text-red-400">
-                  {t.addProject.noProjectFound}
-                </div>
+                <div className="mamp-note mamp-note-danger">{t.addProject.noProjectFound}</div>
               ) : null}
             </div>
           )}
 
           {step === 'details' && (
-            <div className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-400">{t.addProject.projectName}</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-400">{t.addProject.primaryDomain}</label>
-                <input
-                  type="text"
-                  value={formData.domain}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setFormData((prev) => ({
-                      ...prev,
-                      domain: value,
-                      domainMode: isLocalDomain(value) ? 'local_only' : 'public_override',
-                    }));
-                  }}
-                  placeholder="myapp.test"
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-400">{t.addProject.domainAliases}</label>
-                <input
-                  type="text"
-                  value={formData.aliases}
-                  onChange={(event) => setFormData({ ...formData, aliases: event.target.value })}
-                  placeholder="api.myapp.test, admin.myapp.test"
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-400">{t.addProject.port}</label>
-                <input
-                  type="number"
-                  value={formData.port}
-                  onChange={(event) => setFormData({ ...formData, port: parseInt(event.target.value, 10) })}
-                  min="8000"
-                  max="9999"
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-400">{t.addProject.runtimeMode}</label>
-                <select
-                  value={formData.runtimeMode}
-                  onChange={(event) => setFormData({ ...formData, runtimeMode: event.target.value })}
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white focus:border-brand-500 focus:outline-none"
-                >
-                  <option value="uv">{t.addProject.runtimeOptions.uv}</option>
-                  <option value="conda">{t.addProject.runtimeOptions.conda}</option>
-                  <option value="system">{t.addProject.runtimeOptions.system}</option>
-                  <option value="custom">{t.addProject.runtimeOptions.custom}</option>
-                </select>
-              </div>
-              {formData.runtimeMode === 'conda' && (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-400">{t.addProject.condaEnvironment}</label>
-                  <input
-                    type="text"
-                    value={formData.condaEnv}
-                    onChange={(event) => setFormData({ ...formData, condaEnv: event.target.value })}
-                    placeholder="blockchain"
-                    className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
-                  />
+            <div className="space-y-5">
+              <section className="mamp-section">
+                <div className="mamp-section-title">{t.addProject.steps.details}</div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <label className="mamp-field-label">{t.addProject.projectName}</label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+                      className="mamp-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mamp-field-label">{t.addProject.primaryDomain}</label>
+                    <input
+                      type="text"
+                      value={formData.domain}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          domain: value,
+                          domainMode: isLocalDomain(value) ? 'local_only' : 'public_override',
+                        }));
+                      }}
+                      placeholder="myapp.test"
+                      className="mamp-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mamp-field-label">{t.addProject.domainAliases}</label>
+                    <input
+                      type="text"
+                      value={formData.aliases}
+                      onChange={(event) => setFormData({ ...formData, aliases: event.target.value })}
+                      placeholder="api.myapp.test, admin.myapp.test"
+                      className="mamp-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mamp-field-label">{t.addProject.port}</label>
+                    <input
+                      type="number"
+                      value={formData.port}
+                      onChange={(event) => setFormData({ ...formData, port: parseInt(event.target.value, 10) })}
+                      min="8000"
+                      max="9999"
+                      className="mamp-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mamp-field-label">{t.addProject.runtimeMode}</label>
+                    <select
+                      value={formData.runtimeMode}
+                      onChange={(event) => setFormData({ ...formData, runtimeMode: event.target.value })}
+                      className="mamp-select"
+                    >
+                      <option value="uv">{t.addProject.runtimeOptions.uv}</option>
+                      <option value="conda">{t.addProject.runtimeOptions.conda}</option>
+                      <option value="system">{t.addProject.runtimeOptions.system}</option>
+                      <option value="custom">{t.addProject.runtimeOptions.custom}</option>
+                    </select>
+                  </div>
+
+                  {formData.runtimeMode === 'conda' && (
+                    <div className="md:col-span-2">
+                      <label className="mamp-field-label">{t.addProject.condaEnvironment}</label>
+                      <input
+                        type="text"
+                        value={formData.condaEnv}
+                        onChange={(event) => setFormData({ ...formData, condaEnv: event.target.value })}
+                        placeholder="blockchain"
+                        className="mamp-input"
+                      />
+                    </div>
+                  )}
+
+                  {(formData.runtimeMode === 'system' || formData.runtimeMode === 'custom') && (
+                    <div className="md:col-span-2">
+                      <label className="mamp-field-label">{t.addProject.interpreter}</label>
+                      <input
+                        type="text"
+                        value={formData.customInterpreter}
+                        onChange={(event) => setFormData({ ...formData, customInterpreter: event.target.value })}
+                        placeholder={formData.runtimeMode === 'custom' ? 'python /path/to/python' : 'python3'}
+                        className="mamp-input"
+                      />
+                    </div>
+                  )}
+
+                  <div className="md:col-span-2">
+                    <label className="mamp-field-label">{t.addProject.domainMode}</label>
+                    <select
+                      value={formData.domainMode}
+                      onChange={(event) => setFormData({ ...formData, domainMode: event.target.value })}
+                      className="mamp-select"
+                    >
+                      <option value="local_only">{t.addProject.domainModes.local_only}</option>
+                      <option value="public_override">{t.addProject.domainModes.public_override}</option>
+                    </select>
+                  </div>
                 </div>
-              )}
-              {(formData.runtimeMode === 'system' || formData.runtimeMode === 'custom') && (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-400">{t.addProject.interpreter}</label>
-                  <input
-                    type="text"
-                    value={formData.customInterpreter}
-                    onChange={(event) => setFormData({ ...formData, customInterpreter: event.target.value })}
-                    placeholder={formData.runtimeMode === 'custom' ? 'python /path/to/python' : 'python3'}
-                    className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
-                  />
-                </div>
-              )}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-400">{t.addProject.domainMode}</label>
-                <select
-                  value={formData.domainMode}
-                  onChange={(event) => setFormData({ ...formData, domainMode: event.target.value })}
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white focus:border-brand-500 focus:outline-none"
-                >
-                  <option value="local_only">{t.addProject.domainModes.local_only}</option>
-                  <option value="public_override">{t.addProject.domainModes.public_override}</option>
-                </select>
-              </div>
+              </section>
+
               {!isLocalDomain(formData.domain) && (
-                <div className="rounded-lg border border-yellow-700 bg-yellow-900/20 p-3 text-sm text-yellow-300">
-                  {t.addProject.publicDomainDetected}
-                </div>
+                <div className="mamp-note mamp-note-warning">{t.addProject.publicDomainDetected}</div>
               )}
               {formData.domainMode === 'public_override' && (
-                <div className="rounded-lg border border-yellow-700 bg-yellow-900/20 p-3 text-sm text-yellow-300">
-                  {t.addProject.publicDomainWarning}
-                </div>
+                <div className="mamp-note mamp-note-warning">{t.addProject.publicDomainWarning}</div>
               )}
-              <div className="grid grid-cols-2 gap-4">
-                <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-gray-700 p-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.debug}
-                    onChange={(event) => setFormData({ ...formData, debug: event.target.checked })}
-                    className="h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
-                  />
-                  <span className="font-medium">{t.addProject.debugMode}</span>
-                </label>
-                <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-gray-700 p-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.httpsEnabled}
-                    onChange={(event) => setFormData({ ...formData, httpsEnabled: event.target.checked })}
-                    className="h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
-                  />
-                  <span className="font-medium">{t.addProject.enableHttps}</span>
-                </label>
-              </div>
+
+              <section className="mamp-section">
+                <div className="mamp-section-title">{t.addProject.steps.details}</div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="mamp-check-card cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.debug}
+                      onChange={(event) => setFormData({ ...formData, debug: event.target.checked })}
+                      className="h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="font-semibold text-[var(--mamp-text)]">{t.addProject.debugMode}</span>
+                  </label>
+                  <label className="mamp-check-card cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.httpsEnabled}
+                      onChange={(event) => setFormData({ ...formData, httpsEnabled: event.target.checked })}
+                      className="h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="font-semibold text-[var(--mamp-text)]">{t.addProject.enableHttps}</span>
+                  </label>
+                </div>
+              </section>
             </div>
           )}
 
           {step === 'database' && (
-            <div className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-400">{t.addProject.databaseType}</label>
-                <select
-                  value={formData.databaseType}
-                  onChange={(event) => setFormData({ ...formData, databaseType: event.target.value })}
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white focus:border-brand-500 focus:outline-none"
-                >
-                  <option value="postgres">{t.addProject.databaseOptions.postgres}</option>
-                  <option value="mysql">{t.addProject.databaseOptions.mysql}</option>
-                  <option value="none">{t.addProject.databaseOptions.none}</option>
-                </select>
-              </div>
-              {formData.databaseType !== 'none' && (
-                <div className="rounded-lg border border-gray-700 bg-gray-900 p-4 text-sm text-gray-300">
-                  <p>{t.addProject.databaseHelp}</p>
-                  <div className="mt-2 text-gray-400">{t.addProject.databaseHelpNote}</div>
+            <div className="space-y-5">
+              <section className="mamp-section">
+                <div className="mamp-section-title">{t.addProject.steps.database}</div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="mamp-field-label">{t.addProject.databaseType}</label>
+                    <select
+                      value={formData.databaseType}
+                      onChange={(event) => setFormData({ ...formData, databaseType: event.target.value })}
+                      className="mamp-select"
+                    >
+                      <option value="postgres">{t.addProject.databaseOptions.postgres}</option>
+                      <option value="mysql">{t.addProject.databaseOptions.mysql}</option>
+                      <option value="none">{t.addProject.databaseOptions.none}</option>
+                    </select>
+                  </div>
+
+                  {formData.databaseType !== 'none' && (
+                    <div className="mamp-note border-white/8 bg-black/14 text-[var(--mamp-text)]">
+                      <p>{t.addProject.databaseHelp}</p>
+                      <div className="mt-2 text-sm text-[var(--mamp-text-muted)]">{t.addProject.databaseHelpNote}</div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </section>
             </div>
           )}
         </div>
 
-        <div className="space-y-3 border-t border-gray-700 p-6">
+        <div className="border-t border-white/8 px-6 py-5">
           {submitError && (
-            <div className="rounded-lg border border-red-800 bg-red-900/20 px-3 py-2 text-sm text-red-300">
-              {submitError}
-            </div>
+            <div className="mamp-note mamp-note-danger mb-4">{submitError}</div>
           )}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             {step !== 'path' ? (
-              <button
-                onClick={handleBack}
-                className="rounded-lg bg-gray-700 px-6 py-2 font-medium text-white transition-colors hover:bg-gray-600"
-              >
+              <button onClick={handleBack} className="mamp-button-neutral">
                 {t.common.back}
               </button>
             ) : (
-              <button
-                onClick={onClose}
-                className="rounded-lg bg-gray-700 px-6 py-2 font-medium text-white transition-colors hover:bg-gray-600"
-              >
+              <button onClick={onClose} className="mamp-button-neutral">
                 {t.common.cancel}
               </button>
             )}
+
             {step === 'path' ? (
               <button
                 onClick={() => setStep('details')}
                 disabled={loading || !detectionResult.found}
-                className="rounded-lg bg-brand-600 px-6 py-2 font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-700"
+                className="mamp-button-primary"
               >
                 {t.common.next}
               </button>
             ) : step === 'details' ? (
-              <button
-                onClick={() => setStep('database')}
-                className="rounded-lg bg-brand-600 px-6 py-2 font-medium text-white transition-colors hover:bg-brand-700"
-              >
+              <button onClick={() => setStep('database')} className="mamp-button-primary">
                 {t.common.next}
               </button>
             ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2 font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-700"
-              >
+              <button onClick={handleSubmit} disabled={loading} className="mamp-button-success">
                 <Plus size={18} />
                 {loading ? t.addProject.creating : t.addProject.createProject}
               </button>

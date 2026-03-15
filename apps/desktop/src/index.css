@@ -128,6 +128,180 @@ body {
   transform: translateY(1px);
 }
 
+.mamp-modal {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  background: linear-gradient(180deg, rgba(55, 50, 61, 0.98) 0%, rgba(39, 35, 45, 0.99) 100%);
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.mamp-modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(67, 62, 75, 0.94) 0%, rgba(56, 52, 64, 0.92) 100%);
+}
+
+.mamp-input,
+.mamp-select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.9rem;
+  background: rgba(15, 14, 18, 0.28);
+  color: var(--mamp-text);
+  padding: 0.82rem 0.95rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.mamp-input::placeholder {
+  color: var(--mamp-text-dim);
+}
+
+.mamp-input:focus,
+.mamp-select:focus {
+  border-color: rgba(80, 128, 244, 0.72);
+  background: rgba(15, 14, 18, 0.38);
+  box-shadow: 0 0 0 3px rgba(80, 128, 244, 0.14);
+}
+
+.mamp-field-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mamp-text-dim);
+}
+
+.mamp-button-neutral,
+.mamp-button-primary,
+.mamp-button-success {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.72rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: background 160ms ease, border-color 160ms ease, transform 120ms ease, opacity 160ms ease;
+}
+
+.mamp-button-neutral {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--mamp-text);
+}
+
+.mamp-button-neutral:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mamp-button-primary {
+  background: linear-gradient(180deg, var(--mamp-accent-strong) 0%, var(--mamp-accent) 100%);
+  border-color: rgba(80, 128, 244, 0.45);
+  color: white;
+}
+
+.mamp-button-primary:hover {
+  filter: brightness(1.05);
+}
+
+.mamp-button-success {
+  background: linear-gradient(180deg, #2f9d66 0%, #25814f 100%);
+  border-color: rgba(65, 184, 112, 0.3);
+  color: white;
+}
+
+.mamp-button-success:hover {
+  filter: brightness(1.05);
+}
+
+.mamp-button-neutral:active,
+.mamp-button-primary:active,
+.mamp-button-success:active {
+  transform: translateY(1px);
+}
+
+.mamp-button-neutral:disabled,
+.mamp-button-primary:disabled,
+.mamp-button-success:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.mamp-note {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.95rem;
+  padding: 0.9rem 1rem;
+  font-size: 0.9rem;
+}
+
+.mamp-note-success {
+  border-color: rgba(57, 182, 109, 0.28);
+  background: rgba(32, 109, 67, 0.18);
+  color: #bcf3d0;
+}
+
+.mamp-note-warning {
+  border-color: rgba(212, 170, 74, 0.28);
+  background: rgba(140, 101, 22, 0.16);
+  color: #f3d88f;
+}
+
+.mamp-note-danger {
+  border-color: rgba(216, 88, 88, 0.28);
+  background: rgba(122, 31, 31, 0.16);
+  color: #ffb4b4;
+}
+
+.mamp-check-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.9rem 1rem;
+}
+
+.mamp-step {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--mamp-text-dim);
+}
+
+.mamp-step-badge {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mamp-step-active {
+  color: var(--mamp-text);
+}
+
+.mamp-step-active .mamp-step-badge {
+  border-color: rgba(80, 128, 244, 0.45);
+  background: linear-gradient(180deg, var(--mamp-accent-strong) 0%, var(--mamp-accent) 100%);
+  color: white;
+}
+
+.mamp-step-line {
+  height: 1px;
+  width: 3rem;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .mamp-console {
   min-height: 24rem;
   overflow: auto;
