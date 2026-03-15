@@ -1,5 +1,6 @@
 import { FolderOpen, Trash2, ExternalLink, PlayCircle, Shield, Database, Terminal, Code } from 'lucide-react';
 import { Project } from '../types';
+import { useI18n } from '../i18n';
 import { api } from '../services/api';
 
 interface ProjectCardProps {
@@ -8,6 +9,9 @@ interface ProjectCardProps {
 }
 
 export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
+  const { t } = useI18n();
+  const runtimeMode = project.runtimeMode || 'uv';
+
   const commandErrorMessage = (fallback: string, output?: string, error?: string): string => {
     const details = [error, output].filter(Boolean).join('\n').trim();
     return details ? `${fallback}:\n\n${details}` : fallback;
@@ -17,13 +21,13 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
     try {
       const result = await api.runMigrate(project.id);
       if (!result.success) {
-        alert(commandErrorMessage('Migrate failed', result.output, result.error));
+        alert(commandErrorMessage(t.projectCard.migrateFailed, result.output, result.error));
         return;
       }
-      alert('Migrations completed successfully');
+      alert(t.projectCard.migrateSuccess);
     } catch (error) {
       console.error('Migration failed:', error);
-      alert('Migration failed. Check logs for details.');
+      alert(t.projectCard.migrateError);
     }
   };
 
@@ -31,13 +35,13 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
     try {
       const result = await api.runCollectstatic(project.id);
       if (!result.success) {
-        alert(commandErrorMessage('Collectstatic failed', result.output, result.error));
+        alert(commandErrorMessage(t.projectCard.collectstaticFailed, result.output, result.error));
         return;
       }
-      alert('Static files collected successfully');
+      alert(t.projectCard.collectstaticSuccess);
     } catch (error) {
       console.error('Collectstatic failed:', error);
-      alert('Collectstatic failed. Check logs for details.');
+      alert(t.projectCard.collectstaticError);
     }
   };
 
@@ -54,19 +58,19 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
       await api.openDatabaseShell(project.id);
     } catch (error) {
       console.error('Failed to open database shell:', error);
-      alert('Failed to open database shell. Ensure psql/mysql is installed and project DB is configured.');
+      alert(t.projectCard.openDbShellError);
     }
   };
 
   const handleOpenDbAdmin = async () => {
     const dbType = (project.database.type || '').toLowerCase();
     if (dbType !== 'postgres') {
-      alert('Web DB Admin is currently supported for PostgreSQL projects only.');
+      alert(t.projectCard.dbAdminPostgresOnly);
       return;
     }
 
     if (project.status !== 'running') {
-      alert('Start the project first, then open DB Admin.');
+      alert(t.projectCard.dbAdminStartFirst);
       return;
     }
 
@@ -112,7 +116,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
     } catch {
       // Clipboard may be unavailable; continue with manual URL alert.
     }
-    alert(`Unable to open DB admin automatically. Open this URL manually:\n\n${url}`);
+    alert(t.projectCard.dbAdminManualOpen(url));
   };
 
   const handleOpenVSCode = async () => {
@@ -124,7 +128,10 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
   };
 
   const handleOpenBrowser = async () => {
-    if (project.status !== 'running') return;
+    if (project.status !== 'running') {
+      return;
+    }
+
     const protocol = project.httpsEnabled ? 'https' : 'http';
     let url = `${protocol}://${project.domain}`;
     try {
@@ -145,113 +152,117 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
       console.error('Failed to open browser via Tauri API, falling back to window.open:', error);
       const opened = window.open(url, '_blank');
       if (!opened) {
-        alert(`Unable to open browser automatically. Open this URL manually: ${url}`);
+        alert(t.projectCard.browserManualOpen(url));
       }
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Project Info */}
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Project Path</h3>
+          <h3 className="mb-2 text-sm font-medium text-gray-400">{t.projectCard.projectPath}</h3>
           <div className="flex items-center gap-2">
             <FolderOpen size={18} className="text-brand-400" />
-            <span className="font-mono text-sm truncate">{project.path}</span>
+            <span className="truncate font-mono text-sm">{project.path}</span>
           </div>
         </div>
         <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Settings Module</h3>
+          <h3 className="mb-2 text-sm font-medium text-gray-400">{t.projectCard.settingsModule}</h3>
           <span className="font-mono text-sm">{project.settingsModule}</span>
         </div>
         <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Python Version</h3>
+          <h3 className="mb-2 text-sm font-medium text-gray-400">{t.projectCard.pythonVersion}</h3>
           <span className="font-mono text-sm">{project.pythonVersion}</span>
         </div>
         <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Runtime Mode</h3>
-          <span className="font-mono text-sm uppercase">{project.runtimeMode || 'uv'}</span>
+          <h3 className="mb-2 text-sm font-medium text-gray-400">{t.projectCard.runtimeMode}</h3>
+          <span className="font-mono text-sm">{t.common.runtimeModes[runtimeMode]}</span>
         </div>
         <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Debug Mode</h3>
-          <span className={`px-2 py-1 rounded text-xs font-medium ${project.debug ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
-            {project.debug ? 'ON' : 'OFF'}
+          <h3 className="mb-2 text-sm font-medium text-gray-400">{t.projectCard.debugMode}</h3>
+          <span
+            className={`rounded px-2 py-1 text-xs font-medium ${
+              project.debug ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'
+            }`}
+          >
+            {project.debug ? t.projectCard.debugOn : t.projectCard.debugOff}
           </span>
         </div>
       </div>
 
-      {/* Domain & HTTPS */}
       <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
           <Shield size={20} className="text-brand-400" />
-          Domain & HTTPS
+          {t.projectCard.domainAndHttps}
         </h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-gray-400">Primary Domain</div>
+              <div className="text-sm text-gray-400">{t.projectCard.primaryDomain}</div>
               <div className="font-mono text-lg">{project.domain}</div>
             </div>
             <button
               onClick={handleOpenBrowser}
               disabled={project.status !== 'running'}
-              className="rounded-xl bg-brand-500 hover:bg-brand-400 disabled:bg-slate-700 disabled:cursor-not-allowed text-white px-4 py-2.5 flex items-center gap-2 transition-colors"
+              className="flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-white transition-colors hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700"
             >
               <ExternalLink size={18} />
-              {project.status === 'running' ? 'Open' : 'Start First'}
+              {project.status === 'running' ? t.projectCard.open : t.projectCard.startFirst}
             </button>
           </div>
           {project.aliases.length > 0 && (
             <div>
-              <div className="text-sm text-gray-400 mb-2">Aliases</div>
+              <div className="mb-2 text-sm text-gray-400">{t.projectCard.aliases}</div>
               <div className="flex flex-wrap gap-2">
                 {project.aliases.map((alias) => (
-                  <span key={alias} className="rounded-lg border border-white/10 bg-slate-700/70 px-3 py-1 text-sm font-mono">
+                  <span
+                    key={alias}
+                    className="rounded-lg border border-white/10 bg-slate-700/70 px-3 py-1 text-sm font-mono"
+                  >
                     {alias}
                   </span>
                 ))}
               </div>
             </div>
           )}
-          <div className="flex items-center gap-2 pt-2 border-t border-gray-700">
+          <div className="flex items-center gap-2 border-t border-gray-700 pt-2">
             {project.httpsEnabled ? (
               <span className="flex items-center gap-1 text-green-400">
                 <Shield size={18} />
-                HTTPS Enabled
+                {t.projectCard.httpsEnabled}
               </span>
             ) : (
               <span className="flex items-center gap-1 text-yellow-400">
                 <Shield size={18} />
-                HTTPS Disabled
+                {t.projectCard.httpsDisabled}
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Database */}
       <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
           <Database size={20} className="text-brand-400" />
-          Database
+          {t.projectCard.database}
         </h3>
         {project.database.type !== 'none' ? (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="text-sm text-gray-400">Type</div>
-              <div className="font-mono text-sm uppercase">{project.database.type}</div>
+              <div className="text-sm text-gray-400">{t.projectCard.type}</div>
+              <div className="font-mono text-sm">{t.common.databaseTypes[project.database.type]}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-400">Port</div>
+              <div className="text-sm text-gray-400">{t.projectCard.port}</div>
               <div className="font-mono text-sm">{project.database.port}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-400">Database Name</div>
+              <div className="text-sm text-gray-400">{t.projectCard.databaseName}</div>
               <div className="font-mono text-sm">{project.database.name}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-400">Username</div>
+              <div className="text-sm text-gray-400">{t.projectCard.username}</div>
               <div className="font-mono text-sm">{project.database.username}</div>
             </div>
             <div className="col-span-2 border-t border-gray-700 pt-2">
@@ -263,82 +274,80 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
                 >
                   <span className="flex items-center gap-2">
                     <Database size={16} className="text-brand-400" />
-                    Open DB Shell
+                    {t.projectCard.openDbShell}
                   </span>
                 </button>
                 <button
                   onClick={handleOpenDbAdmin}
-                  disabled={project.status !== 'running' || (project.database.type || '').toLowerCase() !== 'postgres'}
+                  disabled={project.status !== 'running' || project.database.type !== 'postgres'}
                   className="rounded-xl border border-white/10 bg-slate-700/65 px-3 py-2 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="flex items-center gap-2">
                     <ExternalLink size={16} className="text-brand-400" />
-                    Open DB Admin
+                    {t.projectCard.openDbAdmin}
                   </span>
                 </button>
               </div>
             </div>
           </div>
         ) : (
-          <div className="text-gray-500">No database configured</div>
+          <div className="text-gray-500">{t.projectCard.noDatabase}</div>
         )}
       </div>
 
-      {/* Quick Actions */}
       <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-        <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <h3 className="mb-4 text-lg font-semibold">{t.projectCard.quickActions}</h3>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           <button
             onClick={handleMigrate}
             disabled={project.status !== 'running'}
-            className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 flex flex-col items-center gap-2 transition-colors"
+            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-slate-700/65 p-3 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <PlayCircle size={24} className="text-green-400" />
-            <span className="text-sm font-medium">Migrate</span>
+            <span className="text-sm font-medium">{t.projectCard.migrate}</span>
           </button>
           <button
             onClick={handleCollectstatic}
             disabled={project.status !== 'running'}
-            className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 flex flex-col items-center gap-2 transition-colors"
+            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-slate-700/65 p-3 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ExternalLink size={24} className="text-blue-400" />
-            <span className="text-sm font-medium">Collectstatic</span>
+            <span className="text-sm font-medium">{t.projectCard.collectstatic}</span>
           </button>
           <button
             onClick={handleOpenShell}
             disabled={project.status !== 'running'}
-            className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 flex flex-col items-center gap-2 transition-colors"
+            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-slate-700/65 p-3 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Terminal size={24} className="text-purple-400" />
-            <span className="text-sm font-medium">Shell</span>
+            <span className="text-sm font-medium">{t.projectCard.shell}</span>
           </button>
           <button
             onClick={handleOpenDbShell}
             disabled={project.status !== 'running' || project.database.type === 'none'}
-            className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 flex flex-col items-center gap-2 transition-colors"
+            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-slate-700/65 p-3 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Database size={24} className="text-brand-400" />
-            <span className="text-sm font-medium">DB Shell</span>
+            <span className="text-sm font-medium">{t.projectCard.dbShell}</span>
           </button>
           <button
             onClick={handleOpenVSCode}
-            className="rounded-xl border border-white/10 bg-slate-700/65 hover:bg-slate-600/70 text-white p-3 flex flex-col items-center gap-2 transition-colors"
+            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-slate-700/65 p-3 text-white transition-colors hover:bg-slate-600/70"
           >
             <Code size={24} className="text-brand-400" />
-            <span className="text-sm font-medium">VS Code</span>
+            <span className="text-sm font-medium">{t.projectCard.vsCode}</span>
           </button>
         </div>
       </div>
 
-      {/* Danger Zone */}
       <div className="rounded-xl border border-red-700/50 bg-red-950/30 p-4">
-        <h3 className="text-lg font-semibold text-red-400 mb-4">Danger Zone</h3>
+        <h3 className="mb-4 text-lg font-semibold text-red-400">{t.projectCard.dangerZone}</h3>
         <button
           onClick={onDelete}
-          className="rounded-xl bg-red-700 hover:bg-red-600 text-white px-4 py-2.5 flex items-center gap-2 transition-colors"
+          className="flex items-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-white transition-colors hover:bg-red-600"
         >
           <Trash2 size={18} />
-          Delete Project
+          {t.projectCard.deleteProject}
         </button>
       </div>
     </div>
