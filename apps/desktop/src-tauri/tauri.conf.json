@@ -21,7 +21,7 @@
     "longDescription": "DJAMP PRO is a local development environment manager for Django projects with custom domains, HTTPS, and service orchestration."
   },
   "productName": "DJAMP PRO",
-  "version": "1.0.1",
+  "version": "1.2.2",
   "identifier": "com.djamppro.desktop",
   "plugins": {},
   "app": {
