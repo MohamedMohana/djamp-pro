@@ -23,7 +23,7 @@ Current primary scope:
 npm install
 npm --prefix apps/desktop install
 python3 -m venv services/controller/.venv
-services/controller/.venv/bin/python -m pip install -r services/controller/requirements.txt
+services/controller/.venv/bin/python -m pip install -r services/controller/requirements-dev.txt
 ```
 
 ## Run in Development

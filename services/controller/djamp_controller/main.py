@@ -539,7 +539,7 @@ def _sanitize_hostname(value: str) -> str:
         raise RuntimeError("Domain is empty")
 
     # Allow users to paste URLs like https://example.test
-    if raw.startswith(("http://", "https://")):
+    if raw.lower().startswith(("http://", "https://")):
         parsed = urlparse(raw)
         raw = parsed.hostname or ""
 
