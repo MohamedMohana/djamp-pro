@@ -1,6 +1,8 @@
-import { FolderOpen, Trash2, ExternalLink, PlayCircle, Shield, Database, Terminal, Code } from 'lucide-react';
-import { Project } from '../types';
+import type { ReactNode } from 'react';
+import { Trash2, ExternalLink, PlayCircle, Database, Terminal, Code } from 'lucide-react';
+import type { Project } from '../types';
 import { useI18n } from '../i18n';
+import { cn, getStatusColor, getStatusIcon } from '../utils';
 import { api } from '../services/api';
 
 interface ProjectCardProps {
@@ -8,9 +10,35 @@ interface ProjectCardProps {
   onDelete: () => void;
 }
 
+interface InspectorRowProps {
+  label: string;
+  value: ReactNode;
+}
+
+function InspectorRow({ label, value }: InspectorRowProps) {
+  return (
+    <div className="grid gap-3 border-b border-white/6 py-3 last:border-b-0 md:grid-cols-[10rem_minmax(0,1fr)]">
+      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--mamp-text-dim)]">
+        {label}
+      </div>
+      <div className="min-w-0 text-sm text-[var(--mamp-text)]">{value}</div>
+    </div>
+  );
+}
+
+function InspectorSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="mamp-section">
+      <div className="mamp-section-title">{title}</div>
+      <div>{children}</div>
+    </section>
+  );
+}
+
 export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
   const { t } = useI18n();
   const runtimeMode = project.runtimeMode || 'uv';
+  const projectUrl = `${project.httpsEnabled ? 'https' : 'http'}://${project.domain}`;
 
   const commandErrorMessage = (fallback: string, output?: string, error?: string): string => {
     const details = [error, output].filter(Boolean).join('\n').trim();
@@ -63,8 +91,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
   };
 
   const handleOpenDbAdmin = async () => {
-    const dbType = (project.database.type || '').toLowerCase();
-    if (dbType !== 'postgres') {
+    if (project.database.type !== 'postgres') {
       alert(t.projectCard.dbAdminPostgresOnly);
       return;
     }
@@ -127,229 +154,172 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
     }
   };
 
-  const handleOpenBrowser = async () => {
-    if (project.status !== 'running') {
-      return;
-    }
-
-    const protocol = project.httpsEnabled ? 'https' : 'http';
-    let url = `${protocol}://${project.domain}`;
-    try {
-      const status = await api.getProxyStatus();
-      const proxyActive = project.httpsEnabled ? status.proxyHttpsActive : status.proxyHttpActive;
-      const standardActive = project.httpsEnabled ? status.standardHttpsActive : status.standardHttpActive;
-
-      if (!proxyActive || !standardActive) {
-        const port = project.httpsEnabled ? status.proxyPort : status.proxyHttpPort;
-        url = `${protocol}://${project.domain}:${port}`;
-      }
-    } catch (error) {
-      console.error('Failed to detect proxy status:', error);
-    }
-    try {
-      await api.openInBrowser(url);
-    } catch (error) {
-      console.error('Failed to open browser via Tauri API, falling back to window.open:', error);
-      const opened = window.open(url, '_blank');
-      if (!opened) {
-        alert(t.projectCard.browserManualOpen(url));
-      }
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-          <h3 className="mb-2 text-sm font-medium text-gray-400">{t.projectCard.projectPath}</h3>
-          <div className="flex items-center gap-2">
-            <FolderOpen size={18} className="text-brand-400" />
-            <span className="truncate font-mono text-sm">{project.path}</span>
-          </div>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-          <h3 className="mb-2 text-sm font-medium text-gray-400">{t.projectCard.settingsModule}</h3>
-          <span className="font-mono text-sm">{project.settingsModule}</span>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-          <h3 className="mb-2 text-sm font-medium text-gray-400">{t.projectCard.pythonVersion}</h3>
-          <span className="font-mono text-sm">{project.pythonVersion}</span>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-          <h3 className="mb-2 text-sm font-medium text-gray-400">{t.projectCard.runtimeMode}</h3>
-          <span className="font-mono text-sm">{t.common.runtimeModes[runtimeMode]}</span>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-          <h3 className="mb-2 text-sm font-medium text-gray-400">{t.projectCard.debugMode}</h3>
-          <span
-            className={`rounded px-2 py-1 text-xs font-medium ${
-              project.debug ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'
-            }`}
-          >
-            {project.debug ? t.projectCard.debugOn : t.projectCard.debugOff}
-          </span>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-          <Shield size={20} className="text-brand-400" />
-          {t.projectCard.domainAndHttps}
-        </h3>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-gray-400">{t.projectCard.primaryDomain}</div>
-              <div className="font-mono text-lg">{project.domain}</div>
-            </div>
-            <button
-              onClick={handleOpenBrowser}
-              disabled={project.status !== 'running'}
-              className="flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-white transition-colors hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700"
+    <div className="space-y-5">
+      <InspectorSection title={t.projectCard.sectionProject}>
+        <InspectorRow
+          label={t.projectCard.projectPath}
+          value={<span className="block truncate font-mono text-[13px]">{project.path}</span>}
+        />
+        <InspectorRow
+          label={t.projectCard.settingsModule}
+          value={<span className="font-mono text-[13px]">{project.settingsModule}</span>}
+        />
+        <InspectorRow label={t.projectCard.pythonVersion} value={project.pythonVersion} />
+        <InspectorRow label={t.projectCard.runtimeMode} value={t.common.runtimeModes[runtimeMode]} />
+        <InspectorRow
+          label={t.projectCard.statusLabel}
+          value={
+            <span
+              className={cn(
+                'inline-flex items-center gap-2 rounded-full border border-white/8 bg-black/15 px-3 py-1',
+                getStatusColor(project.status),
+              )}
             >
-              <ExternalLink size={18} />
-              {project.status === 'running' ? t.projectCard.open : t.projectCard.startFirst}
-            </button>
-          </div>
-          {project.aliases.length > 0 && (
-            <div>
-              <div className="mb-2 text-sm text-gray-400">{t.projectCard.aliases}</div>
+              <span>{getStatusIcon(project.status)}</span>
+              {t.common.status[project.status]}
+            </span>
+          }
+        />
+        <InspectorRow
+          label={t.projectCard.debugMode}
+          value={
+            <span
+              className={cn(
+                'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                project.debug
+                  ? 'bg-emerald-500/15 text-emerald-300'
+                  : 'bg-red-500/15 text-red-300',
+              )}
+            >
+              {project.debug ? t.projectCard.debugOn : t.projectCard.debugOff}
+            </span>
+          }
+        />
+      </InspectorSection>
+
+      <InspectorSection title={t.projectCard.sectionAccess}>
+        <InspectorRow
+          label={t.projectCard.primaryDomain}
+          value={<span className="font-mono text-[13px]">{project.domain}</span>}
+        />
+        <InspectorRow
+          label={t.projectCard.urlLabel}
+          value={<span className="font-mono text-[13px]">{projectUrl}</span>}
+        />
+        <InspectorRow
+          label={t.projectCard.sslLabel}
+          value={project.httpsEnabled ? t.projectCard.httpsEnabled : t.projectCard.httpsDisabled}
+        />
+        <InspectorRow
+          label={t.projectCard.aliases}
+          value={
+            project.aliases.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {project.aliases.map((alias) => (
                   <span
                     key={alias}
-                    className="rounded-lg border border-white/10 bg-slate-700/70 px-3 py-1 text-sm font-mono"
+                    className="rounded-md border border-white/8 bg-black/15 px-2.5 py-1 font-mono text-[12px]"
                   >
                     {alias}
                   </span>
                 ))}
               </div>
-            </div>
-          )}
-          <div className="flex items-center gap-2 border-t border-gray-700 pt-2">
-            {project.httpsEnabled ? (
-              <span className="flex items-center gap-1 text-green-400">
-                <Shield size={18} />
-                {t.projectCard.httpsEnabled}
-              </span>
             ) : (
-              <span className="flex items-center gap-1 text-yellow-400">
-                <Shield size={18} />
-                {t.projectCard.httpsDisabled}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+              <span className="text-[var(--mamp-text-muted)]">{t.projectCard.noAliases}</span>
+            )
+          }
+        />
+      </InspectorSection>
 
-      <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-          <Database size={20} className="text-brand-400" />
-          {t.projectCard.database}
-        </h3>
+      <InspectorSection title={t.projectCard.database}>
         {project.database.type !== 'none' ? (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm text-gray-400">{t.projectCard.type}</div>
-              <div className="font-mono text-sm">{t.common.databaseTypes[project.database.type]}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-400">{t.projectCard.port}</div>
-              <div className="font-mono text-sm">{project.database.port}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-400">{t.projectCard.databaseName}</div>
-              <div className="font-mono text-sm">{project.database.name}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-400">{t.projectCard.username}</div>
-              <div className="font-mono text-sm">{project.database.username}</div>
-            </div>
-            <div className="col-span-2 border-t border-gray-700 pt-2">
-              <div className="flex flex-wrap items-center gap-2">
+          <>
+            <InspectorRow label={t.projectCard.type} value={t.common.databaseTypes[project.database.type]} />
+            <InspectorRow label={t.projectCard.port} value={project.database.port} />
+            <InspectorRow label={t.projectCard.databaseName} value={project.database.name || '--'} />
+            <InspectorRow label={t.projectCard.username} value={project.database.username || '--'} />
+            <div className="border-t border-white/6 pt-4">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleOpenDbShell}
                   disabled={project.status !== 'running'}
-                  className="rounded-xl border border-white/10 bg-slate-700/65 px-3 py-2 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <span className="flex items-center gap-2">
-                    <Database size={16} className="text-brand-400" />
-                    {t.projectCard.openDbShell}
-                  </span>
+                  <Database size={15} />
+                  {t.projectCard.openDbShell}
                 </button>
                 <button
                   onClick={handleOpenDbAdmin}
                   disabled={project.status !== 'running' || project.database.type !== 'postgres'}
-                  className="rounded-xl border border-white/10 bg-slate-700/65 px-3 py-2 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <span className="flex items-center gap-2">
-                    <ExternalLink size={16} className="text-brand-400" />
-                    {t.projectCard.openDbAdmin}
-                  </span>
+                  <ExternalLink size={15} />
+                  {t.projectCard.openDbAdmin}
                 </button>
               </div>
             </div>
-          </div>
+          </>
         ) : (
-          <div className="text-gray-500">{t.projectCard.noDatabase}</div>
+          <div className="text-sm text-[var(--mamp-text-muted)]">{t.projectCard.noDatabase}</div>
         )}
-      </div>
+      </InspectorSection>
 
-      <div className="rounded-xl border border-white/10 bg-slate-900/65 p-4">
-        <h3 className="mb-4 text-lg font-semibold">{t.projectCard.quickActions}</h3>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <InspectorSection title={t.projectCard.quickActions}>
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={handleMigrate}
             disabled={project.status !== 'running'}
-            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-slate-700/65 p-3 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <PlayCircle size={24} className="text-green-400" />
-            <span className="text-sm font-medium">{t.projectCard.migrate}</span>
+            <PlayCircle size={15} />
+            {t.projectCard.migrate}
           </button>
           <button
             onClick={handleCollectstatic}
             disabled={project.status !== 'running'}
-            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-slate-700/65 p-3 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <ExternalLink size={24} className="text-blue-400" />
-            <span className="text-sm font-medium">{t.projectCard.collectstatic}</span>
+            <ExternalLink size={15} />
+            {t.projectCard.collectstatic}
           </button>
           <button
             onClick={handleOpenShell}
             disabled={project.status !== 'running'}
-            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-slate-700/65 p-3 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Terminal size={24} className="text-purple-400" />
-            <span className="text-sm font-medium">{t.projectCard.shell}</span>
+            <Terminal size={15} />
+            {t.projectCard.shell}
           </button>
           <button
             onClick={handleOpenDbShell}
             disabled={project.status !== 'running' || project.database.type === 'none'}
-            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-slate-700/65 p-3 text-white transition-colors hover:bg-slate-600/70 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Database size={24} className="text-brand-400" />
-            <span className="text-sm font-medium">{t.projectCard.dbShell}</span>
+            <Database size={15} />
+            {t.projectCard.dbShell}
           </button>
           <button
             onClick={handleOpenVSCode}
-            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-slate-700/65 p-3 text-white transition-colors hover:bg-slate-600/70"
+            className="mamp-inline-action"
           >
-            <Code size={24} className="text-brand-400" />
-            <span className="text-sm font-medium">{t.projectCard.vsCode}</span>
+            <Code size={15} />
+            {t.projectCard.vsCode}
           </button>
         </div>
-      </div>
+      </InspectorSection>
 
-      <div className="rounded-xl border border-red-700/50 bg-red-950/30 p-4">
-        <h3 className="mb-4 text-lg font-semibold text-red-400">{t.projectCard.dangerZone}</h3>
+      <section className="rounded-xl border border-red-500/20 bg-red-950/20 p-4">
+        <div className="mamp-section-title text-red-300">{t.projectCard.dangerZone}</div>
+        <p className="mb-4 text-sm text-red-100/75">{t.app.deleteProjectNote}</p>
         <button
           onClick={onDelete}
-          className="flex items-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-white transition-colors hover:bg-red-600"
+          className="inline-flex items-center gap-2 rounded-md border border-red-400/30 bg-red-500/15 px-3 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/25"
         >
-          <Trash2 size={18} />
+          <Trash2 size={15} />
           {t.projectCard.deleteProject}
         </button>
-      </div>
+      </section>
     </div>
   );
 }
