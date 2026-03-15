@@ -1,4 +1,5 @@
 import { cn } from '../utils';
+import { useI18n } from '../i18n';
 
 interface ProjectAvatarProps {
   name: string;
@@ -32,6 +33,7 @@ function initials(name: string): string {
 }
 
 export default function ProjectAvatar({ name, size = 'sm', className }: ProjectAvatarProps) {
+  const { t } = useI18n();
   const hash = hashName(name || 'project');
   const hue1 = hash % 360;
   const hue2 = (hue1 + 28) % 360;
@@ -50,7 +52,7 @@ export default function ProjectAvatar({ name, size = 'sm', className }: ProjectA
         className,
       )}
       style={style}
-      aria-label={`${name} avatar`}
+      aria-label={t.projectAvatar.label(name)}
       title={name}
     >
       {initials(name)}

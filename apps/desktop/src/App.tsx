@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Play, Square, Settings, Plus, RefreshCw, Database, Globe } from 'lucide-react';
 import { api } from './services/api';
-import { Project } from './types';
+import type { Project } from './types';
+import { useI18n, type Locale } from './i18n';
 import { cn, getStatusColor, getStatusIcon } from './utils';
 
 import ProjectList from './components/ProjectList';
@@ -11,15 +12,23 @@ import AddProjectModal from './components/AddProjectModal';
 import SettingsPanel from './components/SettingsPanel';
 import djampMark from './assets/djamp-mark.png';
 
+type AppTab = 'projects' | 'logs' | 'environment';
+type LogSource = 'django' | 'proxy' | 'database';
+
+const APP_TABS: AppTab[] = ['projects', 'logs', 'environment'];
+const LOG_SOURCES: LogSource[] = ['django', 'proxy', 'database'];
+const LOCALES: Locale[] = ['en', 'ar'];
+
 function App() {
+  const { direction, locale, setLocale, t } = useI18n();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'projects' | 'logs' | 'environment'>('projects');
-  const [logsSource, setLogsSource] = useState<'django' | 'proxy' | 'database'>('django');
-  const [logsText, setLogsText] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<AppTab>('projects');
+  const [logsSource, setLogsSource] = useState<LogSource>('django');
+  const [logsText, setLogsText] = useState('');
   const [logsLoading, setLogsLoading] = useState(false);
   const [actionProjectId, setActionProjectId] = useState<string | null>(null);
   const [actionKind, setActionKind] = useState<'start' | 'stop' | 'restart' | null>(null);
@@ -56,8 +65,10 @@ function App() {
   };
 
   useEffect(() => {
-    loadProjects();
-    const interval = setInterval(loadProjects, 2000);
+    void loadProjects();
+    const interval = setInterval(() => {
+      void loadProjects();
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -65,7 +76,10 @@ function App() {
     const selectedProjectId = selectedProject?.id;
 
     const loadLogs = async () => {
-      if (!selectedProjectId || activeTab !== 'logs') return;
+      if (!selectedProjectId || activeTab !== 'logs') {
+        return;
+      }
+
       setLogsLoading(true);
       try {
         const text = await api.getLogs(selectedProjectId, logsSource);
@@ -77,8 +91,10 @@ function App() {
       setLogsLoading(false);
     };
 
-    loadLogs();
-    const interval = setInterval(loadLogs, 2000);
+    void loadLogs();
+    const interval = setInterval(() => {
+      void loadLogs();
+    }, 2000);
     return () => clearInterval(interval);
   }, [selectedProject?.id, activeTab, logsSource]);
 
@@ -90,7 +106,8 @@ function App() {
         if (!prev) {
           return loaded.length === 1 ? loaded[0] : null;
         }
-        const fresh = loaded.find((p) => p.id === prev.id);
+
+        const fresh = loaded.find((project) => project.id === prev.id);
         return fresh || null;
       });
       setLoading(false);
@@ -117,21 +134,21 @@ function App() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const certWarning = (result as any)?.certificateWarning as string | undefined;
       if (certWarning) {
-        alert(`HTTPS warning: ${certWarning}`);
+        alert(t.app.httpsWarning(certWarning));
       }
       if (result?.hosts && !result.hosts.success) {
-        alert(`Domain mapping warning: ${result.hosts.error || 'Unable to update hosts file'}`);
+        alert(t.app.domainWarning(result.hosts.error || t.app.hostsUpdateFallback));
       }
       if (result?.proxy && !result.proxy.success) {
-        alert(`Proxy warning: ${result.proxy.error || 'Unable to start/reload Caddy'}`);
+        alert(t.app.proxyWarning(result.proxy.error || t.app.proxyReloadFallback));
       }
       if (result?.proxy?.success && result.proxy.output?.includes('Use https://')) {
-        alert(`Proxy info: ${result.proxy.output}`);
+        alert(t.app.proxyInfo(result.proxy.output));
       }
       await loadProjects();
     } catch (error) {
       console.error('Failed to start project:', error);
-      alert(`Failed to start project: ${extractErrorMessage(error, 'Unknown error')}`);
+      alert(t.app.failedStart(extractErrorMessage(error, t.app.unknownError)));
       setProjectStatusLocal(id, 'error');
     } finally {
       setActionProjectId(null);
@@ -148,7 +165,7 @@ function App() {
       await loadProjects();
     } catch (error) {
       console.error('Failed to stop project:', error);
-      alert(`Failed to stop project: ${extractErrorMessage(error, 'Unknown error')}`);
+      alert(t.app.failedStop(extractErrorMessage(error, t.app.unknownError)));
       setProjectStatusLocal(id, 'running');
     } finally {
       setActionProjectId(null);
@@ -165,7 +182,7 @@ function App() {
       await loadProjects();
     } catch (error) {
       console.error('Failed to restart project:', error);
-      alert(`Failed to restart project: ${extractErrorMessage(error, 'Unknown error')}`);
+      alert(t.app.failedRestart(extractErrorMessage(error, t.app.unknownError)));
       setProjectStatusLocal(id, 'error');
     } finally {
       setActionProjectId(null);
@@ -179,17 +196,22 @@ function App() {
   };
 
   const closeDeleteModal = () => {
-    if (deleteSubmitting) return;
+    if (deleteSubmitting) {
+      return;
+    }
+
     setDeleteModalProject(null);
     setDeleteConfirmName('');
   };
 
   const handleConfirmDeleteProject = async () => {
-    if (!deleteModalProject) return;
+    if (!deleteModalProject) {
+      return;
+    }
 
     const expectedName = deleteModalProject.name.trim();
     if (deleteConfirmName.trim() !== expectedName) {
-      alert(`Type "${expectedName}" exactly to confirm deletion.`);
+      alert(t.app.deleteProjectTypeExact(expectedName));
       return;
     }
 
@@ -205,7 +227,7 @@ function App() {
       setDeleteConfirmName('');
     } catch (error) {
       console.error('Failed to delete project:', error);
-      alert(`Failed to delete project: ${extractErrorMessage(error, 'Unknown error')}`);
+      alert(t.app.failedDelete(extractErrorMessage(error, t.app.unknownError)));
     } finally {
       setDeleteSubmitting(false);
     }
@@ -214,7 +236,7 @@ function App() {
   const isSelectedBusy = Boolean(selectedProject && actionProjectId === selectedProject.id);
 
   return (
-    <div className="app-bg min-h-screen text-slate-100">
+    <div dir={direction} className="app-bg min-h-screen text-slate-100">
       <div className="flex h-screen gap-3 p-3">
         <aside className="glass-panel flex w-80 flex-col overflow-hidden rounded-2xl border border-white/10">
           <div className="border-b border-white/10 px-4 py-5">
@@ -226,7 +248,31 @@ function App() {
               />
               <div>
                 <h1 className="text-[2rem] font-extrabold leading-none tracking-tight text-brand-300">DJAMP PRO</h1>
-                <p className="mt-1 text-sm text-slate-400">Django Local Environment Manager</p>
+                <p className="mt-1 text-sm text-slate-400">{t.app.subtitle}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-900/45 px-3 py-2">
+              <span className="text-xs font-semibold text-slate-400">{t.common.language}</span>
+              <div className="inline-flex rounded-lg border border-white/10 bg-slate-950/70 p-1">
+                {LOCALES.map((item) => {
+                  const isActive = locale === item;
+                  const label = item === 'en' ? t.common.english : t.common.arabic;
+                  return (
+                    <button
+                      key={item}
+                      onClick={() => setLocale(item)}
+                      className={cn(
+                        'rounded-md px-3 py-1.5 text-xs font-semibold transition',
+                        isActive
+                          ? 'bg-brand-500 text-white shadow-[0_6px_18px_rgba(38,131,255,0.3)]'
+                          : 'text-slate-300 hover:bg-slate-800 hover:text-white',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -238,7 +284,7 @@ function App() {
             >
               <span className="inline-flex items-center justify-center gap-2">
                 <Plus size={17} />
-                Add Project
+                {t.app.addProject}
               </span>
             </button>
           </div>
@@ -259,7 +305,7 @@ function App() {
             >
               <span className="inline-flex items-center justify-center gap-2">
                 <Settings size={17} />
-                Settings
+                {t.app.settings}
               </span>
             </button>
           </div>
@@ -275,18 +321,27 @@ function App() {
                     <div>
                       <h2 className="text-4xl font-bold leading-tight tracking-tight">{selectedProject.name}</h2>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-300">
-                        <span className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 ring-1 ring-inset', getStatusColor(selectedProject.status), selectedProject.status === 'running' ? 'bg-emerald-500/10 ring-emerald-500/20' : 'bg-slate-700/35 ring-white/10')}>
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full px-3 py-1 ring-1 ring-inset',
+                            getStatusColor(selectedProject.status),
+                            selectedProject.status === 'running'
+                              ? 'bg-emerald-500/10 ring-emerald-500/20'
+                              : 'bg-slate-700/35 ring-white/10',
+                          )}
+                        >
                           <span>{getStatusIcon(selectedProject.status)}</span>
-                          {selectedProject.status}
+                          {t.common.status[selectedProject.status]}
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/35 px-3 py-1 ring-1 ring-inset ring-white/10">
                           <Globe size={14} />
-                          {selectedProject.httpsEnabled ? 'https://' : 'http://'}{selectedProject.domain}
+                          {selectedProject.httpsEnabled ? 'https://' : 'http://'}
+                          {selectedProject.domain}
                         </span>
                         {selectedProject.database.type !== 'none' && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/35 px-3 py-1 uppercase ring-1 ring-inset ring-white/10">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/35 px-3 py-1 ring-1 ring-inset ring-white/10">
                             <Database size={14} />
-                            {selectedProject.database.type}
+                            {t.common.databaseTypes[selectedProject.database.type]}
                           </span>
                         )}
                       </div>
@@ -298,7 +353,7 @@ function App() {
                       onClick={() => handleRestartProject(selectedProject.id)}
                       disabled={isSelectedBusy}
                       className="rounded-xl border border-white/10 bg-slate-700/80 p-2.5 text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
-                      title="Restart"
+                      title={t.app.restartLabel}
                     >
                       <RefreshCw size={18} />
                     </button>
@@ -310,7 +365,7 @@ function App() {
                       >
                         <span className="inline-flex items-center gap-2">
                           <Square size={16} />
-                          {isSelectedBusy && actionKind === 'stop' ? 'Stopping...' : 'Stop'}
+                          {isSelectedBusy && actionKind === 'stop' ? t.app.stopping : t.app.stop}
                         </span>
                       </button>
                     ) : (
@@ -321,7 +376,7 @@ function App() {
                       >
                         <span className="inline-flex items-center gap-2">
                           <Play size={16} />
-                          {isSelectedBusy && actionKind === 'start' ? 'Starting...' : 'Start'}
+                          {isSelectedBusy && actionKind === 'start' ? t.app.starting : t.app.start}
                         </span>
                       </button>
                     )}
@@ -329,18 +384,18 @@ function App() {
                 </div>
 
                 <div className="mt-6 inline-flex rounded-xl border border-white/10 bg-slate-900/80 p-1">
-                  {(['projects', 'logs', 'environment'] as const).map((tab) => (
+                  {APP_TABS.map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
                       className={cn(
-                        'rounded-lg px-4 py-2 text-sm font-semibold capitalize transition',
+                        'rounded-lg px-4 py-2 text-sm font-semibold transition',
                         activeTab === tab
                           ? 'bg-brand-500 text-white shadow-[0_8px_22px_rgba(38,131,255,0.35)]'
                           : 'text-slate-300 hover:bg-slate-700/70 hover:text-white',
                       )}
                     >
-                      {tab}
+                      {t.app.tabs[tab]}
                     </button>
                   ))}
                 </div>
@@ -357,44 +412,47 @@ function App() {
                 {activeTab === 'logs' && (
                   <div className="flex h-full min-h-0 flex-col gap-3 rounded-xl border border-white/10 bg-slate-900/70 p-4">
                     <div className="flex items-center gap-2">
-                      {(['django', 'proxy', 'database'] as const).map((source) => (
+                      {LOG_SOURCES.map((source) => (
                         <button
                           key={source}
                           onClick={() => setLogsSource(source)}
                           className={cn(
-                            'rounded-lg px-3 py-1.5 text-sm font-semibold capitalize transition',
+                            'rounded-lg px-3 py-1.5 text-sm font-semibold transition',
                             logsSource === source
                               ? 'bg-brand-500 text-white'
                               : 'bg-slate-700/70 text-slate-200 hover:bg-slate-600/80',
                           )}
                         >
-                          {source}
+                          {t.app.logSources[source]}
                         </button>
                       ))}
                       <div className="flex-1" />
-                      <span className="text-xs text-slate-400">{logsLoading ? 'Loading...' : 'Auto-refreshing'}</span>
+                      <span className="text-xs text-slate-400">
+                        {logsLoading ? t.common.loading : t.app.autoRefreshing}
+                      </span>
                     </div>
 
-                    <pre className="flex-1 min-h-0 overflow-auto rounded-lg border border-white/10 bg-slate-950/80 p-3 font-mono text-xs leading-relaxed text-slate-200 whitespace-pre-wrap">
-                      {logsText ? logsText : 'No logs yet.'}
+                    <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-slate-950/80 p-3 font-mono text-xs leading-relaxed text-slate-200">
+                      {logsText || t.app.noLogs}
                     </pre>
                   </div>
                 )}
 
                 {activeTab === 'environment' && (
                   <div className="rounded-xl border border-white/10 bg-slate-900/70 p-6">
-                    <h3 className="mb-2 text-xl font-semibold">Environment Variables</h3>
-                    <p className="mb-4 text-sm text-slate-400">
-                      Loaded from project <code>.env</code> (sensitive values are masked).
-                    </p>
+                    <h3 className="mb-2 text-xl font-semibold">{t.app.environmentVariables}</h3>
+                    <p className="mb-4 text-sm text-slate-400">{t.app.environmentDescription}</p>
                     {Object.entries(selectedProject.environmentVars || {}).length === 0 ? (
                       <div className="rounded-lg border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-400">
-                        No environment variables were found in the project <code>.env</code> file.
+                        {t.app.environmentEmpty}
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {Object.entries(selectedProject.environmentVars).map(([key, value]) => (
-                          <div key={key} className="grid grid-cols-[minmax(0,14rem)_minmax(0,1fr)] items-start gap-4">
+                          <div
+                            key={key}
+                            className="grid grid-cols-[minmax(0,14rem)_minmax(0,1fr)] items-start gap-4"
+                          >
                             <span className="break-all font-mono text-sm leading-relaxed text-slate-400">{key}</span>
                             <span className="min-w-0 break-all whitespace-pre-wrap rounded-lg bg-slate-700/70 px-3 py-2 font-mono text-sm leading-relaxed text-slate-100">
                               {value}
@@ -411,8 +469,8 @@ function App() {
             <div className="flex flex-1 items-center justify-center">
               <div className="text-center">
                 <Globe size={64} className="mx-auto mb-4 text-slate-500" />
-                <h2 className="mb-2 text-2xl font-semibold text-slate-300">No Project Selected</h2>
-                <p className="text-slate-400">Select a project from the sidebar or add a new one</p>
+                <h2 className="mb-2 text-2xl font-semibold text-slate-300">{t.app.noProjectSelected}</h2>
+                <p className="text-slate-400">{t.app.noProjectSelectedDescription}</p>
               </div>
             </div>
           )}
@@ -425,16 +483,14 @@ function App() {
       {deleteModalProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-red-500/40 bg-slate-900 p-5 shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
-            <h3 className="text-xl font-semibold text-red-300">Delete Project</h3>
+            <h3 className="text-xl font-semibold text-red-300">{t.app.deleteProjectTitle}</h3>
             <p className="mt-3 text-sm text-slate-300">
-              This will remove <span className="font-semibold text-white">{deleteModalProject.name}</span> from DJAMP PRO.
+              {t.app.deleteProjectIntro(deleteModalProject.name)}
             </p>
-            <p className="mt-2 text-sm text-slate-400">
-              Project files on disk will stay untouched. This action cannot be undone in the app.
-            </p>
+            <p className="mt-2 text-sm text-slate-400">{t.app.deleteProjectNote}</p>
 
             <label className="mt-4 block text-sm font-medium text-slate-300">
-              Type <span className="font-mono text-white">{deleteModalProject.name}</span> to confirm
+              {t.app.deleteProjectConfirm(deleteModalProject.name)}
             </label>
             <input
               autoFocus
@@ -450,14 +506,14 @@ function App() {
                 disabled={deleteSubmitting}
                 className="rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 onClick={handleConfirmDeleteProject}
                 disabled={deleteSubmitting || deleteConfirmName.trim() !== deleteModalProject.name.trim()}
                 className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {deleteSubmitting ? 'Deleting...' : 'Delete Project'}
+                {deleteSubmitting ? t.app.deleting : t.app.deleteProjectTitle}
               </button>
             </div>
           </div>
