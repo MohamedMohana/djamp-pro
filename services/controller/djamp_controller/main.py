@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 import hashlib
 import html
 import json
@@ -3517,29 +3518,12 @@ def detect_django(path: str) -> DetectionResult:
     return DetectionResult(found=True, managePyPath=str(manage_py), settingsModules=settings_modules)
 
 
-app = FastAPI(
-    title="DJAMP PRO Controller",
-    description="Controller service for DJAMP PRO desktop application",
-    version="1.0.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:1420"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.on_event("startup")
-async def startup() -> None:
+def _startup_controller() -> None:
     ensure_dirs()
     _ = load_registry_sync()
 
 
-@app.on_event("shutdown")
-async def shutdown() -> None:
+async def _shutdown_controller() -> None:
     for project_id in list(PROJECT_PROCESSES.keys()):
         proc, handle = PROJECT_PROCESSES.pop(project_id)
         if proc.returncode is None:
@@ -3575,6 +3559,31 @@ async def shutdown() -> None:
                 _ = _helper_hosts_clear()
     except Exception:
         pass
+
+
+@asynccontextmanager
+async def app_lifespan(_app: FastAPI):
+    _startup_controller()
+    try:
+        yield
+    finally:
+        await _shutdown_controller()
+
+
+app = FastAPI(
+    title="DJAMP PRO Controller",
+    description="Controller service for DJAMP PRO desktop application",
+    version="1.0.0",
+    lifespan=app_lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:1420"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
