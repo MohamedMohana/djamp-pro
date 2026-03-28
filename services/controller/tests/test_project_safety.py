@@ -154,7 +154,7 @@ def test_add_project_rejects_public_domains_without_override(isolated_djamp_home
     assert "real/public domain" in str(exc_info.value.detail)
 
 
-def test_sanitize_subprocess_command_avoids_mamp_binary(
+def test_sanitize_subprocess_command_prefers_safe_binary_when_path_is_polluted(
     isolated_djamp_home: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -175,9 +175,31 @@ def test_sanitize_subprocess_command_avoids_mamp_binary(
     monkeypatch.setattr(controller_main, "_disallowed_executable_roots", lambda: [mamp_root])
     monkeypatch.setenv("PATH", os.pathsep.join([str(mamp_bin), str(safe_bin)]))
 
-    sanitized = _sanitize_subprocess_command([str(mamp_openssl), "version"], isolated_djamp_home)
+    sanitized = _sanitize_subprocess_command(["openssl", "version"], isolated_djamp_home)
 
     assert sanitized[0] == str(safe_openssl)
+
+
+def test_sanitize_subprocess_command_rejects_explicit_mamp_binary(
+    isolated_djamp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    safe_root = isolated_djamp_home / "safe-root"
+    safe_root.mkdir()
+
+    mamp_root = isolated_djamp_home / "Applications" / "MAMP"
+    mamp_bin = mamp_root / "Library" / "bin"
+    mamp_bin.mkdir(parents=True)
+    mamp_openssl = mamp_bin / "openssl"
+    mamp_openssl.write_text("#!/bin/sh\nexit 0\n")
+    mamp_openssl.chmod(0o755)
+
+    monkeypatch.setattr(controller_main, "_allowed_executable_roots", lambda cwd: [safe_root])
+    monkeypatch.setattr(controller_main, "_disallowed_executable_roots", lambda: [mamp_root])
+    monkeypatch.setenv("PATH", str(mamp_bin))
+
+    with pytest.raises(RuntimeError, match="Executable path is blocked"):
+        _sanitize_subprocess_command([str(mamp_openssl), "version"], isolated_djamp_home)
 
 
 def test_sanitize_subprocess_command_rejects_mamp_when_no_safe_alternative(
@@ -199,4 +221,4 @@ def test_sanitize_subprocess_command_rejects_mamp_when_no_safe_alternative(
     monkeypatch.setenv("PATH", str(mamp_bin))
 
     with pytest.raises(RuntimeError, match="Executable path is blocked"):
-        _sanitize_subprocess_command([str(mamp_openssl), "version"], isolated_djamp_home)
+        _sanitize_subprocess_command(["openssl", "version"], isolated_djamp_home)

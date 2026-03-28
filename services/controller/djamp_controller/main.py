@@ -822,6 +822,17 @@ def _disallowed_executable_roots() -> List[Path]:
     return [root.expanduser().resolve() for root in _DISALLOWED_EXECUTABLE_ROOTS]
 
 
+def _find_allowed_executable(
+    executable_name: str,
+    cwd: Path,
+    env: Optional[Dict[str, str]] = None,
+) -> Optional[str]:
+    try:
+        return str(_resolve_allowed_executable_path(executable_name, executable_name, cwd, env))
+    except RuntimeError:
+        return None
+
+
 def _resolve_allowed_executable_path(
     executable_token: str,
     executable_name: str,
@@ -836,16 +847,25 @@ def _resolve_allowed_executable_path(
 
     allowed_roots = _allowed_executable_roots(cwd)
     disallowed_roots = _disallowed_executable_roots()
-    candidates: List[Path] = []
 
     explicit = Path(executable_token).expanduser()
-    if explicit.is_absolute():
-        candidates.append(explicit)
-    elif "/" in executable_token or "\\" in executable_token:
+    is_explicit_path = explicit.is_absolute() or "/" in executable_token or "\\" in executable_token
+    if is_explicit_path:
         try:
-            candidates.append((cwd / explicit).resolve())
-        except Exception:
-            pass
+            candidate = explicit if explicit.is_absolute() else (cwd / explicit).resolve()
+        except Exception as exc:
+            raise RuntimeError(f"Invalid executable path: {executable_token}") from exc
+        if not candidate.exists() or not candidate.is_file():
+            raise RuntimeError(f"Executable not found: {candidate}")
+        if not os.access(str(candidate), os.X_OK):
+            raise RuntimeError(f"Executable is not executable: {candidate}")
+        if any(_is_relative_to(candidate, root) for root in disallowed_roots):
+            raise RuntimeError(f"Executable path is blocked: {candidate}")
+        if any(_is_relative_to(candidate, root) for root in allowed_roots):
+            return candidate
+        raise RuntimeError("Executable path is outside allowed roots")
+
+    candidates: List[Path] = []
 
     for raw_dir in search_path.split(os.pathsep):
         if not raw_dir:
@@ -1271,7 +1291,7 @@ def _ensure_uv_runtime(project: Project) -> CommandResult:
     python_path = _platform_python(project)
     project_root = Path(project.path)
 
-    uv_bin = shutil.which("uv")
+    uv_bin = _find_allowed_executable("uv", project_root)
     if not uv_bin:
         return CommandResult(success=False, error="`uv` is not installed or not in PATH")
 
@@ -1294,7 +1314,7 @@ def _ensure_uv_runtime(project: Project) -> CommandResult:
 
 
 def _conda_env_prefix(env_name: str) -> Path:
-    conda_bin = shutil.which("conda")
+    conda_bin = _find_allowed_executable("conda", paths()["home"])
     if not conda_bin:
         raise RuntimeError("Conda runtime selected but `conda` is not in PATH")
 
@@ -1379,8 +1399,7 @@ def _build_manage_command(project: Project, manage_py: Path, django_args: List[s
             custom_path = Path(custom_exec).expanduser().resolve()
             if not custom_path.exists() or not custom_path.is_file():
                 raise RuntimeError(f"Custom interpreter not found: {custom_path}")
-            _prepend_path_env(env, custom_path.parent)
-            exec_name = custom_path.name
+            return [str(custom_path), str(manage_py), *django_args], env
 
         if not re.fullmatch(r"[A-Za-z0-9._+-]+", exec_name):
             raise RuntimeError("Custom interpreter contains unsupported characters")
@@ -1885,7 +1904,7 @@ def _build_macos_helper_binary() -> Tuple[Optional[Path], CommandResult]:
     if platform.system() != "Darwin":
         return None, CommandResult(success=False, error="Helper build is only implemented for macOS")
 
-    cargo = shutil.which("cargo")
+    cargo = _find_allowed_executable("cargo", _repo_root())
     if not cargo:
         return None, CommandResult(success=False, error="`cargo` was not found in PATH")
 
@@ -2007,7 +2026,7 @@ def _root_ca_paths() -> Tuple[Path, Path]:
 
 
 def _ensure_root_ca() -> CommandResult:
-    openssl = shutil.which("openssl")
+    openssl = _find_allowed_executable("openssl", paths()["home"])
     if not openssl:
         return CommandResult(success=False, error="`openssl` was not found in PATH")
 
@@ -2098,7 +2117,7 @@ def _generate_certificate(domain: str, alt_domains: Optional[List[str]] = None) 
     if not ensure.success:
         raise RuntimeError(ensure.error)
 
-    openssl = shutil.which("openssl")
+    openssl = _find_allowed_executable("openssl", paths()["home"])
     if not openssl:
         raise RuntimeError("`openssl` was not found in PATH")
 
@@ -2209,7 +2228,7 @@ def _generate_certificate(domain: str, alt_domains: Optional[List[str]] = None) 
 
 
 def _get_cert_expiration(cert_path: Path) -> str:
-    openssl = shutil.which("openssl")
+    openssl = _find_allowed_executable("openssl", paths()["home"])
     if not openssl:
         return ""
     result = _run_blocking(
@@ -2227,7 +2246,7 @@ def _check_certificate(domain: str) -> CertificateInfo:
     if not cert.exists() or not key.exists():
         return CertificateInfo(domain=safe_domain, certificatePath=str(cert), keyPath=str(key), isValid=False)
 
-    openssl = shutil.which("openssl")
+    openssl = _find_allowed_executable("openssl", paths()["home"])
     if not openssl:
         return CertificateInfo(
             domain=safe_domain,
@@ -2311,7 +2330,7 @@ def _uninstall_root_ca() -> CommandResult:
     if system != "Darwin":
         return CommandResult(success=False, error="Automatic trust removal is only implemented for macOS")
 
-    security = shutil.which("security")
+    security = _find_allowed_executable("security", paths()["home"])
     if not security:
         return CommandResult(success=False, error="`security` CLI not found")
 
@@ -2347,7 +2366,7 @@ def _check_root_ca_status() -> Dict[str, bool]:
     if not ca_cert.exists() or not ca_key.exists():
         return {"installed": False, "valid": False}
 
-    openssl = shutil.which("openssl")
+    openssl = _find_allowed_executable("openssl", paths()["home"])
     valid = True
     if openssl:
         # `openssl x509 -checkend` returns 0 when the cert is NOT expired.
@@ -2368,7 +2387,7 @@ def _normalize_hex(value: str) -> str:
 
 
 def _openssl_sha1_fingerprint(cert_path: Path) -> str:
-    openssl = shutil.which("openssl")
+    openssl = _find_allowed_executable("openssl", paths()["home"])
     if not openssl or not cert_path.exists():
         return ""
     result = _run_blocking([openssl, "x509", "-noout", "-fingerprint", "-sha1", "-in", str(cert_path)], paths()["home"])
@@ -2382,7 +2401,7 @@ def _openssl_sha1_fingerprint(cert_path: Path) -> str:
 
 
 def _security_keychain_sha1_hashes(common_name: str, keychain: str) -> List[str]:
-    security = shutil.which("security")
+    security = _find_allowed_executable("security", paths()["home"])
     if not security:
         return []
     result = _run_blocking([security, "find-certificate", "-a", "-Z", "-c", common_name, keychain], paths()["home"])
@@ -2439,7 +2458,7 @@ def _caddy_binary() -> Optional[str]:
         if local.exists():
             return str(local.resolve())
 
-    return shutil.which("caddy")
+    return _find_allowed_executable("caddy", _repo_root())
 
 
 def _download_file(url: str, dest: Path) -> None:
@@ -2733,11 +2752,11 @@ async def _reload_caddy(projects: List[Project], allow_privileged: bool = True) 
 
 def _service_binary(name: str) -> Optional[str]:
     if name == "postgres":
-        return shutil.which("postgres")
+        return _find_allowed_executable("postgres", paths()["home"])
     if name == "mysql":
-        return shutil.which("mysqld")
+        return _find_allowed_executable("mysqld", paths()["home"])
     if name == "redis":
-        return shutil.which("redis-server")
+        return _find_allowed_executable("redis-server", paths()["home"])
     return None
 
 
@@ -2761,7 +2780,7 @@ async def _start_service(name: str) -> CommandResult:
     log_handle = open(service_log_path(name), "a", encoding="utf-8")
 
     if name == "postgres":
-        initdb = shutil.which("initdb")
+        initdb = _find_allowed_executable("initdb", paths()["home"])
         if not (data_root / "PG_VERSION").exists() and initdb:
             init_result = _run_blocking(
                 [
@@ -2837,8 +2856,8 @@ def _validate_simple_identifier(value: str, label: str) -> str:
 
 
 def _ensure_postgres_db_and_role(project: Project) -> CommandResult:
-    psql = shutil.which("psql")
-    pg_isready = shutil.which("pg_isready")
+    psql = _find_allowed_executable("psql", paths()["home"])
+    pg_isready = _find_allowed_executable("pg_isready", paths()["home"])
     if not psql or not pg_isready:
         return CommandResult(success=False, error="Postgres tools (psql/pg_isready) not found in PATH")
 
@@ -2925,7 +2944,7 @@ def _ensure_postgres_db_and_role(project: Project) -> CommandResult:
 
 
 def _run_postgres_query_text(project: Project, query: str) -> CommandResult:
-    psql = shutil.which("psql")
+    psql = _find_allowed_executable("psql", paths()["home"])
     if not psql:
         return CommandResult(success=False, error="psql is not installed or not in PATH")
 
@@ -4547,11 +4566,11 @@ async def create_venv(payload: CreateVenvPayload) -> Dict[str, str]:
     project = _sanitize_user_project_path(payload.path)
     venv = project / ".venv"
 
-    uv_bin = shutil.which("uv")
+    uv_bin = _find_allowed_executable("uv", project)
     if uv_bin:
         result = await asyncio.to_thread(_run_blocking, [uv_bin, "venv", str(venv)], project)
     else:
-        py = shutil.which("python3") or shutil.which("python")
+        py = _find_allowed_executable("python3", project) or _find_allowed_executable("python", project)
         if not py:
             raise HTTPException(status_code=500, detail="No Python interpreter found")
         result = await asyncio.to_thread(_run_blocking, [py, "-m", "venv", str(venv)], project)
@@ -4574,7 +4593,7 @@ async def install_dependencies(payload: InstallDependenciesPayload) -> CommandRe
     command, _ = await asyncio.to_thread(_build_manage_command, project, manage_py, ["--version"])
     interpreter = command[0]
 
-    uv_bin = shutil.which("uv")
+    uv_bin = _find_allowed_executable("uv", Path(project.path))
     if project.runtimeMode == "uv" and uv_bin:
         result = await asyncio.to_thread(
             _run_blocking,
