@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "djamp-controller"
-version = "1.0.0"
+version = "1.2.3"
 description = "DJAMP PRO controller service"
 authors = [{ name = "DJAMP PRO Team" }]
 license = { text = "MIT" }

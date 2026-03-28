@@ -3637,7 +3637,7 @@ async def app_lifespan(_app: FastAPI):
 app = FastAPI(
     title="DJAMP PRO Controller",
     description="Controller service for DJAMP PRO desktop application",
-    version="1.0.0",
+    version="1.2.3",
     lifespan=app_lifespan,
 )
 
