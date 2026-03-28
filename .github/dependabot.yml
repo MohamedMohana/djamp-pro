@@ -39,20 +39,20 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-plugin-react-refresh"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
+      - dependency-name: "lucide-react"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
     groups:
-      desktop-npm-safe-dependencies:
+      desktop-npm-patch-dependencies:
         patterns:
           - "*"
         update-types:
-          - "minor"
           - "patch"
-        exclude-patterns:
-          - "react"
-          - "react-dom"
-          - "@types/react"
-          - "@types/react-dom"
-          - "tailwindcss"
-          - "eslint"
   - package-ecosystem: "cargo"
     directory: "/apps/desktop/src-tauri"
     schedule:
