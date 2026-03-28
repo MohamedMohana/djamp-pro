@@ -795,6 +795,96 @@ _ALLOWED_SUBPROCESS_EXECUTABLES = {
     "uv.exe",
 }
 
+_DISALLOWED_EXECUTABLE_ROOTS = (
+    Path("/Applications/MAMP"),
+    Path("/Applications/MAMP PRO"),
+)
+
+
+def _allowed_executable_roots(cwd: Path) -> List[Path]:
+    return [
+        cwd.expanduser().resolve(),
+        paths()["home"].expanduser().resolve(),
+        Path.home().expanduser().resolve(),
+        Path("/bin"),
+        Path("/sbin"),
+        Path("/usr/bin"),
+        Path("/usr/sbin"),
+        Path("/usr/local/bin"),
+        Path("/opt"),
+        Path("/opt/homebrew"),
+        Path("/opt/homebrew/bin"),
+        Path("/opt/homebrew/opt"),
+    ]
+
+
+def _disallowed_executable_roots() -> List[Path]:
+    return [root.expanduser().resolve() for root in _DISALLOWED_EXECUTABLE_ROOTS]
+
+
+def _resolve_allowed_executable_path(
+    executable_token: str,
+    executable_name: str,
+    cwd: Path,
+    env: Optional[Dict[str, str]] = None,
+) -> Path:
+    search_path = None
+    if env:
+        search_path = env.get("PATH")
+    if not search_path:
+        search_path = os.environ.get("PATH", "")
+
+    allowed_roots = _allowed_executable_roots(cwd)
+    disallowed_roots = _disallowed_executable_roots()
+    candidates: List[Path] = []
+
+    explicit = Path(executable_token).expanduser()
+    if explicit.is_absolute():
+        candidates.append(explicit)
+    elif "/" in executable_token or "\\" in executable_token:
+        try:
+            candidates.append((cwd / explicit).resolve())
+        except Exception:
+            pass
+
+    for raw_dir in search_path.split(os.pathsep):
+        if not raw_dir:
+            continue
+        try:
+            candidates.append((Path(raw_dir).expanduser() / executable_name).resolve())
+        except Exception:
+            continue
+
+    # Ensure common safe roots are still checked even when PATH is polluted by other toolchains.
+    for root in allowed_roots:
+        try:
+            candidates.append((root / executable_name).resolve())
+        except Exception:
+            continue
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        candidate_str = str(candidate)
+        if candidate_str in seen:
+            continue
+        seen.add(candidate_str)
+        if not candidate.exists() or not candidate.is_file():
+            continue
+        if not os.access(str(candidate), os.X_OK):
+            continue
+        if any(_is_relative_to(candidate, root) for root in disallowed_roots):
+            continue
+        if any(_is_relative_to(candidate, root) for root in allowed_roots):
+            return candidate
+
+    resolved = shutil.which(executable_name, path=search_path)
+    if not resolved:
+        raise RuntimeError(f"Executable not found in PATH: {executable_name}")
+    resolved_path = Path(resolved).expanduser().resolve()
+    if any(_is_relative_to(resolved_path, root) for root in disallowed_roots):
+        raise RuntimeError(f"Executable path is blocked: {resolved_path}")
+    raise RuntimeError("Executable path is outside allowed roots")
+
 
 def _sanitize_subprocess_command(command: List[str], cwd: Path, env: Optional[Dict[str, str]] = None) -> List[str]:
     if not command:
@@ -828,33 +918,7 @@ def _sanitize_subprocess_command(command: List[str], cwd: Path, env: Optional[Di
     if not allowed_name:
         raise RuntimeError(f"Executable is not permitted: {executable}")
 
-    search_path = None
-    if env:
-        search_path = env.get("PATH")
-    if not search_path:
-        search_path = os.environ.get("PATH")
-
-    resolved = shutil.which(executable, path=search_path)
-    if not resolved:
-        raise RuntimeError(f"Executable not found in PATH: {executable}")
-    resolved_path = Path(resolved).expanduser().resolve()
-
-    allowed_roots = [
-        safe_cwd,
-        paths()["home"].expanduser().resolve(),
-        Path.home().expanduser().resolve(),
-        Path("/bin"),
-        Path("/sbin"),
-        Path("/usr/bin"),
-        Path("/usr/sbin"),
-        Path("/usr/local/bin"),
-        Path("/opt"),
-        Path("/opt/homebrew"),
-        Path("/opt/homebrew/bin"),
-        Path("/opt/homebrew/opt"),
-    ]
-    if not any(_is_relative_to(resolved_path, root) for root in allowed_roots):
-        raise RuntimeError("Executable path is outside allowed roots")
+    resolved_path = _resolve_allowed_executable_path(executable_token, executable, safe_cwd, env)
     sanitized[0] = str(resolved_path)
 
     return sanitized

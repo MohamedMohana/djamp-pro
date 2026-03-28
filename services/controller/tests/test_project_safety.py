@@ -1,4 +1,5 @@
 import asyncio
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -6,11 +7,13 @@ from pathlib import Path
 import pytest
 from fastapi import HTTPException
 
+from djamp_controller import main as controller_main
 from djamp_controller.main import (
     AddProjectPayload,
     AppSettings,
     Project,
     _enforce_domain_policy,
+    _sanitize_subprocess_command,
     _sanitize_hostname,
     add_project,
     load_registry_sync,
@@ -149,3 +152,51 @@ def test_add_project_rejects_public_domains_without_override(isolated_djamp_home
             )
         )
     assert "real/public domain" in str(exc_info.value.detail)
+
+
+def test_sanitize_subprocess_command_avoids_mamp_binary(
+    isolated_djamp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    safe_bin = isolated_djamp_home / "safe-bin"
+    safe_bin.mkdir()
+    safe_openssl = safe_bin / "openssl"
+    safe_openssl.write_text("#!/bin/sh\nexit 0\n")
+    safe_openssl.chmod(0o755)
+
+    mamp_root = isolated_djamp_home / "Applications" / "MAMP"
+    mamp_bin = mamp_root / "Library" / "bin"
+    mamp_bin.mkdir(parents=True)
+    mamp_openssl = mamp_bin / "openssl"
+    mamp_openssl.write_text("#!/bin/sh\nexit 0\n")
+    mamp_openssl.chmod(0o755)
+
+    monkeypatch.setattr(controller_main, "_allowed_executable_roots", lambda cwd: [safe_bin])
+    monkeypatch.setattr(controller_main, "_disallowed_executable_roots", lambda: [mamp_root])
+    monkeypatch.setenv("PATH", os.pathsep.join([str(mamp_bin), str(safe_bin)]))
+
+    sanitized = _sanitize_subprocess_command([str(mamp_openssl), "version"], isolated_djamp_home)
+
+    assert sanitized[0] == str(safe_openssl)
+
+
+def test_sanitize_subprocess_command_rejects_mamp_when_no_safe_alternative(
+    isolated_djamp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    safe_root = isolated_djamp_home / "safe-root"
+    safe_root.mkdir()
+
+    mamp_root = isolated_djamp_home / "Applications" / "MAMP"
+    mamp_bin = mamp_root / "Library" / "bin"
+    mamp_bin.mkdir(parents=True)
+    mamp_openssl = mamp_bin / "openssl"
+    mamp_openssl.write_text("#!/bin/sh\nexit 0\n")
+    mamp_openssl.chmod(0o755)
+
+    monkeypatch.setattr(controller_main, "_allowed_executable_roots", lambda cwd: [safe_root])
+    monkeypatch.setattr(controller_main, "_disallowed_executable_roots", lambda: [mamp_root])
+    monkeypatch.setenv("PATH", str(mamp_bin))
+
+    with pytest.raises(RuntimeError, match="Executable path is blocked"):
+        _sanitize_subprocess_command([str(mamp_openssl), "version"], isolated_djamp_home)
