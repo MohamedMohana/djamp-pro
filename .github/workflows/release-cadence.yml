@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ensure release reminder issue exists when needed
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const cadenceDays = 21;
