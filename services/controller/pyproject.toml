@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=82.0.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,15 +10,15 @@ authors = [{ name = "DJAMP PRO Team" }]
 license = { text = "MIT" }
 requires-python = ">=3.9"
 dependencies = [
-  "fastapi>=0.110.0",
-  "uvicorn[standard]>=0.24.0",
-  "pydantic>=2.5.0",
+  "fastapi>=0.128.8",
+  "uvicorn[standard]>=0.39.0",
+  "pydantic>=2.12.5",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.0.0",
-  "ruff>=0.1.8",
+  "pytest>=8.4.2",
+  "ruff>=0.15.10",
 ]
 
 [tool.setuptools.packages.find]
