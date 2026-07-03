@@ -18,7 +18,6 @@ async fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            commands::greet,
             commands::get_projects,
             commands::add_project,
             commands::update_project,

@@ -429,6 +429,10 @@ fn handle_request(req: Request, state: Arc<Mutex<State>>) -> Response {
             http_target_port,
             https_target_port,
         } => {
+            if http_target_port == 0 || https_target_port == 0 {
+                return Response::err("target ports must be in range 1-65535");
+            }
+
             let mut guard = match state.lock() {
                 Ok(g) => g,
                 Err(_) => return Response::err("failed to lock state"),
@@ -450,14 +454,22 @@ fn handle_request(req: Request, state: Arc<Mutex<State>>) -> Response {
 
                 match Forwarder::start(80, http_target_port) {
                     Ok(f) => guard.http_forwarder = Some(f),
-                    Err(err) => return Response::err(err),
+                    Err(err) => {
+                        guard.http_target_port = 0;
+                        guard.https_target_port = 0;
+                        return Response::err(err);
+                    }
                 }
                 match Forwarder::start(443, https_target_port) {
                     Ok(f) => guard.https_forwarder = Some(f),
                     Err(err) => {
+                        // Roll back the HTTP forwarder so a partial failure
+                        // never leaves one port silently captured.
                         if let Some(f) = guard.http_forwarder.take() {
                             f.stop();
                         }
+                        guard.http_target_port = 0;
+                        guard.https_target_port = 0;
                         return Response::err(err);
                     }
                 }

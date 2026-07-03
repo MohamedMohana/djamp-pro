@@ -11,9 +11,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { api } from './services/api';
-import type { Project } from './types';
+import type { Project, ProxyStatus } from './types';
 import { useI18n, type Locale } from './i18n';
-import { cn, getStatusColor, getStatusIcon } from './utils';
+import { cn, computeProjectUrl, extractErrorMessage, getStatusColor, getStatusIcon } from './utils';
 
 import ProjectList from './components/ProjectList';
 import ProjectCard from './components/ProjectCard';
@@ -79,66 +79,72 @@ function App() {
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
-  const extractErrorMessage = (error: unknown, fallback: string): string => {
-    if (error instanceof Error && error.message.trim()) {
-      return error.message;
-    }
-
-    const raw = String(error ?? '').trim();
-    if (!raw) {
-      return fallback;
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (typeof parsed === 'string' && parsed.trim()) {
-        return parsed;
-      }
-      if (parsed && typeof parsed === 'object') {
-        const detail = (parsed as { detail?: unknown }).detail;
-        if (typeof detail === 'string' && detail.trim()) {
-          return detail;
-        }
-      }
-    } catch {
-      // Keep raw string fallback below.
-    }
-
-    return raw;
-  };
-
   useEffect(() => {
-    void loadProjects();
+    // Skip a tick while the previous request is still in flight so slow
+    // responses cannot pile up and apply out of order.
+    let inFlight = false;
+    const tick = async () => {
+      if (inFlight) {
+        return;
+      }
+      inFlight = true;
+      try {
+        await loadProjects();
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    void tick();
     const interval = setInterval(() => {
-      void loadProjects();
+      void tick();
     }, 2000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     const selectedProjectId = selectedProject?.id;
+    if (!selectedProjectId || activeTab !== 'logs') {
+      return;
+    }
+
+    let cancelled = false;
+    let inFlight = false;
 
     const loadLogs = async () => {
-      if (!selectedProjectId || activeTab !== 'logs') {
+      if (inFlight) {
         return;
       }
-
+      inFlight = true;
       setLogsLoading(true);
       try {
         const text = await api.getLogs(selectedProjectId, logsSource);
-        setLogsText(text);
+        if (!cancelled) {
+          setLogsText(text);
+        }
       } catch (error) {
         console.error('Failed to load logs:', error);
-        setLogsText('');
+        if (!cancelled) {
+          setLogsText('');
+        }
+      } finally {
+        inFlight = false;
+        if (!cancelled) {
+          setLogsLoading(false);
+        }
       }
-      setLogsLoading(false);
     };
 
     void loadLogs();
     const interval = setInterval(() => {
       void loadLogs();
     }, 2000);
-    return () => clearInterval(interval);
+    return () => {
+      // Drop responses from a previous project/source selection so stale
+      // logs cannot overwrite the newly selected stream.
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [selectedProject?.id, activeTab, logsSource]);
 
   const loadProjects = async () => {
@@ -174,10 +180,8 @@ function App() {
       if (result?.message && result.message !== 'Project started') {
         alert(result.message);
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const certWarning = (result as any)?.certificateWarning as string | undefined;
-      if (certWarning) {
-        alert(t.app.httpsWarning(certWarning));
+      if (result?.certificateWarning) {
+        alert(t.app.httpsWarning(result.certificateWarning));
       }
       if (result?.hosts && !result.hosts.success) {
         alert(t.app.domainWarning(result.hosts.error || t.app.hostsUpdateFallback));
@@ -238,20 +242,13 @@ function App() {
       return;
     }
 
-    const protocol = selectedProject.httpsEnabled ? 'https' : 'http';
-    let url = `${protocol}://${selectedProject.domain}`;
+    let proxyStatus: ProxyStatus | null = null;
     try {
-      const status = await api.getProxyStatus();
-      const proxyActive = selectedProject.httpsEnabled ? status.proxyHttpsActive : status.proxyHttpActive;
-      const standardActive = selectedProject.httpsEnabled ? status.standardHttpsActive : status.standardHttpActive;
-
-      if (!proxyActive || !standardActive) {
-        const port = selectedProject.httpsEnabled ? status.proxyPort : status.proxyHttpPort;
-        url = `${protocol}://${selectedProject.domain}:${port}`;
-      }
+      proxyStatus = await api.getProxyStatus();
     } catch (error) {
       console.error('Failed to detect proxy status:', error);
     }
+    const url = computeProjectUrl(selectedProject, proxyStatus);
 
     try {
       await api.openInBrowser(url);

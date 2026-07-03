@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { Trash2, ExternalLink, PlayCircle, Database, Terminal, Code } from 'lucide-react';
-import type { Project } from '../types';
+import type { Project, ProxyStatus } from '../types';
 import { useI18n } from '../i18n';
-import { cn, getStatusColor, getStatusIcon } from '../utils';
+import { cn, commandErrorMessage, computeProjectUrl, getStatusColor, getStatusIcon } from '../utils';
 import { api } from '../services/api';
 
 interface ProjectCardProps {
@@ -39,11 +39,6 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
   const { t } = useI18n();
   const runtimeMode = project.runtimeMode || 'uv';
   const projectUrl = `${project.httpsEnabled ? 'https' : 'http'}://${project.domain}`;
-
-  const commandErrorMessage = (fallback: string, output?: string, error?: string): string => {
-    const details = [error, output].filter(Boolean).join('\n').trim();
-    return details ? `${fallback}:\n\n${details}` : fallback;
-  };
 
   const handleMigrate = async () => {
     try {
@@ -101,21 +96,13 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
       return;
     }
 
-    const protocol = project.httpsEnabled ? 'https' : 'http';
-    let url = `${protocol}://${project.domain}/phpmyadmin/`;
-
+    let proxyStatus: ProxyStatus | null = null;
     try {
-      const status = await api.getProxyStatus();
-      const proxyActive = project.httpsEnabled ? status.proxyHttpsActive : status.proxyHttpActive;
-      const standardActive = project.httpsEnabled ? status.standardHttpsActive : status.standardHttpActive;
-
-      if (!proxyActive || !standardActive) {
-        const port = project.httpsEnabled ? status.proxyPort : status.proxyHttpPort;
-        url = `${protocol}://${project.domain}:${port}/phpmyadmin/`;
-      }
+      proxyStatus = await api.getProxyStatus();
     } catch (error) {
       console.error('Failed to detect proxy status for DB admin URL:', error);
     }
+    let url = computeProjectUrl(project, proxyStatus, '/phpmyadmin/');
 
     try {
       const response = await api.getDatabaseAdminUrl(project.id);

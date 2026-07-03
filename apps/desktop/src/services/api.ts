@@ -30,6 +30,7 @@ export const api = {
     message?: string;
     hosts?: CommandResult;
     proxy?: CommandResult;
+    certificateWarning?: string;
   }> => {
     return invoke('start_project', { id });
   },

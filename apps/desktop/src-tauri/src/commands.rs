@@ -29,11 +29,6 @@ struct MessageResponse {
 }
 
 #[tauri::command]
-pub fn greet(name: &str) -> String {
-    format!("Hello, {name}! Welcome to DJAMP PRO.")
-}
-
-#[tauri::command]
 pub async fn get_projects() -> Result<Value, String> {
     sidecar::get_json("/api/projects").await
 }
@@ -100,40 +95,40 @@ pub async fn run_tests(project_id: String) -> Result<CommandResult, String> {
     sidecar::post_json(&format!("/api/projects/{project_id}/test"), &json!({})).await
 }
 
+/// Run a shell command in a new Terminal window. AppleScript string literals
+/// need backslashes escaped before quotes, otherwise commands containing
+/// either character are corrupted (or break out of the string entirely).
+fn run_in_terminal(command: &str) -> Result<(), String> {
+    if !cfg!(target_os = "macos") {
+        return Err("opening a terminal is only supported on macOS".to_string());
+    }
+
+    let escaped = command.replace('\\', "\\\\").replace('"', "\\\"");
+    let status = Command::new("osascript")
+        .arg("-e")
+        .arg(format!(
+            "tell application \"Terminal\" to do script \"{escaped}\""
+        ))
+        .status()
+        .map_err(|err| format!("osascript failed: {err}"))?;
+    if !status.success() {
+        return Err(format!("osascript exited with status: {status}"));
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn open_shell(project_id: String) -> Result<(), String> {
     let response: MessageResponse =
         sidecar::post_json(&format!("/api/utilities/{project_id}/shell"), &json!({})).await?;
-
-    if cfg!(target_os = "macos") {
-        let _ = Command::new("osascript")
-            .arg("-e")
-            .arg(format!(
-                "tell application \"Terminal\" to do script \"{}\"",
-                response.message.replace('"', "\\\"")
-            ))
-            .status();
-    }
-
-    Ok(())
+    run_in_terminal(&response.message)
 }
 
 #[tauri::command]
 pub async fn open_db_shell(project_id: String) -> Result<(), String> {
     let response: MessageResponse =
         sidecar::post_json(&format!("/api/utilities/{project_id}/db-shell"), &json!({})).await?;
-
-    if cfg!(target_os = "macos") {
-        let _ = Command::new("osascript")
-            .arg("-e")
-            .arg(format!(
-                "tell application \"Terminal\" to do script \"{}\"",
-                response.message.replace('"', "\\\"")
-            ))
-            .status();
-    }
-
-    Ok(())
+    run_in_terminal(&response.message)
 }
 
 #[tauri::command]
