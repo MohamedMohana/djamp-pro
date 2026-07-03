@@ -19,7 +19,6 @@ Cargo.lock
 
 # Python
 *.so
-.DS_Store
 .mypy_cache/
 .pytest_cache/
 .coverage

@@ -132,8 +132,8 @@ jobs:
       - name: Enforce DJAMP PRO branding in docs
         run: |
           set -euo pipefail
-          if grep -RInE "DJANGOForge|DjangoForge" --exclude-dir=.git --exclude-dir=legacy --include='*.md' .; then
-            echo "Found old branding outside legacy/."
+          if grep -RInE "DJANGOForge|DjangoForge" --exclude-dir=.git --include='*.md' .; then
+            echo "Found old branding in docs."
             exit 1
           fi
 

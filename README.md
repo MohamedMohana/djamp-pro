@@ -84,7 +84,8 @@ docs/
   BUILD.md
   FAQs.md
   TROUBLESHOOTING.md
-legacy/                     # Archived old implementation
+scripts/
+  djamp-pro/                # Cert/CA/hosts helper scripts
 ```
 
 ## Architecture Overview
