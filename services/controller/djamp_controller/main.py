@@ -13,6 +13,7 @@ import shutil
 import signal
 import socket
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -167,7 +168,6 @@ class ShellPayload(BaseModel):
 
 
 class CreateSuperuserPayload(BaseModel):
-    projectId: str
     username: str
     email: str
 
@@ -175,6 +175,29 @@ class CreateSuperuserPayload(BaseModel):
 REGISTRY_LOCK = asyncio.Lock()
 PROJECT_PROCESSES: Dict[str, Tuple[asyncio.subprocess.Process, Any]] = {}
 SERVICE_PROCESSES: Dict[str, Tuple[asyncio.subprocess.Process, Any]] = {}
+
+# Strong references to best-effort background tasks. Without these, the event
+# loop only holds a weak reference and a task can be garbage-collected mid-run.
+_BACKGROUND_TASKS: set = set()
+
+
+def _spawn_background_task(coro: Any, label: str) -> None:
+    task = asyncio.create_task(coro)
+    _BACKGROUND_TASKS.add(task)
+
+    def _on_done(done: asyncio.Task) -> None:
+        _BACKGROUND_TASKS.discard(done)
+        if done.cancelled():
+            return
+        exc = done.exception()
+        if exc is not None:
+            print(
+                f"[djamp-controller] background task '{label}' failed: {exc}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    task.add_done_callback(_on_done)
 
 
 def utc_now() -> str:
@@ -779,6 +802,8 @@ _ALLOWED_SUBPROCESS_EXECUTABLES = {
     "djamp-priv-helper.exe",
     "initdb",
     "initdb.exe",
+    "mysqladmin",
+    "mysqladmin.exe",
     "openssl",
     "openssl.exe",
     "osascript",
@@ -790,6 +815,8 @@ _ALLOWED_SUBPROCESS_EXECUTABLES = {
     "psql.exe",
     "python",
     "python.exe",
+    "redis-cli",
+    "redis-cli.exe",
     "security",
     "uv",
     "uv.exe",
@@ -1097,131 +1124,6 @@ def _friendly_hosts_helper_error(raw_error: Optional[str], hosts_file: Path) -> 
     return "DJAMP Helper is not running. Install/start helper from Settings to manage hosts without prompts."
 
 
-def _macos_pf_redirect_configured(http_target_port: int, https_target_port: int) -> bool:
-    """Return True when the DJAMP PF redirect rules exist for the given target ports (macOS)."""
-    if platform.system() != "Darwin":
-        return True
-
-    anchor_name = "djamp-pro"
-    anchor_path = Path(f"/etc/pf.anchors/{anchor_name}")
-    pf_conf = Path("/etc/pf.conf")
-
-    anchor_content = "\n".join(
-        [
-            "# DJAMP PRO managed PF redirect (loopback only)",
-            f"rdr pass on lo0 inet proto tcp from any to any port 80 -> 127.0.0.1 port {int(http_target_port)}",
-            f"rdr pass on lo0 inet proto tcp from any to any port 443 -> 127.0.0.1 port {int(https_target_port)}",
-            "",
-        ]
-    )
-
-    pf_block_lines = [
-        MANAGED_PF_BEGIN,
-        f'anchor "{anchor_name}"',
-        f'load anchor "{anchor_name}" from "{anchor_path}"',
-        MANAGED_PF_END,
-    ]
-
-    try:
-        if not anchor_path.exists() or not pf_conf.exists():
-            return False
-        existing = anchor_path.read_text(encoding="utf-8", errors="ignore")
-        if existing.strip() != anchor_content.strip():
-            return False
-
-        conf_text = pf_conf.read_text(encoding="utf-8", errors="ignore")
-        if MANAGED_PF_BEGIN in conf_text and MANAGED_PF_END in conf_text:
-            _before, managed, _after = _split_marked_sections(conf_text, MANAGED_PF_BEGIN, MANAGED_PF_END)
-            if managed and [line.strip() for line in managed] == [line.strip() for line in pf_block_lines]:
-                return True
-        # Older versions appended lines without markers; accept if present.
-        if all(line in conf_text for line in pf_block_lines[1:3]):
-            return True
-        return False
-    except Exception:
-        return False
-
-
-def _ensure_macos_pf_redirect(http_target_port: int, https_target_port: int) -> CommandResult:
-    """Redirect standard ports 80/443 on loopback to the configured proxy ports using PF (macOS)."""
-    if platform.system() != "Darwin":
-        return CommandResult(success=True, output="PF redirect not applicable")
-    if os.getenv("DJAMP_SKIP_PF") == "1":
-        return CommandResult(success=True, output="PF redirect skipped via DJAMP_SKIP_PF=1")
-
-    anchor_name = "djamp-pro"
-    anchor_path = Path(f"/etc/pf.anchors/{anchor_name}")
-    pf_conf = Path("/etc/pf.conf")
-
-    anchor_content = "\n".join(
-        [
-            "# DJAMP PRO managed PF redirect (loopback only)",
-            f"rdr pass on lo0 inet proto tcp from any to any port 80 -> 127.0.0.1 port {int(http_target_port)}",
-            f"rdr pass on lo0 inet proto tcp from any to any port 443 -> 127.0.0.1 port {int(https_target_port)}",
-            "",
-        ]
-    )
-
-    pf_block_lines = [
-        MANAGED_PF_BEGIN,
-        f'anchor "{anchor_name}"',
-        f'load anchor "{anchor_name}" from "{anchor_path}"',
-        MANAGED_PF_END,
-    ]
-
-    # If already configured, do nothing (avoid repeated elevation prompts).
-    try:
-        if anchor_path.exists():
-            existing = anchor_path.read_text(encoding="utf-8", errors="ignore")
-            if existing.strip() == anchor_content.strip():
-                conf_text = pf_conf.read_text(encoding="utf-8", errors="ignore")
-                if MANAGED_PF_BEGIN in conf_text and MANAGED_PF_END in conf_text:
-                    before, managed, after = _split_marked_sections(conf_text, MANAGED_PF_BEGIN, MANAGED_PF_END)
-                    if managed and [line.strip() for line in managed] == [line.strip() for line in pf_block_lines]:
-                        return CommandResult(success=True, output="PF redirect already configured")
-                # Older versions appended lines without markers; accept if present.
-                if all(line in conf_text for line in pf_block_lines[1:3]):
-                    return CommandResult(success=True, output="PF redirect already configured")
-    except Exception:
-        # Best effort only.
-        pass
-
-    staged_anchor = paths()["home"] / "pf.anchor.staged"
-    staged_anchor.write_text(anchor_content, encoding="utf-8")
-
-    # Ensure pf.conf loads our anchor.
-    try:
-        conf_text = pf_conf.read_text(encoding="utf-8", errors="ignore")
-    except Exception as exc:
-        return CommandResult(success=False, error=f"Unable to read {pf_conf}: {exc}")
-
-    needs_conf_update = True
-    staged_pf_conf = paths()["home"] / "pf.conf.staged"
-    try:
-        before, _managed, after = _split_marked_sections(conf_text, MANAGED_PF_BEGIN, MANAGED_PF_END)
-        new_conf = _join_marked_sections(before, pf_block_lines, after)
-        if new_conf.strip() == conf_text.strip():
-            needs_conf_update = False
-        else:
-            staged_pf_conf.write_text(new_conf, encoding="utf-8")
-    except Exception as exc:
-        return CommandResult(success=False, error=f"Unable to prepare PF configuration: {exc}")
-
-    # Apply changes with a single elevation prompt.
-    script_parts: List[str] = []
-    script_parts.append(f"/usr/bin/install -m 644 {shlex.quote(str(staged_anchor))} {shlex.quote(str(anchor_path))}")
-    if needs_conf_update:
-        script_parts.append(f"/usr/bin/install -m 644 {shlex.quote(str(staged_pf_conf))} {shlex.quote(str(pf_conf))}")
-    script_parts.append(f"/sbin/pfctl -f {shlex.quote(str(pf_conf))}")
-    script_parts.append("/sbin/pfctl -E")
-    script = "set -e; " + " && ".join(script_parts)
-
-    result = _run_with_macos_elevation(["/bin/sh", "-c", script], cwd=paths()["home"])
-    if not result.success:
-        return result
-    return CommandResult(success=True, output="PF redirect enabled")
-
-
 def _disable_macos_pf_redirect_impl() -> CommandResult:
     """Remove the DJAMP PF redirect rules from pf.conf and delete the anchor file (macOS)."""
     if platform.system() != "Darwin":
@@ -1423,13 +1325,14 @@ def _flush_macos_dns_cache() -> None:
             pass
 
 
-def _sync_domains_for_registry_impl(registry: Registry) -> CommandResult:
-    if os.getenv("DJAMP_SKIP_HOSTS") == "1":
-        return CommandResult(success=True, output="Hosts sync skipped via DJAMP_SKIP_HOSTS=1")
+def _apply_hosts_entries_impl(entries: List[str]) -> CommandResult:
+    """Write (or remove, when `entries` is empty) the managed hosts block.
 
-    # Build a stable list of desired host entries. Sorting avoids spurious diffs and prompts.
-    desired_domains: List[str] = sorted({"localhost", *{d for project in registry.projects for d in _project_domains(project)}})
-    entries = [f"127.0.0.1 {domain}" for domain in desired_domains]
+    Tries, in order: no-op preflight, macOS helper daemon, privileged helper
+    binary, then a direct write (works when running elevated).
+    """
+    clearing = not entries
+    action = "cleared" if clearing else "updated"
 
     hosts_file = (
         Path("C:/Windows/System32/drivers/etc/hosts")
@@ -1437,47 +1340,47 @@ def _sync_domains_for_registry_impl(registry: Registry) -> CommandResult:
         else Path("/etc/hosts")
     )
 
+    def render(current: str) -> Tuple[str, List[str]]:
+        before, managed, after = _split_hosts_sections(current)
+        if clearing:
+            return _join_without_section(before, after), managed
+        block_lines = [MANAGED_HOSTS_BEGIN, *entries, MANAGED_HOSTS_END]
+        return _join_hosts_sections(before, block_lines, after), managed
+
     # Preflight: if the hosts file is already in the desired state, avoid any privileged execution.
     try:
         if hosts_file.exists():
             current = hosts_file.read_text(encoding="utf-8", errors="ignore")
-            before, managed, after = _split_hosts_sections(current)
-            if not entries:
-                if not managed:
-                    return CommandResult(success=True, output="Hosts file already clean")
-                new_content = _join_without_section(before, after)
-                if new_content.strip() == current.strip():
-                    return CommandResult(success=True, output="Hosts file already clean")
-            else:
-                block_lines = [MANAGED_HOSTS_BEGIN, *entries, MANAGED_HOSTS_END]
-                new_content = _join_hosts_sections(before, block_lines, after)
-                if new_content.strip() == current.strip():
-                    return CommandResult(success=True, output="Hosts file already up to date")
+            new_content, managed = render(current)
+            if clearing and not managed:
+                return CommandResult(success=True, output="Hosts file already clean")
+            if new_content.strip() == current.strip():
+                return CommandResult(success=True, output="Hosts file already up to date")
     except Exception:
         # Preflight is best-effort; continue with helper/direct write below.
         pass
 
+    domains = [line.split(" ", 1)[1] for line in entries]
+
     # Prefer the installed macOS helper daemon (MAMP-style): no repeated password prompts.
     if platform.system() == "Darwin" and MACOS_HELPER_SOCKET.exists():
-        helper_domains = [line.split(" ", 1)[1] for line in entries]
-        helper_result = _helper_hosts_clear() if not helper_domains else _helper_hosts_apply(helper_domains)
+        helper_result = _helper_hosts_clear() if clearing else _helper_hosts_apply(domains)
         if helper_result.success:
-            return CommandResult(success=True, output="Hosts file updated via DJAMP Helper")
+            return CommandResult(success=True, output=f"Hosts file {action} via DJAMP Helper")
 
     helper = _priv_helper_binary()
     if helper:
-        helper_domains = [line.split(" ", 1)[1] for line in entries]
         helper_command = (
             [str(helper), "hosts", "clear"]
-            if not helper_domains
-            else [str(helper), "hosts", "apply", *helper_domains]
+            if clearing
+            else [str(helper), "hosts", "apply", *domains]
         )
         helper_env = os.environ.copy()
         _prepend_path_env(helper_env, helper.parent)
         helper_run = _run_blocking(helper_command, paths()["home"], helper_env)
         if helper_run.success:
             _flush_macos_dns_cache()
-            return CommandResult(success=True, output="Hosts file updated via privileged helper")
+            return CommandResult(success=True, output=f"Hosts file {action} via privileged helper")
 
         if platform.system() == "Darwin":
             return CommandResult(
@@ -1491,9 +1394,9 @@ def _sync_domains_for_registry_impl(registry: Registry) -> CommandResult:
 
     try:
         current = hosts_file.read_text(encoding="utf-8", errors="ignore")
-        before, managed, after = _split_hosts_sections(current)
-        block_lines = [MANAGED_HOSTS_BEGIN, *entries, MANAGED_HOSTS_END]
-        new_content = _join_hosts_sections(before, block_lines, after)
+        new_content, managed = render(current)
+        if clearing and not managed:
+            return CommandResult(success=True, output="Hosts file already clean")
         if new_content.strip() == current.strip():
             return CommandResult(success=True, output="Hosts file already up to date")
 
@@ -1504,7 +1407,7 @@ def _sync_domains_for_registry_impl(registry: Registry) -> CommandResult:
                 tmp_path = Path(tmp.name)
             os.replace(tmp_path, hosts_file)
             _flush_macos_dns_cache()
-            return CommandResult(success=True, output="Hosts file updated")
+            return CommandResult(success=True, output=f"Hosts file {action}")
         except PermissionError:
             if platform.system() != "Darwin":
                 raise
@@ -1527,6 +1430,15 @@ def _sync_domains_for_registry_impl(registry: Registry) -> CommandResult:
         return CommandResult(success=False, error=str(exc))
 
 
+def _sync_domains_for_registry_impl(registry: Registry) -> CommandResult:
+    if os.getenv("DJAMP_SKIP_HOSTS") == "1":
+        return CommandResult(success=True, output="Hosts sync skipped via DJAMP_SKIP_HOSTS=1")
+
+    # Build a stable list of desired host entries. Sorting avoids spurious diffs and prompts.
+    desired_domains: List[str] = sorted({"localhost", *{d for project in registry.projects for d in _project_domains(project)}})
+    return _apply_hosts_entries_impl([f"127.0.0.1 {domain}" for domain in desired_domains])
+
+
 async def _sync_domains_for_registry(registry: Registry) -> CommandResult:
     # Hosts changes may require privilege elevation and can block for user interaction;
     # run them off the main event loop to keep the API responsive.
@@ -1536,84 +1448,7 @@ async def _sync_domains_for_registry(registry: Registry) -> CommandResult:
 def _clear_hosts_block_impl() -> CommandResult:
     if os.getenv("DJAMP_SKIP_HOSTS") == "1":
         return CommandResult(success=True, output="Hosts clear skipped via DJAMP_SKIP_HOSTS=1")
-
-    hosts_file = (
-        Path("C:/Windows/System32/drivers/etc/hosts")
-        if platform.system() == "Windows"
-        else Path("/etc/hosts")
-    )
-
-    # Preflight: avoid privilege prompts when there's nothing to clear.
-    try:
-        if hosts_file.exists():
-            current = hosts_file.read_text(encoding="utf-8", errors="ignore")
-            _before, managed, _after = _split_hosts_sections(current)
-            if not managed:
-                return CommandResult(success=True, output="Hosts file already clean")
-    except Exception:
-        pass
-
-    # Prefer the installed macOS helper daemon (MAMP-style): no repeated password prompts.
-    if platform.system() == "Darwin" and MACOS_HELPER_SOCKET.exists():
-        helper_result = _helper_hosts_clear()
-        if helper_result.success:
-            return CommandResult(success=True, output="Hosts file cleared via DJAMP Helper")
-
-    helper = _priv_helper_binary()
-    if helper:
-        helper_command = [str(helper), "hosts", "clear"]
-        helper_env = os.environ.copy()
-        _prepend_path_env(helper_env, helper.parent)
-        helper_run = _run_blocking(helper_command, paths()["home"], helper_env)
-        if helper_run.success:
-            _flush_macos_dns_cache()
-            return CommandResult(success=True, output="Hosts file cleared via privileged helper")
-        if platform.system() == "Darwin":
-            return CommandResult(
-                success=False,
-                output=helper_run.output,
-                error=_friendly_hosts_helper_error(helper_run.error, hosts_file),
-            )
-
-    if not hosts_file.exists():
-        return CommandResult(success=False, error=f"Hosts file not found at {hosts_file}")
-
-    try:
-        current = hosts_file.read_text(encoding="utf-8", errors="ignore")
-        before, managed, after = _split_hosts_sections(current)
-        if not managed:
-            return CommandResult(success=True, output="Hosts file already clean")
-
-        new_content = _join_without_section(before, after)
-
-        # Attempt direct write first (will work when running elevated).
-        try:
-            with tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8") as tmp:
-                tmp.write(new_content)
-                tmp_path = Path(tmp.name)
-            os.replace(tmp_path, hosts_file)
-            _flush_macos_dns_cache()
-            return CommandResult(success=True, output="Hosts file cleared")
-        except PermissionError:
-            if platform.system() != "Darwin":
-                raise
-
-        return CommandResult(
-            success=False,
-            error=(
-                f"Permission denied updating {hosts_file}. Install the DJAMP Helper from Settings to clear hosts changes."
-            ),
-        )
-    except PermissionError:
-        return CommandResult(
-            success=False,
-            error=(
-                f"Permission denied updating {hosts_file}. Install the DJAMP Helper from Settings (recommended) "
-                "or run DJAMP PRO with elevated privileges for hosts changes."
-            ),
-        )
-    except Exception as exc:
-        return CommandResult(success=False, error=str(exc))
+    return _apply_hosts_entries_impl([])
 
 
 async def _clear_hosts_block() -> CommandResult:
@@ -2025,6 +1860,17 @@ def _root_ca_paths() -> Tuple[Path, Path]:
     return ca_dir / "djamp-pro-root-ca.crt", ca_dir / "djamp-pro-root-ca.key"
 
 
+def _tighten_cert_permissions(directory: Path, key: Path, cert: Path) -> None:
+    """Best-effort: private keys must not be world-readable (no-op on Windows)."""
+    if platform.system() == "Windows":
+        return
+    for path, mode in ((directory, 0o700), (key, 0o600), (cert, 0o644)):
+        try:
+            path.chmod(mode)
+        except Exception:
+            pass
+
+
 def _ensure_root_ca() -> CommandResult:
     openssl = _find_allowed_executable("openssl", paths()["home"])
     if not openssl:
@@ -2032,20 +1878,8 @@ def _ensure_root_ca() -> CommandResult:
 
     ca_cert, ca_key = _root_ca_paths()
     if ca_cert.exists() and ca_key.exists():
-        if platform.system() != "Windows":
-            # Best-effort permission tightening even when the CA already exists.
-            try:
-                paths()["ca"].chmod(0o700)
-            except Exception:
-                pass
-            try:
-                ca_key.chmod(0o600)
-            except Exception:
-                pass
-            try:
-                ca_cert.chmod(0o644)
-            except Exception:
-                pass
+        # Tighten permissions even when the CA already exists.
+        _tighten_cert_permissions(paths()["ca"], ca_key, ca_cert)
         return CommandResult(success=True, output="Root CA already exists")
 
     ca_conf = paths()["ca"] / "root-ca.cnf"
@@ -2095,20 +1929,9 @@ def _ensure_root_ca() -> CommandResult:
         "v3_ca",
     ]
     result = _run_blocking(cmd, paths()["home"])
-    if result.success and platform.system() != "Windows":
+    if result.success:
         # Protect the CA private key (it can sign certs for any hostname).
-        try:
-            paths()["ca"].chmod(0o700)
-        except Exception:
-            pass
-        try:
-            ca_key.chmod(0o600)
-        except Exception:
-            pass
-        try:
-            ca_cert.chmod(0o644)
-        except Exception:
-            pass
+        _tighten_cert_permissions(paths()["ca"], ca_key, ca_cert)
     return result
 
 
@@ -2203,19 +2026,7 @@ def _generate_certificate(domain: str, alt_domains: Optional[List[str]] = None) 
     if not run_sign.success:
         raise RuntimeError(run_sign.error)
 
-    if platform.system() != "Windows":
-        try:
-            paths()["certs"].chmod(0o700)
-        except Exception:
-            pass
-        try:
-            key.chmod(0o600)
-        except Exception:
-            pass
-        try:
-            cert.chmod(0o644)
-        except Exception:
-            pass
+    _tighten_cert_permissions(paths()["certs"], key, cert)
 
     expires = _get_cert_expiration(cert)
     return CertificateInfo(
@@ -2583,7 +2394,7 @@ def _render_caddyfile(projects: List[Project]) -> str:
         lines.append(f"    output file {q(access_log)}")
         lines.append("  }")
         if project.httpsEnabled and project.certificatePath:
-            key_path = project.certificatePath.replace(".crt", ".key")
+            key_path = re.sub(r"\.crt$", ".key", project.certificatePath)
             lines.append(f"  tls {q(project.certificatePath)} {q(key_path)}")
         if project.database.type == "postgres":
             lines.append("  @dbadmin path /phpmyadmin /phpmyadmin/ /phpMyAdmin /phpMyAdmin/ /phpMyAdmin5 /phpMyAdmin5/")
@@ -2663,27 +2474,7 @@ async def _reload_caddy(projects: List[Project], allow_privileged: bool = True) 
     reload_result = _run_blocking(reload_cmd, paths()["home"], reload_env)
     if reload_result.success:
         std_warning = await _sync_standard_ports(settings)
-        if std_warning:
-            if allow_privileged:
-                if settings.standardPortsEnabled:
-                    return CommandResult(
-                        success=False,
-                        output="Caddy reloaded",
-                        error=(
-                            f"Proxy is running but standard ports (80/443) are not enabled: {std_warning}\n"
-                            f"You can still access projects on https://<domain>:{settings.proxyPort}"
-                        ),
-                    )
-                return CommandResult(
-                    success=False,
-                    output="Caddy reloaded",
-                    error=f"Proxy is running but standard ports (80/443) could not be disabled: {std_warning}",
-                )
-            return CommandResult(
-                success=True,
-                output=f"Caddy reloaded (note: {std_warning} Use https://<domain>:{settings.proxyPort})",
-            )
-        return CommandResult(success=True, output="Caddy reloaded")
+        return _caddy_result_with_standard_ports("reloaded", std_warning, settings, allow_privileged)
 
     # Start Caddy in-process (no daemonizing) and track it.
     caddy_data = paths()["caddy"] / "data"
@@ -2725,29 +2516,36 @@ async def _reload_caddy(projects: List[Project], allow_privileged: bool = True) 
 
     if _is_port_open(settings.proxyPort) or _is_port_open(settings.proxyHttpPort):
         std_warning = await _sync_standard_ports(settings)
-        if std_warning:
-            if allow_privileged:
-                if settings.standardPortsEnabled:
-                    return CommandResult(
-                        success=False,
-                        output="Caddy started",
-                        error=(
-                            f"Proxy is running but standard ports (80/443) are not enabled: {std_warning}\n"
-                            f"You can still access projects on https://<domain>:{settings.proxyPort}"
-                        ),
-                    )
-                return CommandResult(
-                    success=False,
-                    output="Caddy started",
-                    error=f"Proxy is running but standard ports (80/443) could not be disabled: {std_warning}",
-                )
-            return CommandResult(
-                success=True,
-                output=f"Caddy started (note: {std_warning} Use https://<domain>:{settings.proxyPort})",
-            )
-        return CommandResult(success=True, output="Caddy started")
+        return _caddy_result_with_standard_ports("started", std_warning, settings, allow_privileged)
 
     return CommandResult(success=False, error="Caddy started but ports are not listening")
+
+
+def _caddy_result_with_standard_ports(
+    action: str, std_warning: Optional[str], settings: AppSettings, allow_privileged: bool
+) -> CommandResult:
+    """Shape the reload/start result based on the standard-ports sync outcome."""
+    if not std_warning:
+        return CommandResult(success=True, output=f"Caddy {action}")
+    if allow_privileged:
+        if settings.standardPortsEnabled:
+            return CommandResult(
+                success=False,
+                output=f"Caddy {action}",
+                error=(
+                    f"Proxy is running but standard ports (80/443) are not enabled: {std_warning}\n"
+                    f"You can still access projects on https://<domain>:{settings.proxyPort}"
+                ),
+            )
+        return CommandResult(
+            success=False,
+            output=f"Caddy {action}",
+            error=f"Proxy is running but standard ports (80/443) could not be disabled: {std_warning}",
+        )
+    return CommandResult(
+        success=True,
+        output=f"Caddy {action} (note: {std_warning} Use https://<domain>:{settings.proxyPort})",
+    )
 
 
 def _service_binary(name: str) -> Optional[str]:
@@ -2777,7 +2575,6 @@ async def _start_service(name: str) -> CommandResult:
 
     data_root = paths()["service_data"] / name
     data_root.mkdir(parents=True, exist_ok=True)
-    log_handle = open(service_log_path(name), "a", encoding="utf-8")
 
     if name == "postgres":
         initdb = _find_allowed_executable("initdb", paths()["home"])
@@ -2795,39 +2592,47 @@ async def _start_service(name: str) -> CommandResult:
             if not init_result.success:
                 return init_result
 
-        proc = await asyncio.create_subprocess_exec(
-            binary,
-            "-D",
-            str(data_root),
-            "-p",
-            str(MANAGED_POSTGRES_PORT),
-            "-h",
-            "127.0.0.1",
-            stdout=log_handle,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-    elif name == "mysql":
-        proc = await asyncio.create_subprocess_exec(
-            binary,
-            "--datadir",
-            str(data_root),
-            f"--port={MANAGED_MYSQL_PORT}",
-            "--bind-address=127.0.0.1",
-            stdout=log_handle,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-    else:
-        conf = data_root / "redis.conf"
-        conf.write_text(
-            "\n".join(["bind 127.0.0.1", f"port {MANAGED_REDIS_PORT}", f"dir {data_root}"]),
-            encoding="utf-8",
-        )
-        proc = await asyncio.create_subprocess_exec(
-            binary,
-            str(conf),
-            stdout=log_handle,
-            stderr=asyncio.subprocess.STDOUT,
-        )
+    # Open the log handle only after all preflight checks so failures above
+    # cannot leak a file descriptor; close it if spawning itself fails.
+    log_handle = open(service_log_path(name), "a", encoding="utf-8")
+    try:
+        if name == "postgres":
+            proc = await asyncio.create_subprocess_exec(
+                binary,
+                "-D",
+                str(data_root),
+                "-p",
+                str(MANAGED_POSTGRES_PORT),
+                "-h",
+                "127.0.0.1",
+                stdout=log_handle,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+        elif name == "mysql":
+            proc = await asyncio.create_subprocess_exec(
+                binary,
+                "--datadir",
+                str(data_root),
+                f"--port={MANAGED_MYSQL_PORT}",
+                "--bind-address=127.0.0.1",
+                stdout=log_handle,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+        else:
+            conf = data_root / "redis.conf"
+            conf.write_text(
+                "\n".join(["bind 127.0.0.1", f"port {MANAGED_REDIS_PORT}", f"dir {data_root}"]),
+                encoding="utf-8",
+            )
+            proc = await asyncio.create_subprocess_exec(
+                binary,
+                str(conf),
+                stdout=log_handle,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+    except BaseException:
+        log_handle.close()
+        raise
 
     SERVICE_PROCESSES[name] = (proc, log_handle)
     return CommandResult(success=True, output=f"{name} started")
@@ -3795,7 +3600,7 @@ async def patch_project(project_id: str, payload: Dict[str, Any]) -> Project:
     # Best-effort: keep /etc/hosts in sync when domains/aliases are edited.
     try:
         refreshed = load_registry_sync()
-        asyncio.create_task(_sync_domains_for_registry(refreshed))
+        _spawn_background_task(_sync_domains_for_registry(refreshed), "sync-domains-after-update")
     except Exception:
         pass
     return updated
@@ -3825,8 +3630,10 @@ async def delete_project(project_id: str) -> Dict[str, str]:
     # Best-effort cleanup: update hosts + proxy config after removing a project.
     try:
         updated = load_registry_sync()
-        asyncio.create_task(_sync_domains_for_registry(updated))
-        asyncio.create_task(_reload_caddy(updated.projects, allow_privileged=False))
+        _spawn_background_task(_sync_domains_for_registry(updated), "sync-domains-after-delete")
+        _spawn_background_task(
+            _reload_caddy(updated.projects, allow_privileged=False), "reload-caddy-after-delete"
+        )
     except Exception:
         pass
 
@@ -4645,10 +4452,13 @@ async def open_db_shell(project_id: str) -> Dict[str, str]:
         db_user = project.database.username or "root"
         db_password = project.database.password or ""
         db_port = project.database.port or MANAGED_MYSQL_PORT
+        # Pass the password via MYSQL_PWD instead of -p<password> so it does
+        # not show up in the process list for the lifetime of the session.
         cmd = (
             f"cd {shlex.quote(project.path)} && "
+            f"MYSQL_PWD={shlex.quote(db_password)} "
             f"mysql -h 127.0.0.1 -P {int(db_port)} -u {shlex.quote(db_user)} "
-            f"-p{shlex.quote(db_password)} {shlex.quote(db_name)}"
+            f"{shlex.quote(db_name)}"
         )
         return {"message": cmd}
 

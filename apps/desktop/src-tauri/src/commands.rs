@@ -85,7 +85,7 @@ pub async fn create_superuser(
 ) -> Result<CommandResult, String> {
     sidecar::post_json(
         &format!("/api/projects/{project_id}/createsuperuser"),
-        &json!({ "projectId": project_id, "username": username, "email": email }),
+        &json!({ "username": username, "email": email }),
     )
     .await
 }
