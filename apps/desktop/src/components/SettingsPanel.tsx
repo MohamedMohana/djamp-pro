@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { X, Shield, Globe, RefreshCw, Lock } from 'lucide-react';
+import { X, Shield, Globe, RefreshCw, Lock, Monitor, Moon, Palette, Sun } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { api } from '../services/api';
 import type { AppSettings, ProxyStatus, HelperStatus } from '../types';
+import { useTheme, type ThemePreference } from '../theme';
 import { useToast } from '../toast';
 import { useConfirm } from '../confirm';
 import Spinner from './Spinner';
+import { cn } from '../utils';
+
+const THEME_OPTIONS: { value: ThemePreference; icon: typeof Sun }[] = [
+  { value: 'system', icon: Monitor },
+  { value: 'light', icon: Sun },
+  { value: 'dark', icon: Moon },
+];
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -43,7 +51,7 @@ function ToggleCard({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-[var(--line)] bg-white/[0.03] p-3.5">
+    <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-[var(--line)] bg-[var(--fill-1)] p-3.5">
       <div>
         <div className="text-[13px] font-medium text-[var(--text-1)]">{title}</div>
         <div className="mt-1 text-[12px] text-[var(--text-2)]">{description}</div>
@@ -61,6 +69,7 @@ function ToggleCard({
 export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { t } = useI18n();
   const toast = useToast();
+  const theme = useTheme();
   const confirm = useConfirm();
   const [caStatus, setCaStatus] = useState<{ installed: boolean; valid: boolean } | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -323,7 +332,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const helperOk = Boolean(helperStatus?.running);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[var(--scrim)] p-4 backdrop-blur-sm sm:items-center">
       <div className="mamp-modal my-4 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden sm:my-0 sm:max-h-[90vh]">
         <div className="mamp-modal-header flex items-center justify-between px-6 py-5">
           <div>
@@ -332,13 +341,44 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
           </div>
           <button
             onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/8 bg-white/5 text-[var(--mamp-text-muted)] transition hover:bg-white/10 hover:text-white"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--fill-1)] text-[var(--mamp-text-muted)] transition hover:bg-[var(--fill-2)] hover:text-[var(--text-1)]"
           >
             <X size={20} />
           </button>
         </div>
 
         <div className="modal-scroll min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-y-contain px-6 py-5">
+          <SettingsSection icon={Palette} title={t.settingsPanel.appearance}>
+            <p className="mb-3 text-[12px] text-[var(--text-2)]">
+              {t.settingsPanel.appearanceDescription}
+            </p>
+            <div
+              role="group"
+              aria-label={t.settingsPanel.appearance}
+              className="inline-flex rounded-lg border border-[var(--line)] bg-[var(--well)] p-0.5"
+            >
+              {THEME_OPTIONS.map(({ value, icon: Icon }) => {
+                const isActive = theme.preference === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => theme.setPreference(value)}
+                    aria-pressed={isActive}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition',
+                      isActive
+                        ? 'bg-[var(--surface-4)] text-[var(--text-1)]'
+                        : 'text-[var(--text-2)] hover:text-[var(--text-1)]',
+                    )}
+                  >
+                    <Icon size={14} />
+                    {t.common.themes[value]}
+                  </button>
+                );
+              })}
+            </div>
+          </SettingsSection>
+
           <SettingsSection icon={Shield} title={t.settingsPanel.certificateAuthority}>
             <p className="mb-4 text-[13px] text-[var(--text-2)]">
               {t.settingsPanel.certificateAuthorityDescription}
@@ -375,10 +415,10 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
           </SettingsSection>
 
           <SettingsSection icon={Globe} title={t.settingsPanel.proxyAndDomains}>
-            <div className="mb-4 rounded-lg border border-[var(--line)] bg-white/[0.03] p-3.5 text-[13px] text-[var(--text-1)]">
+            <div className="mb-4 rounded-lg border border-[var(--line)] bg-[var(--fill-1)] p-3.5 text-[13px] text-[var(--text-1)]">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-[12px] font-medium text-[var(--text-2)]">{t.settingsPanel.helperLabel}</span>
-                <span className={helperOk ? 'text-emerald-300' : 'text-amber-300'}>
+                <span className={helperOk ? 'text-[var(--success-text)]' : 'text-[var(--warning-text)]'}>
                   {helperOk
                     ? t.settingsPanel.helperRunning
                     : helperStatus?.installed
@@ -408,10 +448,10 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
             </div>
 
             {proxyStatus ? (
-              <div className="mb-4 rounded-lg border border-[var(--line)] bg-white/[0.03] p-3.5 text-[13px] text-[var(--text-1)]">
+              <div className="mb-4 rounded-lg border border-[var(--line)] bg-[var(--fill-1)] p-3.5 text-[13px] text-[var(--text-1)]">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-[12px] font-medium text-[var(--text-2)]">{t.settingsPanel.standardPorts}</span>
-                  <span className={standardPortsOk ? 'text-emerald-300' : 'text-amber-300'}>
+                  <span className={standardPortsOk ? 'text-[var(--success-text)]' : 'text-[var(--warning-text)]'}>
                     {standardPortsOk ? t.settingsPanel.active : t.settingsPanel.notActive}
                   </span>
                 </div>
@@ -446,7 +486,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
 
               <ToggleCard
                 title={t.settingsPanel.allowPublicDomainOverrides}
-                description={<span className="text-amber-300">{t.settingsPanel.publicDomainRisk}</span>}
+                description={<span className="text-[var(--warning-text)]">{t.settingsPanel.publicDomainRisk}</span>}
                 checked={settings?.anyDomainOverrideEnabled ?? false}
                 onChange={(checked) =>
                   setSettings((prev) => (prev ? { ...prev, anyDomainOverrideEnabled: checked } : prev))

@@ -45,6 +45,20 @@
   --warning: #fbbf24;
   --danger: #f87171;
 
+  /* Interactive fills + wells (theme-aware neutrals) */
+  --fill-1: rgba(255, 255, 255, 0.05);
+  --fill-2: rgba(255, 255, 255, 0.09);
+  --well: rgba(0, 0, 0, 0.25);
+  --scrim: rgba(0, 0, 0, 0.7);
+  --scroll-thumb: rgba(255, 255, 255, 0.13);
+  --scroll-thumb-hover: rgba(255, 255, 255, 0.22);
+
+  /* Semantic text (readable on the current theme's surfaces) */
+  --success-text: #6ee7b7;
+  --warning-text: #fcd34d;
+  --danger-text: #fca5a5;
+  --dot-stopped: #55555e;
+
   /* Legacy aliases — every component keeps working while it migrates. */
   --mamp-bg: var(--surface-2);
   --mamp-bg-deep: var(--surface-0);
@@ -59,6 +73,41 @@
   --mamp-text-muted: var(--text-2);
   --mamp-text-dim: var(--text-3);
   --mamp-line: var(--line);
+}
+
+/* Light theme — same token contract, inverted values. */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --surface-0: #e9e9ec;
+  --surface-1: #f3f3f5;
+  --surface-2: #fafafa;
+  --surface-3: #ffffff;
+  --surface-4: #ffffff;
+
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.15);
+
+  --accent: #2f6fe4;
+  --accent-hover: #275fc7;
+  --accent-pressed: #2153af;
+  --accent-tint: rgba(47, 111, 228, 0.12);
+
+  --text-1: #1d1d22;
+  --text-2: #565660;
+  --text-3: #8b8b94;
+
+  --fill-1: rgba(0, 0, 0, 0.045);
+  --fill-2: rgba(0, 0, 0, 0.08);
+  --well: rgba(0, 0, 0, 0.05);
+  --scrim: rgba(28, 28, 34, 0.45);
+  --scroll-thumb: rgba(0, 0, 0, 0.2);
+  --scroll-thumb-hover: rgba(0, 0, 0, 0.32);
+
+  --success-text: #067a55;
+  --warning-text: #92600a;
+  --danger-text: #bb2525;
+  --dot-stopped: #a1a1aa;
 }
 
 * {
@@ -128,7 +177,7 @@ body {
   gap: 0.45rem;
   border: 1px solid var(--line-strong);
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--fill-1);
   color: var(--text-1);
   padding: 0.4rem 0.75rem;
   font-size: 12.5px;
@@ -137,11 +186,11 @@ body {
 }
 
 .mamp-inline-action:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--fill-2);
 }
 
 .mamp-inline-action:active {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--fill-1);
 }
 
 .mamp-modal {
@@ -207,12 +256,12 @@ body {
 
 .mamp-button-neutral {
   border-color: var(--line-strong);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--fill-1);
   color: var(--text-1);
 }
 
 .mamp-button-neutral:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--fill-2);
 }
 
 .mamp-button-primary {
@@ -262,21 +311,21 @@ body {
 }
 
 .mamp-note-success {
-  border-color: rgba(52, 211, 153, 0.25);
+  border-color: rgba(52, 211, 153, 0.3);
   background: rgba(16, 185, 129, 0.08);
-  color: #a7f3d0;
+  color: var(--success-text);
 }
 
 .mamp-note-warning {
-  border-color: rgba(251, 191, 36, 0.25);
+  border-color: rgba(251, 191, 36, 0.3);
   background: rgba(217, 119, 6, 0.09);
-  color: #fde68a;
+  color: var(--warning-text);
 }
 
 .mamp-note-danger {
-  border-color: rgba(248, 113, 113, 0.25);
-  background: rgba(220, 38, 38, 0.09);
-  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--danger-text);
 }
 
 .mamp-check-card {
@@ -285,7 +334,7 @@ body {
   gap: 0.7rem;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--fill-1);
   padding: 0.7rem 0.85rem;
 }
 
@@ -304,7 +353,7 @@ body {
   justify-content: center;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--fill-1);
 }
 
 .mamp-step-active {
@@ -328,7 +377,8 @@ body {
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-0);
+  /* Console stays dark in both themes, terminal-style. */
+  background: #161619;
   padding: 0.85rem;
   font-family: 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
@@ -347,14 +397,14 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.13);
+  background: var(--scroll-thumb);
   border-radius: 999px;
   background-clip: padding-box;
   border: 2px solid transparent;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--scroll-thumb-hover);
   background-clip: padding-box;
   border: 2px solid transparent;
 }
@@ -454,7 +504,7 @@ body {
 }
 
 .status-dot-stopped {
-  background: #55555e;
+  background: var(--dot-stopped);
 }
 
 .status-dot-busy {
@@ -487,12 +537,7 @@ body {
 /* Loading skeletons */
 .skeleton {
   border-radius: 6px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.05) 25%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.05) 75%
-  );
+  background: linear-gradient(90deg, var(--fill-1) 25%, var(--fill-2) 50%, var(--fill-1) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }

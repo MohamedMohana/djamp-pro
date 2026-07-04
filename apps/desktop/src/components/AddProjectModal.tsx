@@ -215,7 +215,7 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
   const activeStep = steps.find((item) => item.id === step);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[var(--scrim)] p-4 backdrop-blur-sm sm:items-center">
       <div className="mamp-modal my-4 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden sm:my-0 sm:max-h-[90vh]">
         <div className="mamp-modal-header flex items-center justify-between px-6 py-5">
           <div>
@@ -224,7 +224,7 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
           </div>
           <button
             onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/8 bg-white/5 text-[var(--mamp-text-muted)] transition hover:bg-white/10 hover:text-white"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--fill-1)] text-[var(--mamp-text-muted)] transition hover:bg-[var(--fill-2)] hover:text-[var(--text-1)]"
           >
             <X size={20} />
           </button>

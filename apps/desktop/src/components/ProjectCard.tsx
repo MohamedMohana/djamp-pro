@@ -196,7 +196,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
           value={
             <span
               className={cn(
-                'inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px]',
+                'inline-flex items-center gap-2 rounded-full bg-[var(--fill-1)] px-2.5 py-1 text-[12px]',
                 getStatusColor(project.status),
               )}
             >
@@ -212,8 +212,8 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
               className={cn(
                 'inline-flex rounded-full px-2.5 py-1 text-[12px] font-medium',
                 project.debug
-                  ? 'bg-emerald-500/15 text-emerald-300'
-                  : 'bg-red-500/15 text-red-300',
+                  ? 'bg-emerald-500/15 text-[var(--success-text)]'
+                  : 'bg-red-500/15 text-[var(--danger-text)]',
               )}
             >
               {project.debug ? t.projectCard.debugOn : t.projectCard.debugOff}
@@ -243,7 +243,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
                 {project.aliases.map((alias) => (
                   <span
                     key={alias}
-                    className="rounded-full bg-white/[0.06] px-2.5 py-1 font-mono text-[12px]"
+                    className="rounded-full bg-[var(--fill-1)] px-2.5 py-1 font-mono text-[12px]"
                   >
                     {alias}
                   </span>
@@ -341,12 +341,12 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
         </div>
       </InspectorSection>
 
-      <section className="rounded-[10px] border border-red-500/20 bg-red-950/20 px-[1.1rem] py-4">
-        <div className="mamp-section-title text-red-300">{t.projectCard.dangerZone}</div>
-        <p className="mb-3 text-[13px] text-red-100/75">{t.app.deleteProjectNote}</p>
+      <section className="rounded-[10px] border border-red-500/25 bg-red-500/[0.06] px-[1.1rem] py-4">
+        <div className="mamp-section-title text-[var(--danger-text)]">{t.projectCard.dangerZone}</div>
+        <p className="mb-3 text-[13px] text-[var(--text-2)]">{t.app.deleteProjectNote}</p>
         <button
           onClick={onDelete}
-          className="inline-flex items-center gap-2 rounded-[7px] border border-red-400/30 bg-red-500/15 px-3 py-1.5 text-[13px] font-medium text-red-100 transition hover:bg-red-500/25"
+          className="inline-flex items-center gap-2 rounded-[7px] border border-red-400/30 bg-red-500/15 px-3 py-1.5 text-[13px] font-medium text-[var(--danger-text)] transition hover:bg-red-500/25"
         >
           <Trash2 size={15} />
           {t.projectCard.deleteProject}

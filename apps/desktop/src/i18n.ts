@@ -20,6 +20,11 @@ const enMessages = {
     working: 'Working...',
     loading: 'Loading...',
     saveAndApply: 'Save & Apply',
+    themes: {
+      system: 'System',
+      light: 'Light',
+      dark: 'Dark',
+    },
     status: {
       stopped: 'Stopped',
       starting: 'Starting',
@@ -219,6 +224,8 @@ const enMessages = {
   },
   settingsPanel: {
     title: 'Settings',
+    appearance: 'Appearance',
+    appearanceDescription: 'Choose how DJAMP PRO looks, or follow your system setting.',
     certificateAuthority: 'Certificate Authority',
     certificateAuthorityDescription: 'DJAMP PRO uses a local Root CA to issue trusted HTTPS certificates for your development domains.',
     rootCaTrusted: 'Root CA is trusted',
@@ -310,6 +317,11 @@ const arMessages: Messages = {
     working: 'جارٍ التنفيذ...',
     loading: 'جارٍ التحميل...',
     saveAndApply: 'حفظ وتطبيق',
+    themes: {
+      system: 'النظام',
+      light: 'فاتح',
+      dark: 'داكن',
+    },
     status: {
       stopped: 'متوقف',
       starting: 'قيد البدء',
@@ -509,6 +521,8 @@ const arMessages: Messages = {
   },
   settingsPanel: {
     title: 'الإعدادات',
+    appearance: 'المظهر',
+    appearanceDescription: 'اختر مظهر DJAMP PRO أو اتبع إعداد النظام.',
     certificateAuthority: 'مرجع الشهادات',
     certificateAuthorityDescription: 'يستخدم DJAMP PRO مرجع شهادات محلي Root CA لإصدار شهادات HTTPS موثوقة لنطاقات التطوير لديك.',
     rootCaTrusted: 'تم الوثوق بـ Root CA',

@@ -44,10 +44,10 @@ interface ToolbarActionProps {
 function ToolbarAction({ icon: Icon, label, onClick, disabled, busy, tone = 'neutral' }: ToolbarActionProps) {
   const toneClasses =
     tone === 'start'
-      ? 'border-transparent bg-transparent text-emerald-300 hover:bg-emerald-500/10'
+      ? 'border-transparent bg-transparent text-[var(--success-text)] hover:bg-emerald-500/10'
       : tone === 'stop'
-        ? 'border-transparent bg-transparent text-red-300 hover:bg-red-500/10'
-        : 'border-transparent bg-transparent text-[var(--text-2)] hover:bg-white/5 hover:text-[var(--text-1)]';
+        ? 'border-transparent bg-transparent text-[var(--danger-text)] hover:bg-red-500/10'
+        : 'border-transparent bg-transparent text-[var(--text-2)] hover:bg-[var(--fill-2)] hover:text-[var(--text-1)]';
 
   return (
     <button
@@ -341,10 +341,10 @@ function App() {
             <img
               src={djampMark}
               alt="DJAMP PRO"
-              className="h-9 w-9 rounded-lg border border-white/10 bg-black/20 p-1 object-contain"
+              className="h-9 w-9 rounded-lg border border-[var(--line-strong)] bg-[var(--well)] p-1 object-contain"
             />
             <div className="min-w-0">
-              <div className="truncate text-[15px] font-semibold tracking-tight text-white">DJAMP PRO</div>
+              <div className="truncate text-[15px] font-semibold tracking-tight text-[var(--text-1)]">DJAMP PRO</div>
               <div className="truncate text-[11px] text-[var(--mamp-text-dim)]">{t.app.subtitle}</div>
             </div>
           </div>
@@ -404,7 +404,7 @@ function App() {
             <div
               role="group"
               aria-label={t.common.language}
-              className="ms-2 inline-flex items-center self-center rounded-lg border border-white/5 bg-black/25 p-0.5"
+              className="ms-2 inline-flex items-center self-center rounded-lg border border-[var(--line)] bg-[var(--well)] p-0.5"
             >
               {LOCALES.map((item) => {
                 const isActive = locale === item;
@@ -416,7 +416,7 @@ function App() {
                     className={cn(
                       'rounded-md px-2.5 py-1.5 text-[11px] font-medium transition',
                       isActive
-                        ? 'bg-[var(--surface-4)] text-white'
+                        ? 'bg-[var(--surface-4)] text-[var(--text-1)]'
                         : 'text-[var(--text-2)] hover:text-[var(--text-1)]',
                     )}
                   >
@@ -449,7 +449,7 @@ function App() {
               <span className="text-[11px] font-medium text-[var(--text-3)]">{t.app.projectCount(projects.length)}</span>
               <button
                 onClick={() => void loadProjects()}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[var(--text-2)] transition hover:bg-white/5 hover:text-[var(--text-1)]"
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[var(--text-2)] transition hover:bg-[var(--fill-2)] hover:text-[var(--text-1)]"
               >
                 <RefreshCw size={13} />
                 {t.app.refreshList}
@@ -460,7 +460,7 @@ function App() {
           <main className="mamp-content flex min-w-0 flex-1 flex-col">
             {selectedProject ? (
               <>
-                <div className="border-b border-white/8 px-6 py-5">
+                <div className="border-b border-[var(--line)] px-6 py-5">
                   <div className="flex items-start justify-between gap-6">
                     <div className="flex min-w-0 items-start gap-4">
                       <ProjectAvatar name={selectedProject.name} size="md" />
@@ -468,28 +468,28 @@ function App() {
                         <div className="text-[11px] font-medium text-[var(--text-3)]">
                           {t.projectCard.sectionProject}
                         </div>
-                        <h2 className="truncate text-[22px] font-semibold tracking-[-0.01em] text-white">
+                        <h2 className="truncate text-[22px] font-semibold tracking-[-0.01em] text-[var(--text-1)]">
                           {selectedProject.name}
                         </h2>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <span
                             className={cn(
-                              'inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px]',
+                              'inline-flex items-center gap-2 rounded-full bg-[var(--fill-1)] px-2.5 py-1 text-[12px]',
                               getStatusColor(selectedProject.status),
                             )}
                           >
                             <span className={statusDotClass(selectedProject.status)} />
                             {t.common.status[selectedProject.status]}
                           </span>
-                          <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] text-[var(--text-2)]">
+                          <span className="inline-flex items-center gap-2 rounded-full bg-[var(--fill-1)] px-2.5 py-1 text-[12px] text-[var(--text-2)]">
                             <Globe size={14} />
                             {selectedProject.domain}
                           </span>
-                          <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] text-[var(--text-2)]">
+                          <span className="inline-flex items-center gap-2 rounded-full bg-[var(--fill-1)] px-2.5 py-1 text-[12px] text-[var(--text-2)]">
                             {t.common.runtimeModes[selectedRuntime]}
                           </span>
                           {selectedProject.database.type !== 'none' && (
-                            <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] text-[var(--text-2)]">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--fill-1)] px-2.5 py-1 text-[12px] text-[var(--text-2)]">
                               <Database size={14} />
                               {t.common.databaseTypes[selectedProject.database.type]}
                             </span>
@@ -509,7 +509,7 @@ function App() {
                   </div>
 
                   <div className="mt-4 border-t border-[var(--line)] pt-4">
-                    <div className="inline-flex rounded-lg border border-white/5 bg-black/25 p-0.5">
+                    <div className="inline-flex rounded-lg border border-[var(--line)] bg-[var(--well)] p-0.5">
                       {APP_TABS.map((tab) => (
                         <button
                           key={tab}
@@ -517,7 +517,7 @@ function App() {
                           className={cn(
                             'rounded-md px-3 py-1.5 text-[12.5px] font-medium transition',
                             activeTab === tab
-                              ? 'bg-[var(--surface-4)] text-white'
+                              ? 'bg-[var(--surface-4)] text-[var(--text-1)]'
                               : 'text-[var(--text-2)] hover:text-[var(--text-1)]',
                           )}
                         >
@@ -538,8 +538,8 @@ function App() {
 
                   {activeTab === 'logs' && (
                     <div className="mamp-section">
-                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/6 pb-4">
-                        <div className="inline-flex rounded-lg border border-white/5 bg-black/25 p-0.5">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-4">
+                        <div className="inline-flex rounded-lg border border-[var(--line)] bg-[var(--well)] p-0.5">
                           {LOG_SOURCES.map((source) => (
                             <button
                               key={source}
@@ -547,7 +547,7 @@ function App() {
                               className={cn(
                                 'rounded-md px-3 py-1.5 text-[12.5px] font-medium transition',
                                 logsSource === source
-                                  ? 'bg-[var(--surface-4)] text-white'
+                                  ? 'bg-[var(--surface-4)] text-[var(--text-1)]'
                                   : 'text-[var(--text-2)] hover:text-[var(--text-1)]',
                               )}
                             >
@@ -571,11 +571,11 @@ function App() {
                         {t.app.environmentDescription}
                       </p>
                       {Object.entries(selectedProject.environmentVars || {}).length === 0 ? (
-                        <div className="rounded-lg border border-white/8 bg-black/10 p-4 text-sm text-[var(--mamp-text-muted)]">
+                        <div className="rounded-lg border border-[var(--line)] bg-[var(--well)] p-4 text-sm text-[var(--mamp-text-muted)]">
                           {t.app.environmentEmpty}
                         </div>
                       ) : (
-                        <div className="space-y-0 divide-y divide-white/6">
+                        <div className="space-y-0 divide-y divide-[var(--line)]">
                           {Object.entries(selectedProject.environmentVars).map(([key, value]) => (
                             <div
                               key={key}
@@ -584,7 +584,7 @@ function App() {
                               <span className="break-all font-mono text-[13px] text-[var(--mamp-text-dim)]">
                                 {key}
                               </span>
-                              <span className="min-w-0 break-all whitespace-pre-wrap rounded-md border border-white/6 bg-black/12 px-3 py-2 font-mono text-[13px] text-[var(--mamp-text)]">
+                              <span className="min-w-0 break-all whitespace-pre-wrap rounded-md border border-[var(--line)] bg-[var(--well)] px-3 py-2 font-mono text-[13px] text-[var(--mamp-text)]">
                                 {value}
                               </span>
                             </div>
@@ -599,7 +599,7 @@ function App() {
               <div className="flex flex-1 items-center justify-center">
                 <div className="max-w-md text-center">
                   <Globe size={56} className="mx-auto mb-4 text-[var(--mamp-text-dim)]" />
-                  <h2 className="mb-2 text-2xl font-semibold text-white">{t.app.noProjectSelected}</h2>
+                  <h2 className="mb-2 text-2xl font-semibold text-[var(--text-1)]">{t.app.noProjectSelected}</h2>
                   <p className="text-sm text-[var(--mamp-text-muted)]">{t.app.noProjectSelectedDescription}</p>
                 </div>
               </div>
@@ -612,9 +612,9 @@ function App() {
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
       {deleteModalProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--scrim)] p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl border border-red-500/30 bg-[var(--mamp-panel)] p-5 shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
-            <h3 className="text-[17px] font-semibold text-red-300">{t.app.deleteProjectTitle}</h3>
+            <h3 className="text-[17px] font-semibold text-[var(--danger-text)]">{t.app.deleteProjectTitle}</h3>
             <p className="mt-3 text-sm text-[var(--mamp-text)]">
               {t.app.deleteProjectIntro(deleteModalProject.name)}
             </p>
@@ -627,7 +627,7 @@ function App() {
               autoFocus
               value={deleteConfirmName}
               onChange={(event) => setDeleteConfirmName(event.target.value)}
-              className="mt-2 w-full rounded-[7px] border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none transition focus:border-red-400/70"
+              className="mt-2 w-full rounded-[7px] border border-[var(--line-strong)] bg-[var(--well)] px-3 py-2 text-sm text-[var(--text-1)] outline-none transition focus:border-red-400/70"
               placeholder={deleteModalProject.name}
             />
 
@@ -635,14 +635,14 @@ function App() {
               <button
                 onClick={closeDeleteModal}
                 disabled={deleteSubmitting}
-                className="rounded-[7px] border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-[var(--mamp-text)] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[7px] border border-[var(--line-strong)] bg-[var(--fill-1)] px-4 py-2 text-sm font-medium text-[var(--mamp-text)] transition hover:bg-[var(--fill-2)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {t.common.cancel}
               </button>
               <button
                 onClick={handleConfirmDeleteProject}
                 disabled={deleteSubmitting || deleteConfirmName.trim() !== deleteModalProject.name.trim()}
-                className="rounded-[7px] border border-red-400/30 bg-red-500/15 px-4 py-2 text-sm font-medium text-red-100 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[7px] border border-red-400/30 bg-red-500/15 px-4 py-2 text-sm font-medium text-[var(--danger-text)] transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {deleteSubmitting ? t.app.deleting : t.app.deleteProjectTitle}
               </button>

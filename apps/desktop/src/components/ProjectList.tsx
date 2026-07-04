@@ -44,7 +44,7 @@ export default function ProjectList({
 
   if (projects.length === 0) {
     return (
-      <div className="mx-2 my-3 rounded-[10px] border border-dashed border-white/12 bg-black/10 px-4 py-7 text-center">
+      <div className="mx-2 my-3 rounded-[10px] border border-dashed border-[var(--line-strong)] bg-[var(--well)] px-4 py-7 text-center">
         <Folder size={36} className="mx-auto mb-3 text-[var(--mamp-text-dim)]" />
         <p className="text-sm font-semibold text-[var(--mamp-text)]">{t.projectList.emptyTitle}</p>
         <p className="mt-1 text-xs text-[var(--mamp-text-muted)]">{t.projectList.emptyDescription}</p>
@@ -70,7 +70,7 @@ export default function ProjectList({
               'project-row group mx-1.5 my-0.5 flex w-[calc(100%-0.75rem)] items-center gap-3 rounded-lg px-2.5 py-2 text-start',
               isSelected
                 ? 'project-row-selected'
-                : 'text-[var(--text-1)] hover:bg-white/[0.04]',
+                : 'text-[var(--text-1)] hover:bg-[var(--fill-2)]',
             )}
           >
             <div
@@ -78,7 +78,7 @@ export default function ProjectList({
                 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs',
                 isSelected
                   ? 'border-transparent bg-[var(--accent-tint)] text-[var(--accent-hover)]'
-                  : 'border-white/8 bg-white/5 text-[var(--text-2)]',
+                  : 'border-[var(--line)] bg-[var(--fill-1)] text-[var(--text-2)]',
               )}
             >
               <Globe size={14} />

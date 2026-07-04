@@ -50,7 +50,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       {children}
       {pending && (
         <div
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-[var(--scrim)] p-4 backdrop-blur-sm"
           onClick={() => settle(false)}
         >
           <div
@@ -68,7 +68,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 className={cn(
                   'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border',
                   danger
-                    ? 'border-transparent bg-red-500/12 text-red-300'
+                    ? 'border-transparent bg-red-500/12 text-[var(--danger-text)]'
                     : 'border-transparent bg-[var(--accent-tint)] text-[var(--accent-hover)]',
                 )}
               >

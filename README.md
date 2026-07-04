@@ -60,6 +60,7 @@ Point it at a project folder and it detects the framework — `manage.py` + sett
 - 📜 **Unified logs** — Django, proxy (Caddy), and database output in one place.
 - 🔑 **Environment inspector** — view `.env` keys with sensitive values masked.
 - 🛡️ **Least-privilege design** — the app and sidecar run unprivileged; only specific flows (cert install, `/etc/hosts`, ports 80/443) touch a small, isolated macOS helper.
+- 🌓 **Dark, light, or system theme** — a full light palette and live OS-appearance tracking, switchable in Settings.
 - 🌍 **Bilingual UI** — full English and Arabic (RTL) support.
 
 ## Install

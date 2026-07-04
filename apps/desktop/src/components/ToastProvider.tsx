@@ -59,7 +59,7 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
       <button
         onClick={onDismiss}
         aria-label={t.common.dismiss}
-        className="shrink-0 rounded-md p-1 text-[var(--mamp-text-dim)] transition hover:bg-white/10 hover:text-white"
+        className="shrink-0 rounded-md p-1 text-[var(--mamp-text-dim)] transition hover:bg-[var(--fill-2)] hover:text-[var(--text-1)]"
       >
         <X size={15} />
       </button>
