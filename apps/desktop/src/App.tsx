@@ -197,8 +197,8 @@ function App() {
       if (result?.proxy && !result.proxy.success) {
         toast.warning(t.app.proxyWarning(result.proxy.error || t.app.proxyReloadFallback));
       }
-      if (result?.proxy?.success && result.proxy.output?.includes('Use https://')) {
-        toast.info(t.app.proxyInfo(result.proxy.output));
+      if (result?.proxy?.warning) {
+        toast.info(t.app.proxyInfo(result.proxy.warning));
       }
       toast.success(t.app.projectStarted(projectName(id)));
       await loadProjects();

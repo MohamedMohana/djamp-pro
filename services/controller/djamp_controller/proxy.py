@@ -314,11 +314,13 @@ def _caddy_result_with_standard_ports(
         return CommandResult(success=True, output=f"Caddy {action}")
     if allow_privileged:
         if settings.standardPortsEnabled:
+            # The proxy itself is fine — missing 80/443 is degraded mode,
+            # not a failure of the operation the user asked for.
             return CommandResult(
-                success=False,
+                success=True,
                 output=f"Caddy {action}",
-                error=(
-                    f"Proxy is running but standard ports (80/443) are not enabled: {std_warning}\n"
+                warning=(
+                    f"Standard ports (80/443) are not enabled: {std_warning}\n"
                     f"You can still access projects on https://<domain>:{settings.proxyPort}"
                 ),
             )
@@ -329,5 +331,6 @@ def _caddy_result_with_standard_ports(
         )
     return CommandResult(
         success=True,
-        output=f"Caddy {action} (note: {std_warning} Use https://<domain>:{settings.proxyPort})",
+        output=f"Caddy {action}",
+        warning=f"{std_warning} Use https://<domain>:{settings.proxyPort}",
     )

@@ -77,6 +77,9 @@ class CommandResult(BaseModel):
     success: bool
     output: str = ""
     error: str = ""
+    # Degraded-but-working conditions (e.g. proxy running without ports
+    # 80/443): the operation succeeded, but the user should be told.
+    warning: str = ""
 
 
 class DetectionResult(BaseModel):

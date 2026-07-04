@@ -85,6 +85,7 @@ export interface CommandResult {
   success: boolean;
   output: string;
   error?: string;
+  warning?: string;
 }
 
 export interface DetectionResult {

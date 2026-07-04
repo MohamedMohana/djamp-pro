@@ -167,6 +167,9 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
         toast.error(t.settingsPanel.proxyReloadError, result.error || result.output);
       } else {
         toast.success(t.settingsPanel.proxyReloaded);
+        if (result.warning) {
+          toast.warning(t.settingsPanel.standardPortsWarningTitle, result.warning);
+        }
       }
       await loadAll();
     } catch (error) {
@@ -266,10 +269,10 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
         }
 
         const sync = await withTimeout(api.reloadProxy(), 30000, 'Proxy reload timed out.');
-        if (!sync.success) {
+        if (!sync.success || sync.warning) {
           toast.warning(
             t.settingsPanel.helperStandardPortsActivationError,
-            sync.error || sync.output,
+            sync.warning || sync.error || sync.output,
           );
         }
       }
@@ -318,6 +321,9 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
         toast.error(t.settingsPanel.applyFailed, result.error || result.output);
       } else {
         toast.success(t.settingsPanel.settingsSaved);
+        if (result.warning) {
+          toast.warning(t.settingsPanel.standardPortsWarningTitle, result.warning);
+        }
       }
       await loadAll();
     } catch (error) {
