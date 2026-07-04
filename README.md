@@ -1,408 +1,314 @@
+<div align="center">
+
+<img src="docs/assets/djamp-pro-ui.png" alt="DJAMP PRO" width="640" />
+
 # DJAMP PRO
 
-![GitHub stars](https://img.shields.io/github/stars/MohamedMohana/djamp-pro?style=for-the-badge)
-![GitHub release](https://img.shields.io/github/v/release/MohamedMohana/djamp-pro?style=for-the-badge)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/MohamedMohana/djamp-pro/ci.yml?style=for-the-badge&label=CI)
-![License](https://img.shields.io/github/license/MohamedMohana/djamp-pro?style=for-the-badge)
+### The open-source, MAMP PRO–style control panel for Django
 
-DJAMP PRO is a desktop local development environment manager for Django projects, inspired by the “it just works” workflow of MAMP PRO.
+Run all your Django projects on real domains with trusted local HTTPS — from one desktop app.
+No more juggling `localhost:8000`, hand-editing `/etc/hosts`, or fighting self-signed certs.
 
-It gives you one control panel to run multiple Django apps with custom domains, local HTTPS, managed runtime modes (`uv`, `conda`, system/custom Python), database wiring from `.env`, project actions, and diagnostics.
+[![Latest release](https://img.shields.io/github/v/release/MohamedMohana/djamp-pro?style=for-the-badge&color=3f69d7)](https://github.com/MohamedMohana/djamp-pro/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/MohamedMohana/djamp-pro/total?style=for-the-badge&color=2f9d66)](https://github.com/MohamedMohana/djamp-pro/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/MohamedMohana/djamp-pro/ci.yml?style=for-the-badge&label=CI)](https://github.com/MohamedMohana/djamp-pro/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/MohamedMohana/djamp-pro?style=for-the-badge)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/MohamedMohana/djamp-pro?style=for-the-badge)](https://github.com/MohamedMohana/djamp-pro/stargazers)
 
-## Quick Links
+**[⬇️ Download for macOS](https://github.com/MohamedMohana/djamp-pro/releases/latest)** ·
+**[🚀 Quickstart](#quickstart)** ·
+**[📖 Docs](#documentation)** ·
+**[🏗️ Architecture](#architecture)** ·
+**[🤝 Contributing](#contributing)**
 
-- macOS install: [`docs/INSTALL_MACOS.md`](docs/INSTALL_MACOS.md)
-- 5-minute start: [`docs/QUICKSTART_5_MIN.md`](docs/QUICKSTART_5_MIN.md)
-- Troubleshooting: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
-- Contributing: [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)
-- Maintainer playbook: [`docs/MAINTAINER_PLAYBOOK.md`](docs/MAINTAINER_PLAYBOOK.md)
+<sub>Built with Tauri · React · FastAPI · Rust · Caddy</sub>
 
-## Product Preview
+</div>
 
-![DJAMP PRO UI](docs/assets/djamp-pro-ui.png)
+---
 
-## Product Status
+## What is DJAMP PRO?
 
-- Platform focus: macOS (Windows later, Linux optional)
-- UI host: Tauri + React
-- Controller: FastAPI sidecar
-- Reverse proxy: Caddy (managed config + reload)
-- Database focus: PostgreSQL local dev workflow
-- Current maturity: active MVP+ hardening
+DJAMP PRO is a desktop app that gives every Django project the "it just works" local workflow that MAMP PRO gave PHP — **but open source, and built for Django.**
 
-## Core Capabilities
+Point it at a project folder and it detects your `manage.py` and settings module, gives the app a real domain like `https://myapp.test`, issues a locally trusted HTTPS certificate, wires the database from your `.env`, and runs everything behind a managed Caddy proxy. Start, stop, migrate, open a shell, or tail logs — all from one panel, for as many projects as you want, at the same time.
 
-- Add existing Django projects from disk
-- Auto-detect `manage.py` and settings modules
-- Start / stop / restart per project
-- Manage multiple projects concurrently (virtual-host style)
-- Custom domains + aliases per project
-- Local HTTPS certificates for project domains
-- Caddy-managed domain routing to each Django runtime port
-- Runtime modes:
-  - `uv` (recommended)
-  - `conda`
-  - `system`
-  - custom interpreter path
-- Database behavior aligned with project `.env`
-  - reads DB config from `.env`
-  - can create missing PostgreSQL role/database for project
-- One-click developer actions
-  - migrate
-  - collectstatic
-  - shell
-  - DB shell
-  - open in VS Code
-- Logs UI
-  - Django logs
-  - proxy logs
-  - database logs
-- Environment UI
-  - reads and shows `.env` keys with masking for sensitive values
+> **Local development only.** DJAMP PRO is a developer tool for your machine — not a production hosting stack.
 
-## What Makes It MAMP-Style (for Django)
+## Why not just `runserver`?
 
-- Single desktop app to manage local hosts/domains/certs/runtime
-- Domain-first workflow (`https://myapp.test`) instead of only localhost:port
-- Standard port support model (80/443) with helper-based workflow on macOS
-- DB web admin exposed on project domain path:
-  - `/phpmyadmin/`
-  - `/phpMyAdmin/`
-  - `/phpMyAdmin5/`
+| | `manage.py runserver` | **DJAMP PRO** |
+|---|---|---|
+| Run many projects at once | One terminal + one port each | One panel, all projects together |
+| Real domains (`myapp.test`) | Hand-edit `/etc/hosts` + a proxy | Managed automatically |
+| Trusted local HTTPS | DIY certs & browser warnings | Local root CA + per-domain certs |
+| Serve on ports 80/443 | `sudo` every time | One-time helper, MAMP-style |
+| Database setup | Create role/DB by hand | Reads `.env`, auto-provisions Postgres |
+| migrate / collectstatic / shell | Retype terminal commands | One click per project |
+| Logs | Scattered across terminals | Unified Django / proxy / DB tabs |
 
-## Repository Layout
+## Features
 
-```text
-apps/
-  desktop/                  # Tauri host + React frontend
-services/
-  controller/               # FastAPI local sidecar orchestration
-  priv-helper/              # macOS privileged helper daemon (Rust)
-bundles/                    # Optional bundled binaries (e.g. Caddy)
-docs/
-  ARCHITECTURE.md
-  BUILD.md
-  FAQs.md
-  TROUBLESHOOTING.md
-scripts/
-  djamp-pro/                # Cert/CA/hosts helper scripts
-```
+- 🗂️ **Multi-project control panel** — add existing Django projects from disk and run them concurrently, virtual-host style.
+- 🔍 **Auto-detection** — finds `manage.py` and candidate settings modules for you.
+- 🌐 **Domain-first workflow** — per-project primary domain + aliases (e.g. `myapp.test`, `api.myapp.test`), synced into `/etc/hosts` behind a scoped managed block.
+- 🔒 **Trusted local HTTPS** — a DJAMP-managed root CA issues per-domain certificates; Caddy serves TLS automatically.
+- ⚡ **Flexible runtimes** — `uv` (recommended), `conda`, system Python, or a custom interpreter path — per project.
+- 🐘 **Database wiring from `.env`** — reads `DB_*` / `DATABASE_URL`, and can create a missing PostgreSQL role/database for you.
+- 🎛️ **One-click actions** — migrate, collectstatic, shell, DB shell, and open in VS Code.
+- 📜 **Unified logs** — Django, proxy (Caddy), and database output in one place.
+- 🔑 **Environment inspector** — view `.env` keys with sensitive values masked.
+- 🛡️ **Least-privilege design** — the app and sidecar run unprivileged; only specific flows (cert install, `/etc/hosts`, ports 80/443) touch a small, isolated macOS helper.
+- 🌍 **Bilingual UI** — full English and Arabic (RTL) support.
 
-## Architecture Overview
+## Install
 
-```text
-┌───────────────────────────── DJAMP PRO Desktop (Tauri + React) ──────────────────────────────┐
-│                                                                                                 │
-│  UI (projects/settings/logs/environment)                                                        │
-│        │                                                                                        │
-│        └── Tauri invoke() commands                                                              │
-│                                                                                                 │
-└────────────────────────────────────────────┬────────────────────────────────────────────────────┘
-                                             │
-                                             ▼
-                              FastAPI Sidecar Controller (127.0.0.1:8765)
-                              - Project registry
-                              - Runtime orchestration
-                              - Caddy config generation/reload
-                              - Cert + CA operations
-                              - DB provisioning/query helper
-                                             │
-                        ┌────────────────────┼────────────────────┐
-                        ▼                    ▼                    ▼
-                   Caddy Proxy           Django Processes       Local DB services
-               (domain + TLS routing)     (per project)         (primarily Postgres)
-                        │
-                        ▼
-              Browser on custom local domains
-```
+### Recommended: download the app (macOS)
 
-## Security Model
+Grab the latest signed build from the **[Releases page](https://github.com/MohamedMohana/djamp-pro/releases/latest)** — download the `.dmg`, drag DJAMP PRO to Applications, and launch it. Every release ships a `SHA256SUMS.txt` so you can verify the download.
 
-DJAMP PRO is designed for least privilege:
+> Platform focus is **macOS (Apple Silicon)** today. Windows and Linux support are on the roadmap.
 
-- Main app + sidecar run unprivileged
-- Privileged operations are isolated to specific flows:
-  - trusted certificate install/update
-  - `/etc/hosts` modifications
-  - standard port forwarding (80/443) on macOS helper path
-- Managed hosts entries are scoped between:
-  - `# BEGIN DJAMP PRO MANAGED`
-  - `# END DJAMP PRO MANAGED`
+### Build from source
 
-Important:
+See [Quickstart](#quickstart) below, or [`docs/BUILD.md`](docs/BUILD.md) for packaging installers.
 
-- DJAMP PRO is for local development only.
-- Do not use it as a public production hosting stack.
+## Quickstart
 
-## Requirements (macOS)
-
-Required:
-
-- Node.js 18+
-- npm
-- Python 3.10+
-- Rust toolchain (for Tauri/native pieces)
-
-Recommended:
-
-- `uv`
-- `psql` + `pg_isready`
-- `mysql` + `mysqladmin` (if MySQL workflow needed)
-- `code` CLI for VS Code integration
-
-## Quick Start (Development)
-
-### 1) Install root dependencies
+**Requirements:** Node.js 18+, npm, Python 3.10+, and the Rust toolchain (for the Tauri/native pieces). Recommended extras: [`uv`](https://github.com/astral-sh/uv), `psql` + `pg_isready`, and the `code` CLI for VS Code integration.
 
 ```bash
+# 1. Install JS dependencies
 npm install
 npm --prefix apps/desktop install
-```
 
-### 2) Prepare sidecar virtualenv
-
-```bash
+# 2. Create the controller (sidecar) virtualenv
 python3 -m venv services/controller/.venv
 services/controller/.venv/bin/python -m pip install -r services/controller/requirements-dev.txt
-```
 
-### 3) Run desktop app
-
-```bash
+# 3. Run the desktop app (starts the sidecar on 127.0.0.1:8765 automatically)
 npm run dev
 ```
 
-The Tauri app starts the sidecar automatically (`127.0.0.1:8765`) and watches desktop/frontend changes.
+Then add your first project:
 
-## First Project Flow
+1. Click **Add Project** and select a Django project folder.
+2. Confirm the detected `manage.py` and settings module.
+3. Choose a domain (prefer a `.test` TLD) and a runtime mode.
+4. Pick the database type and create the project.
+5. Hit **Start** — then open `https://<your-domain>` (or the `:8443` fallback when standard ports are off).
 
-1. Click `Add Project`
-2. Select project folder (Django root)
-3. Detect `manage.py` + settings module
-4. Set domain (prefer `.test`)
-5. Pick runtime mode (`uv`, `conda`, etc.)
-6. Confirm database type
-7. Create project entry
-8. Click `Start`
+New to it? The **[5-minute guide](docs/QUICKSTART_5_MIN.md)** and **[macOS install notes](docs/INSTALL_MACOS.md)** walk through it step by step.
 
-When running, open:
+## Architecture
 
-- app root: `https://<your-domain>` (or fallback `:8443` when standard ports disabled)
-- DB admin: `https://<your-domain>/phpMyAdmin5/`
+DJAMP PRO is a Tauri desktop shell talking to a local FastAPI sidecar, which orchestrates Caddy, your Django processes, and local databases.
 
-## Runtime Modes
-
-- `uv`
-  - best default for isolated Python package management
-- `conda`
-  - for existing conda-based teams/projects
-- `system`
-  - uses system Python in PATH
-- `custom`
-  - direct explicit interpreter path
-
-## Domains & HTTPS
-
-Domain handling:
-
-- Per-project primary domain + aliases
-- Hosts sync through DJAMP PRO managed block
-- Caddy routes domain -> Django port
-
-HTTPS handling:
-
-- Local root CA managed by DJAMP PRO
-- Per-domain certificates generated locally
-- Caddy serves TLS cert/key per project domain
-
-Notes:
-
-- Prefer local dev TLDs (`.test`)
-- Public domains can hit HSTS/preload/policy limits
-- Browsers may cache TLS state aggressively; regenerate cert and restart if needed
-
-## Standard Ports (80/443)
-
-- DJAMP PRO proxy defaults to internal ports (8080/8443)
-- On macOS, helper path can enable standard port behavior (MAMP-style)
-- If standard ports are not active, DJAMP PRO opens fallback URL with explicit proxy port
-
-## Database Behavior
-
-DJAMP PRO reads DB credentials from project `.env` when available:
-
-- `DB_NAME`
-- `DB_USER`
-- `DB_PASSWORD`
-- `DATABASE_URL`
-
-For PostgreSQL workflow:
-
-- ensures managed local Postgres service routing
-- can create missing role/database
-- updates managed `.env` block for local host/port alignment
-
-DB admin URL behavior:
-
-- path-style, domain-based routing
-  - `/phpmyadmin/`
-  - `/phpMyAdmin/`
-  - `/phpMyAdmin5/`
-- requires project to be running
-
-## Project Actions
-
-Per-project quick actions:
-
-- `Migrate`
-- `Collectstatic`
-- `Shell`
-- `DB Shell`
-- `VS Code`
-
-Deletion safety:
-
-- “Delete Project” now opens a destructive-action modal
-- requires typing project name exactly before deletion
-- prevents accidental one-click deletion
-
-## Logs & Diagnostics
-
-UI log sources:
-
-- Django
-- Proxy (Caddy)
-- Database
-
-Useful checks:
-
-```bash
-curl -s http://127.0.0.1:8765/health
-curl -s http://127.0.0.1:8765/api/projects
+```text
+┌──────────────── DJAMP PRO Desktop (Tauri + React) ────────────────┐
+│  UI: projects · settings · logs · environment                     │
+│                         │  Tauri invoke() commands                 │
+└─────────────────────────┼─────────────────────────────────────────┘
+                          ▼
+        FastAPI Sidecar Controller  (127.0.0.1:8765)
+        · project registry          · Caddy config gen + reload
+        · runtime orchestration     · cert + CA operations
+        · database provisioning     · privileged-helper bridge
+                          │
+        ┌─────────────────┼─────────────────┐
+        ▼                 ▼                 ▼
+    Caddy Proxy      Django processes   Local DB services
+  (domains + TLS)     (per project)    (primarily Postgres)
+        │
+        ▼
+   Browser on your custom local domains (https://myapp.test)
 ```
 
-macOS port checks:
+On macOS, a small **Rust privileged helper** handles the few operations that need elevation — editing `/etc/hosts` and binding ports 80/443 — so the main app never runs as root. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full picture.
 
-```bash
-lsof -nP -iTCP:8080 -sTCP:LISTEN
-lsof -nP -iTCP:8443 -sTCP:LISTEN
+### Repository layout
+
+```text
+apps/desktop/            # Tauri host + React frontend
+services/
+  controller/            # FastAPI sidecar (project/proxy/cert/DB orchestration)
+  priv-helper/           # macOS privileged helper daemon (Rust)
+bundles/                 # Optional bundled binaries (e.g. Caddy)
+scripts/djamp-pro/       # Cert / CA / hosts helper scripts
+docs/                    # Architecture, build, install, FAQ, troubleshooting
 ```
 
-## Build & Packaging
+## How it works
 
-### Development checks
+<details>
+<summary><b>Domains &amp; HTTPS</b></summary>
 
-```bash
-npm --prefix apps/desktop run typecheck
-cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
-services/controller/.venv/bin/python -m py_compile services/controller/djamp_controller/main.py
-```
+<br>
 
-### Desktop build
+- Each project gets a primary domain plus optional aliases.
+- Host entries are synced into `/etc/hosts` inside a scoped managed block:
+  ```text
+  # BEGIN DJAMP PRO MANAGED
+  127.0.0.1 myapp.test
+  # END DJAMP PRO MANAGED
+  ```
+- A DJAMP-managed **root CA** issues a certificate per domain; Caddy serves TLS and routes the domain to the project's Django port.
 
-```bash
-npm --prefix apps/desktop run build
-npm --prefix apps/desktop run tauri:build
-```
+**Tips**
 
-Installer outputs are produced under Tauri target bundle directories.
+- Prefer local dev TLDs like `.test`. Public domains can hit HSTS/preload/policy limits.
+- Browsers cache TLS state aggressively — if a cert looks stale, regenerate it, restart the project, and hard-refresh (`Cmd+Shift+R`).
 
-## Data Locations
+</details>
+
+<details>
+<summary><b>Standard ports (80/443)</b></summary>
+
+<br>
+
+- The proxy defaults to internal ports **8080 (HTTP)** and **8443 (HTTPS)**.
+- On macOS, the helper can enable MAMP-style behavior on the real ports 80/443.
+- When standard ports aren't active, DJAMP PRO opens the fallback URL with the explicit proxy port (e.g. `https://myapp.test:8443`).
+
+</details>
+
+<details>
+<summary><b>Database behavior</b></summary>
+
+<br>
+
+DJAMP PRO reads DB credentials from a project's `.env` when present: `DB_NAME`, `DB_USER`, `DB_PASSWORD`, or `DATABASE_URL`.
+
+For the PostgreSQL workflow it:
+
+- routes to a managed local Postgres service,
+- creates a missing role/database when needed, and
+- keeps a managed `.env` block aligned to the local host/port.
+
+**Web DB admin** is exposed on the project domain (path-style routing: `/phpmyadmin/`, `/phpMyAdmin/`, `/phpMyAdmin5/`) and requires the project to be running.
+
+</details>
+
+<details>
+<summary><b>Data locations</b></summary>
+
+<br>
 
 App data root:
 
 - macOS: `~/Library/Application Support/DJAMP PRO/`
 - Windows: `%APPDATA%/DJAMP PRO/`
 
-Key files/folders:
+Key files:
 
-- registry: `registry.json`
-- certs: `certs/`
-- Caddy config: `caddy/Caddyfile`
-- logs:
-  - `logs/django/`
-  - `logs/proxy/`
-  - `logs/database/`
+- `registry.json` — project registry
+- `certs/` — generated certificates
+- `caddy/Caddyfile` — proxy config
+- `logs/django/`, `logs/proxy/`, `logs/database/` — per-source logs
+
+</details>
+
+<details>
+<summary><b>Build &amp; packaging</b></summary>
+
+<br>
+
+```bash
+# Validate
+npm --prefix apps/desktop run lint
+npm --prefix apps/desktop run typecheck
+cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+services/controller/.venv/bin/python -m pytest services/controller/tests -q
+
+# Build the desktop app + installer
+npm --prefix apps/desktop run build
+npm --prefix apps/desktop run tauri:build
+```
+
+Installer artifacts are produced under the Tauri target bundle directories. Full details in [`docs/BUILD.md`](docs/BUILD.md).
+
+</details>
 
 ## Troubleshooting
 
-### Domain resolves but app does not load
+<details>
+<summary><b>Common issues &amp; quick fixes</b></summary>
 
-- Ensure project status is `running`
-- Check Caddy logs in Logs tab
-- Check Django logs for startup errors
+<br>
 
-### `ERR_NAME_NOT_RESOLVED`
+**Domain resolves but the app doesn't load**
+- Confirm the project status is `running`.
+- Check the Caddy and Django output in the **Logs** tab.
 
-- Re-sync hosts from Settings
-- Verify DJAMP PRO managed block in `/etc/hosts`
-- Flush DNS cache on macOS:
+**`ERR_NAME_NOT_RESOLVED`**
+- Re-sync hosts from **Settings** and confirm the managed block exists in `/etc/hosts`.
+- Flush DNS on macOS:
+  ```bash
+  sudo dscacheutil -flushcache
+  sudo killall -HUP mDNSResponder
+  ```
 
+**TLS warnings / cert issues**
+- Install the CA from **Settings**, regenerate the project cert, restart the project, and hard-refresh (`Cmd+Shift+R`).
+
+**Helper install appears stuck** — check these paths and the log:
 ```bash
-sudo dscacheutil -flushcache
-sudo killall -HUP mDNSResponder
-```
-
-### TLS warnings / cert issues
-
-- Confirm CA install from Settings
-- Regenerate project cert
-- Restart project
-- Hard refresh browser (`Cmd+Shift+R`)
-
-### DB Admin opens while project stopped
-
-- Fixed in current branch: DB admin now requires running project
-- If behavior seems stale, restart app and hard refresh browser
-
-### Helper install appears stuck
-
-Check:
-
-- `/Library/PrivilegedHelperTools/com.djamp.pro.helperd`
-- `/Library/LaunchDaemons/com.djamp.pro.helperd.plist`
-
-Logs:
-
-```bash
+ls -l /Library/PrivilegedHelperTools/com.djamp.pro.helperd
+ls -l /Library/LaunchDaemons/com.djamp.pro.helperd.plist
 sudo tail -n 200 /var/log/djamp-pro-helper.log
 ```
 
-## Known Limitations (Current)
+**Health checks**
+```bash
+curl -s http://127.0.0.1:8765/health
+lsof -nP -iTCP:8443 -sTCP:LISTEN   # is the HTTPS proxy port listening?
+```
 
-- Windows parity is not yet complete
-- DB admin is PostgreSQL-focused in current workflow
-- Full phpMyAdmin feature parity is not a goal for PostgreSQL mode
-- Production-grade installer signing/notarization pipeline is still pending
+</details>
 
-## Release Strategy
+More in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) and [`docs/FAQs.md`](docs/FAQs.md).
 
-- Semantic tags (`vMAJOR.MINOR.PATCH`)
-- Each release should include:
-  - UI/UX changes
-  - runtime/controller changes
-  - migration or compatibility notes
-  - known issues + workaround summary
+## Roadmap & limitations
+
+- Windows and Linux parity are in progress (macOS-first today).
+- Web DB admin is PostgreSQL-focused; full phpMyAdmin parity isn't a goal for Postgres mode.
+- Installer signing/notarization hardening is ongoing.
+
+Releases follow semantic tags (`vMAJOR.MINOR.PATCH`); see the [Releases page](https://github.com/MohamedMohana/djamp-pro/releases) for notes.
 
 ## Documentation
 
-Additional docs:
+| Guide | What it covers |
+|---|---|
+| [Quickstart (5 min)](docs/QUICKSTART_5_MIN.md) | Fastest path from clone to a running project |
+| [macOS install](docs/INSTALL_MACOS.md) | Requirements and setup on macOS |
+| [Architecture](docs/ARCHITECTURE.md) | How the desktop app, sidecar, and helper fit together |
+| [Build](docs/BUILD.md) | Building and packaging installers |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) · [FAQ](docs/FAQs.md) | Fixes and common questions |
+| [Uninstall](docs/UNINSTALL.md) | Clean removal |
 
-- `docs/ARCHITECTURE.md`
-- `docs/BUILD.md`
-- `docs/FAQs.md`
-- `docs/TROUBLESHOOTING.md`
-- `docs/INSTALL_MACOS.md`
-- `docs/QUICKSTART_5_MIN.md`
-- `docs/UNINSTALL.md`
+## Contributing
 
-## Community
+Contributions are welcome — whether it's a bug report, a docs fix, or a feature PR.
 
-- Contributing guide: `.github/CONTRIBUTING.md`
-- Security policy: `.github/SECURITY.md`
-- Support policy: `.github/SUPPORT.md`
-- Code of conduct: `.github/CODE_OF_CONDUCT.md`
+- Read the [Contributing guide](.github/CONTRIBUTING.md) to get set up.
+- Check [open issues](https://github.com/MohamedMohana/djamp-pro/issues) for a place to start.
+- Please follow our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
+
+Found a security issue? Please follow the [Security policy](.github/SECURITY.md) rather than opening a public issue.
+
+## Community & support
+
+- 💬 [Discussions & issues](https://github.com/MohamedMohana/djamp-pro/issues)
+- 🛟 [Support policy](.github/SUPPORT.md)
+- 🔐 [Security policy](.github/SECURITY.md)
+
+If DJAMP PRO saves you time, a ⭐ helps others discover it.
 
 ## License
 
-MIT (see `LICENSE`).
+Released under the [MIT License](LICENSE) — free to use, modify, and distribute.
+
+<div align="center">
+<sub>Built for the Django community. Star it, fork it, make it yours.</sub>
+</div>
