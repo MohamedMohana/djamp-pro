@@ -42,10 +42,10 @@ function makeProject(overrides: Partial<Project>): Project {
 
 const projects: Project[] = [
   makeProject({
-    name: 'Blockchain Certs',
-    domain: 'certs.test',
-    path: '/Users/dev/projects/certs',
-    aliases: ['api.certs.test'],
+    name: 'Acme Blog',
+    domain: 'blog.test',
+    path: '/Users/dev/projects/acme-blog',
+    aliases: ['api.blog.test'],
     status: 'running',
   }),
   makeProject({

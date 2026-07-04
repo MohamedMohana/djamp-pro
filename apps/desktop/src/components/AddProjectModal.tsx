@@ -376,7 +376,7 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
                         type="text"
                         value={formData.condaEnv}
                         onChange={(event) => setFormData({ ...formData, condaEnv: event.target.value })}
-                        placeholder="blockchain"
+                        placeholder="myenv"
                         className="mamp-input"
                       />
                     </div>
