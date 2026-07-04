@@ -4,9 +4,9 @@
 
 # DJAMP PRO
 
-### The open-source, MAMP PRO–style control panel for Django
+### The open-source, MAMP PRO–style control panel for Django, FastAPI & Flask
 
-Run all your Django projects on real domains with trusted local HTTPS — from one desktop app.
+Run all your Python web projects on real domains with trusted local HTTPS — from one desktop app.
 No more juggling `localhost:8000`, hand-editing `/etc/hosts`, or fighting self-signed certs.
 
 [![Latest release](https://img.shields.io/github/v/release/MohamedMohana/djamp-pro?style=for-the-badge&color=3f69d7)](https://github.com/MohamedMohana/djamp-pro/releases/latest)
@@ -29,9 +29,9 @@ No more juggling `localhost:8000`, hand-editing `/etc/hosts`, or fighting self-s
 
 ## What is DJAMP PRO?
 
-DJAMP PRO is a desktop app that gives every Django project the "it just works" local workflow that MAMP PRO gave PHP — **but open source, and built for Django.**
+DJAMP PRO is a desktop app that gives every Python web project the "it just works" local workflow that MAMP PRO gave PHP — **but open source, and built for Django, FastAPI, Flask, and any ASGI/WSGI app.**
 
-Point it at a project folder and it detects your `manage.py` and settings module, gives the app a real domain like `https://myapp.test`, issues a locally trusted HTTPS certificate, wires the database from your `.env`, and runs everything behind a managed Caddy proxy. Start, stop, migrate, open a shell, or tail logs — all from one panel, for as many projects as you want, at the same time.
+Point it at a project folder and it detects the framework — `manage.py` + settings module for Django, or the app object (e.g. `main:app`) for FastAPI/Flask/ASGI/WSGI — gives the app a real domain like `https://myapp.test`, issues a locally trusted HTTPS certificate, wires the database from your `.env`, and runs everything behind a managed Caddy proxy. Start, stop, migrate, open a shell, or tail logs — all from one panel, for as many projects as you want, at the same time.
 
 > **Local development only.** DJAMP PRO is a developer tool for your machine — not a production hosting stack.
 
@@ -49,8 +49,9 @@ Point it at a project folder and it detects your `manage.py` and settings module
 
 ## Features
 
-- 🗂️ **Multi-project control panel** — add existing Django projects from disk and run them concurrently, virtual-host style.
-- 🔍 **Auto-detection** — finds `manage.py` and candidate settings modules for you.
+- 🗂️ **Multi-project control panel** — add existing Django, FastAPI, or Flask projects from disk and run them concurrently, virtual-host style.
+- 🔍 **Auto-detection** — finds `manage.py` + settings modules (Django) or the app object like `main:app` (FastAPI/Flask/ASGI/WSGI) for you.
+- 🐍 **Multi-framework** — Django runs via `runserver`, FastAPI and generic ASGI/WSGI apps via `uvicorn`, Flask via `flask run`; migrations work through Django, Alembic, or Flask-Migrate.
 - 🌐 **Domain-first workflow** — per-project primary domain + aliases (e.g. `myapp.test`, `api.myapp.test`), synced into `/etc/hosts` behind a scoped managed block.
 - 🔒 **Trusted local HTTPS** — a DJAMP-managed root CA issues per-domain certificates; Caddy serves TLS automatically.
 - ⚡ **Flexible runtimes** — `uv` (recommended), `conda`, system Python, or a custom interpreter path — per project.
@@ -92,8 +93,8 @@ npm run dev
 
 Then add your first project:
 
-1. Click **Add Project** and select a Django project folder.
-2. Confirm the detected `manage.py` and settings module.
+1. Click **Add Project** and select a Django, FastAPI, or Flask project folder.
+2. Confirm the detected framework — `manage.py` + settings module for Django, or the `module:app` object otherwise.
 3. Choose a domain (prefer a `.test` TLD) and a runtime mode.
 4. Pick the database type and create the project.
 5. Hit **Start** — then open `https://<your-domain>` (or the `:8443` fallback when standard ports are off).
