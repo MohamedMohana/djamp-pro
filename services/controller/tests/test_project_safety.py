@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from fastapi import HTTPException
 
-from djamp_controller import main as controller_main
+from djamp_controller import subprocess_security
 from djamp_controller.main import (
     AddProjectPayload,
     AppSettings,
@@ -171,8 +171,8 @@ def test_sanitize_subprocess_command_prefers_safe_binary_when_path_is_polluted(
     mamp_openssl.write_text("#!/bin/sh\nexit 0\n")
     mamp_openssl.chmod(0o755)
 
-    monkeypatch.setattr(controller_main, "_allowed_executable_roots", lambda cwd: [safe_bin])
-    monkeypatch.setattr(controller_main, "_disallowed_executable_roots", lambda: [mamp_root])
+    monkeypatch.setattr(subprocess_security, "_allowed_executable_roots", lambda cwd: [safe_bin])
+    monkeypatch.setattr(subprocess_security, "_disallowed_executable_roots", lambda: [mamp_root])
     monkeypatch.setenv("PATH", os.pathsep.join([str(mamp_bin), str(safe_bin)]))
 
     sanitized = _sanitize_subprocess_command(["openssl", "version"], isolated_djamp_home)
@@ -194,8 +194,8 @@ def test_sanitize_subprocess_command_rejects_explicit_mamp_binary(
     mamp_openssl.write_text("#!/bin/sh\nexit 0\n")
     mamp_openssl.chmod(0o755)
 
-    monkeypatch.setattr(controller_main, "_allowed_executable_roots", lambda cwd: [safe_root])
-    monkeypatch.setattr(controller_main, "_disallowed_executable_roots", lambda: [mamp_root])
+    monkeypatch.setattr(subprocess_security, "_allowed_executable_roots", lambda cwd: [safe_root])
+    monkeypatch.setattr(subprocess_security, "_disallowed_executable_roots", lambda: [mamp_root])
     monkeypatch.setenv("PATH", str(mamp_bin))
 
     with pytest.raises(RuntimeError, match="Executable path is blocked"):
@@ -216,8 +216,8 @@ def test_sanitize_subprocess_command_rejects_mamp_when_no_safe_alternative(
     mamp_openssl.write_text("#!/bin/sh\nexit 0\n")
     mamp_openssl.chmod(0o755)
 
-    monkeypatch.setattr(controller_main, "_allowed_executable_roots", lambda cwd: [safe_root])
-    monkeypatch.setattr(controller_main, "_disallowed_executable_roots", lambda: [mamp_root])
+    monkeypatch.setattr(subprocess_security, "_allowed_executable_roots", lambda cwd: [safe_root])
+    monkeypatch.setattr(subprocess_security, "_disallowed_executable_roots", lambda: [mamp_root])
     monkeypatch.setenv("PATH", str(mamp_bin))
 
     with pytest.raises(RuntimeError, match="Executable path is blocked"):
