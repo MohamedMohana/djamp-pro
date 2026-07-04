@@ -157,7 +157,8 @@ function App() {
       setProjects(loaded);
       setSelectedProject((prev) => {
         if (!prev) {
-          return loaded.length === 1 ? loaded[0] : null;
+          // Open on the first project instead of an empty detail pane.
+          return loaded[0] ?? null;
         }
 
         const fresh = loaded.find((project) => project.id === prev.id);
