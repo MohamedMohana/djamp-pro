@@ -133,12 +133,19 @@ from .registry import (  # noqa: F401 -- some names are re-exported for compatib
     save_registry_sync,
     write_registry,
 )
+from .frameworks import (  # noqa: F401 -- some names are re-exported for compatibility
+    detect_project,
+    project_framework,
+    validate_app_module,
+)
 from .processes import (  # noqa: F401 -- some names are re-exported for compatibility
     PROJECT_PROCESSES,
     SERVICE_PROCESSES,
     _apply_djamp_project_env,
     _base_env,
     _build_manage_command,
+    _build_python_command,
+    _build_server_command,
     _conda_env_prefix,
     _conda_python_from_prefix,
     _ensure_django_settings_override,
@@ -148,7 +155,9 @@ from .processes import (  # noqa: F401 -- some names are re-exported for compati
     _kill_processes_on_port,
     _kill_stray_project_processes,
     _platform_python,
+    _resolve_runtime,
     _spawn_background_task,
+    _stray_process_pattern,
     _terminate_process,
 )
 from .proxy import (  # noqa: F401 -- some names are re-exported for compatibility
@@ -235,29 +244,9 @@ async def _refresh_runtime_states(registry: Registry) -> Registry:
     return registry
 
 
-def _find_settings_modules(project_root: Path) -> List[str]:
-    settings = []
-    for candidate in project_root.rglob("settings.py"):
-        rel = candidate.relative_to(project_root)
-        parts = list(rel.parts)
-        if parts[-1] == "settings.py":
-            parts[-1] = "settings"
-        settings.append(".".join(parts))
-    return sorted(set(settings))
-
-
-def detect_django(path: str) -> DetectionResult:
-    project_root = Path(path).expanduser().resolve()
-    if not project_root.exists() or not project_root.is_dir():
-        return DetectionResult(found=False)
-
-    manage_candidates = list(project_root.rglob("manage.py"))
-    if not manage_candidates:
-        return DetectionResult(found=False)
-
-    manage_py = manage_candidates[0]
-    settings_modules = _find_settings_modules(project_root)
-    return DetectionResult(found=True, managePyPath=str(manage_py), settingsModules=settings_modules)
+# Backwards-compatible alias; detection now lives in frameworks.py and covers
+# Django, FastAPI, Flask, and generic ASGI/WSGI apps.
+detect_django = detect_project
 
 
 def _startup_controller() -> None:
@@ -374,6 +363,12 @@ async def add_project(payload: AddProjectPayload) -> Project:
         _enforce_domain_policy(project, load_registry_sync().settings)
         project.allowedHosts = sorted(set(_project_domains(project) + ["localhost", "127.0.0.1"]))
         project.path = str(_sanitize_user_project_path(project.path))
+        if project_framework(project) != "django":
+            if not project.appModule.strip():
+                detected = detect_project(project.path)
+                if detected.found and detected.appModules:
+                    project.appModule = detected.appModules[0]
+            project.appModule = validate_app_module(project.appModule)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     # Make DB credentials consistent with the project .env (common in Django projects).
@@ -611,7 +606,21 @@ async def start_project(project_id: str) -> Dict[str, Any]:
         await _update_project(registry, project)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    manage_py = _find_manage_py(project)
+    # Validate the framework entrypoint before spawning anything.
+    try:
+        if project_framework(project) == "django":
+            _find_manage_py(project)
+        else:
+            if not project.appModule.strip():
+                detected = await asyncio.to_thread(detect_project, project.path)
+                if detected.found and detected.appModules:
+                    project.appModule = detected.appModules[0]
+                    await _update_project(registry, project)
+            validate_app_module(project.appModule)
+    except (FileNotFoundError, ValueError) as exc:
+        project.status = "error"
+        await _update_project(registry, project)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     tracked = PROJECT_PROCESSES.get(project_id)
     if tracked and tracked[0].returncode is None:
@@ -635,7 +644,10 @@ async def start_project(project_id: str) -> Dict[str, Any]:
 
     # Clean up any previously orphaned processes for this project/port.
     _kill_processes_on_port(project.port)
-    _kill_stray_project_processes(manage_py, project.port)
+    try:
+        _kill_stray_project_processes(_stray_process_pattern(project, project.port))
+    except Exception:
+        pass
 
     project.status = "starting"
     await _update_project(registry, project)
@@ -703,12 +715,12 @@ async def start_project(project_id: str) -> Dict[str, Any]:
             await _update_project(registry, project)
             raise HTTPException(status_code=500, detail=db_ready.error or "Failed to prepare Postgres database")
 
-    command, env = await asyncio.to_thread(
-        _build_manage_command,
-        project,
-        manage_py,
-        ["runserver", f"127.0.0.1:{project.port}"],
-    )
+    try:
+        command, env = await asyncio.to_thread(_build_server_command, project)
+    except (RuntimeError, ValueError, FileNotFoundError) as exc:
+        project.status = "error"
+        await _update_project(registry, project)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     env = _apply_djamp_project_env(project, env)
 
     log_path = project_log_path(project.id)
@@ -812,8 +824,7 @@ async def stop_project(project_id: str) -> Dict[str, str]:
 
     _kill_processes_on_port(project.port)
     try:
-        manage_py = _find_manage_py(project)
-        _kill_stray_project_processes(manage_py, project.port)
+        _kill_stray_project_processes(_stray_process_pattern(project, project.port))
     except Exception:
         pass
 
@@ -829,14 +840,23 @@ async def restart_project(project_id: str) -> Dict[str, str]:
     return {"message": "Project restarted"}
 
 
-async def _run_project_task(project_id: str, django_args: List[str], extra_env: Optional[Dict[str, str]] = None) -> CommandResult:
+async def _run_project_task(
+    project_id: str,
+    task_args: List[str],
+    extra_env: Optional[Dict[str, str]] = None,
+    *,
+    use_manage_py: bool = True,
+) -> CommandResult:
     registry = await read_registry()
     project = _get_project_or_404(registry, project_id)
     project_id = project.id
-    manage_py = _find_manage_py(project)
+    manage_py = _find_manage_py(project) if use_manage_py else None
 
     def runner() -> CommandResult:
-        command, env = _build_manage_command(project, manage_py, django_args)
+        if manage_py is not None:
+            command, env = _build_manage_command(project, manage_py, task_args)
+        else:
+            command, env = _build_python_command(project, task_args)
         env = _apply_djamp_project_env(project, env)
         if extra_env:
             env = {**env, **extra_env}
@@ -860,18 +880,51 @@ async def _run_project_task(project_id: str, django_args: List[str], extra_env: 
     return await asyncio.to_thread(runner)
 
 
+async def _project_framework_for(project_id: str) -> tuple[Project, str]:
+    registry = await read_registry()
+    project = _get_project_or_404(registry, project_id)
+    return project, project_framework(project)
+
+
 @app.post("/api/projects/{project_id}/migrate", response_model=CommandResult)
 async def migrate_project(project_id: str) -> CommandResult:
-    return await _run_project_task(project_id, ["migrate"])
+    project, framework = await _project_framework_for(project_id)
+    if framework == "django":
+        return await _run_project_task(project_id, ["migrate"])
+
+    root = Path(project.path)
+    if (root / "alembic.ini").exists():
+        return await _run_project_task(project_id, ["-m", "alembic", "upgrade", "head"], use_manage_py=False)
+    if framework == "flask" and (root / "migrations").exists():
+        try:
+            app_module = validate_app_module(project.appModule)
+        except ValueError as exc:
+            return CommandResult(success=False, error=str(exc))
+        return await _run_project_task(
+            project_id, ["-m", "flask", "--app", app_module, "db", "upgrade"], use_manage_py=False
+        )
+    return CommandResult(
+        success=False,
+        error=(
+            "No migration tool detected. Expected a Django project, an alembic.ini "
+            "(Alembic), or a Flask-Migrate migrations/ directory."
+        ),
+    )
 
 
 @app.post("/api/projects/{project_id}/collectstatic", response_model=CommandResult)
 async def collect_static(project_id: str) -> CommandResult:
+    _, framework = await _project_framework_for(project_id)
+    if framework != "django":
+        return CommandResult(success=False, error="collectstatic is only available for Django projects.")
     return await _run_project_task(project_id, ["collectstatic", "--noinput"])
 
 
 @app.post("/api/projects/{project_id}/createsuperuser", response_model=CommandResult)
 async def create_superuser(project_id: str, payload: CreateSuperuserPayload) -> CommandResult:
+    _, framework = await _project_framework_for(project_id)
+    if framework != "django":
+        return CommandResult(success=False, error="createsuperuser is only available for Django projects.")
     env = {
         "DJANGO_SUPERUSER_USERNAME": payload.username,
         "DJANGO_SUPERUSER_EMAIL": payload.email,
@@ -882,7 +935,10 @@ async def create_superuser(project_id: str, payload: CreateSuperuserPayload) -> 
 
 @app.post("/api/projects/{project_id}/test", response_model=CommandResult)
 async def run_tests(project_id: str) -> CommandResult:
-    return await _run_project_task(project_id, ["test"])
+    _, framework = await _project_framework_for(project_id)
+    if framework == "django":
+        return await _run_project_task(project_id, ["test"])
+    return await _run_project_task(project_id, ["-m", "pytest"], use_manage_py=False)
 
 
 @app.get("/api/settings", response_model=AppSettings)
@@ -1217,9 +1273,10 @@ async def get_logs(project_id: str, source: str) -> str:
 
 
 @app.post("/api/utilities/detect-django", response_model=DetectionResult)
-async def detect_django_project(payload: Dict[str, str]) -> DetectionResult:
+@app.post("/api/utilities/detect-project", response_model=DetectionResult)
+async def detect_project_endpoint(payload: Dict[str, str]) -> DetectionResult:
     path = payload.get("path", "")
-    return await asyncio.to_thread(detect_django, path)
+    return await asyncio.to_thread(detect_project, path)
 
 
 @app.post("/api/utilities/create-venv")
@@ -1250,9 +1307,8 @@ async def install_dependencies(payload: InstallDependenciesPayload) -> CommandRe
     if not req.exists():
         return CommandResult(success=True, output="No requirements.txt found")
 
-    manage_py = _find_manage_py(project)
-    command, _ = await asyncio.to_thread(_build_manage_command, project, manage_py, ["--version"])
-    interpreter = command[0]
+    prefix, _env = await asyncio.to_thread(_resolve_runtime, project)
+    interpreter = str(_platform_python(project)) if project.runtimeMode == "uv" else prefix[0]
 
     uv_bin = _find_allowed_executable("uv", Path(project.path))
     if project.runtimeMode == "uv" and uv_bin:

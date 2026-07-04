@@ -5,6 +5,7 @@ import type {
   ProxyStatus,
   CertificateInfo,
   CommandResult,
+  DetectionResult,
   HelperStatus,
 } from '../types';
 import { createMockApi } from './mock';
@@ -172,11 +173,7 @@ const tauriApi = {
   },
 
   // Utilities
-  detectDjangoProject: async (path: string): Promise<{
-    found: boolean;
-    managePyPath?: string;
-    settingsModules?: string[];
-  }> => {
+  detectProject: async (path: string): Promise<DetectionResult> => {
     return invoke('detect_django_project', { path });
   },
 

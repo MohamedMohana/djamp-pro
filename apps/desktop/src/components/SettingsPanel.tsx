@@ -23,7 +23,7 @@ function SettingsSection({
   return (
     <section className="mamp-section">
       <div className="mb-4 flex items-center gap-3">
-        <Icon size={20} className="text-[var(--mamp-accent-strong)]" />
+        <Icon size={20} className="text-[var(--accent)]" />
         <div className="mamp-section-title mb-0">{title}</div>
       </div>
       {children}
@@ -43,16 +43,16 @@ function ToggleCard({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-white/8 bg-black/12 p-4">
+    <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-[var(--line)] bg-white/[0.03] p-3.5">
       <div>
-        <div className="font-semibold text-[var(--mamp-text)]">{title}</div>
-        <div className="mt-1 text-sm text-[var(--mamp-text-muted)]">{description}</div>
+        <div className="text-[13px] font-medium text-[var(--text-1)]">{title}</div>
+        <div className="mt-1 text-[12px] text-[var(--text-2)]">{description}</div>
       </div>
       <input
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
+        className="mt-1 h-4 w-4 accent-[var(--accent)]"
       />
     </label>
   );
@@ -327,8 +327,8 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
       <div className="mamp-modal my-4 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden sm:my-0 sm:max-h-[90vh]">
         <div className="mamp-modal-header flex items-center justify-between px-6 py-5">
           <div>
-            <h2 className="text-2xl font-semibold text-white">{t.settingsPanel.title}</h2>
-            <p className="mt-1 text-sm text-[var(--mamp-text-muted)]">{t.settingsPanel.proxyAndDomains}</p>
+            <h2 className="text-[17px] font-semibold text-[var(--text-1)]">{t.settingsPanel.title}</h2>
+            <p className="mt-1 text-[12px] text-[var(--text-2)]">{t.settingsPanel.proxyAndDomains}</p>
           </div>
           <button
             onClick={onClose}
@@ -340,7 +340,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
 
         <div className="modal-scroll min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-y-contain px-6 py-5">
           <SettingsSection icon={Shield} title={t.settingsPanel.certificateAuthority}>
-            <p className="mb-4 text-sm text-[var(--mamp-text-muted)]">
+            <p className="mb-4 text-[13px] text-[var(--text-2)]">
               {t.settingsPanel.certificateAuthorityDescription}
             </p>
 
@@ -349,7 +349,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                 {caOk ? `✓ ${t.settingsPanel.rootCaTrusted}` : `✗ ${t.settingsPanel.rootCaNotTrusted}`}
               </div>
             ) : (
-              <div className="mamp-note mb-4 border-white/8 bg-black/12 text-[var(--mamp-text-muted)]">
+              <div className="mamp-note mb-4 text-[var(--text-2)]">
                 {t.settingsPanel.loadingCaStatus}
               </div>
             )}
@@ -375,10 +375,10 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
           </SettingsSection>
 
           <SettingsSection icon={Globe} title={t.settingsPanel.proxyAndDomains}>
-            <div className="mb-4 rounded-xl border border-white/8 bg-black/12 p-4 text-sm text-[var(--mamp-text)]">
+            <div className="mb-4 rounded-lg border border-[var(--line)] bg-white/[0.03] p-3.5 text-[13px] text-[var(--text-1)]">
               <div className="flex items-center justify-between gap-4">
-                <span className="font-semibold text-[var(--mamp-text-muted)]">{t.settingsPanel.helperLabel}</span>
-                <span className={helperOk ? 'text-green-300' : 'text-yellow-300'}>
+                <span className="text-[12px] font-medium text-[var(--text-2)]">{t.settingsPanel.helperLabel}</span>
+                <span className={helperOk ? 'text-emerald-300' : 'text-amber-300'}>
                   {helperOk
                     ? t.settingsPanel.helperRunning
                     : helperStatus?.installed
@@ -386,7 +386,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                       : t.settingsPanel.helperNotInstalled}
                 </span>
               </div>
-              <div className="mt-2 text-[var(--mamp-text-muted)]">{t.settingsPanel.helperDescription}</div>
+              <div className="mt-2 text-[12px] text-[var(--text-2)]">{t.settingsPanel.helperDescription}</div>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   onClick={handleInstallHelper}
@@ -408,19 +408,19 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
             </div>
 
             {proxyStatus ? (
-              <div className="mb-4 rounded-xl border border-white/8 bg-black/12 p-4 text-sm text-[var(--mamp-text)]">
+              <div className="mb-4 rounded-lg border border-[var(--line)] bg-white/[0.03] p-3.5 text-[13px] text-[var(--text-1)]">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="font-semibold text-[var(--mamp-text-muted)]">{t.settingsPanel.standardPorts}</span>
-                  <span className={standardPortsOk ? 'text-green-300' : 'text-yellow-300'}>
+                  <span className="text-[12px] font-medium text-[var(--text-2)]">{t.settingsPanel.standardPorts}</span>
+                  <span className={standardPortsOk ? 'text-emerald-300' : 'text-amber-300'}>
                     {standardPortsOk ? t.settingsPanel.active : t.settingsPanel.notActive}
                   </span>
                 </div>
-                <div className="mt-2 text-[var(--mamp-text-muted)]">
+                <div className="mt-2 text-[12px] text-[var(--text-2)]">
                   {t.settingsPanel.proxyListening(proxyStatus.proxyHttpPort, proxyStatus.proxyPort)}
                 </div>
               </div>
             ) : (
-              <div className="mamp-note mb-4 border-white/8 bg-black/12 text-[var(--mamp-text-muted)]">
+              <div className="mamp-note mb-4 text-[var(--text-2)]">
                 {t.settingsPanel.loadingProxyStatus}
               </div>
             )}
@@ -446,7 +446,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
 
               <ToggleCard
                 title={t.settingsPanel.allowPublicDomainOverrides}
-                description={<span className="text-yellow-300">{t.settingsPanel.publicDomainRisk}</span>}
+                description={<span className="text-amber-300">{t.settingsPanel.publicDomainRisk}</span>}
                 checked={settings?.anyDomainOverrideEnabled ?? false}
                 onChange={(checked) =>
                   setSettings((prev) => (prev ? { ...prev, anyDomainOverrideEnabled: checked } : prev))
@@ -508,7 +508,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
           </SettingsSection>
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-white/8 px-6 py-5">
+        <div className="flex items-center justify-end gap-3 border-t border-[var(--line)] px-6 py-5">
           <button
             onClick={handleSaveAndApply}
             disabled={busy !== null || !settings}

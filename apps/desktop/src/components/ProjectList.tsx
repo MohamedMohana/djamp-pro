@@ -13,7 +13,7 @@ interface ProjectListProps {
 
 function SkeletonRow() {
   return (
-    <div className="flex w-full items-center gap-3 px-3 py-3" aria-hidden>
+    <div className="mx-1.5 my-0.5 flex items-center gap-3 rounded-lg px-2.5 py-2" aria-hidden>
       <div className="skeleton h-8 w-8 shrink-0" />
       <div className="min-w-0 flex-1 space-y-2">
         <div className="skeleton h-3.5 w-2/3" />
@@ -34,7 +34,7 @@ export default function ProjectList({
 
   if (loading) {
     return (
-      <div className="divide-y divide-white/5" role="status" aria-label={t.projectList.loading}>
+      <div className="py-1" role="status" aria-label={t.projectList.loading}>
         <SkeletonRow />
         <SkeletonRow />
         <SkeletonRow />
@@ -44,7 +44,7 @@ export default function ProjectList({
 
   if (projects.length === 0) {
     return (
-      <div className="mx-3 my-4 rounded-xl border border-dashed border-white/12 bg-black/10 px-4 py-8 text-center">
+      <div className="mx-2 my-3 rounded-[10px] border border-dashed border-white/12 bg-black/10 px-4 py-7 text-center">
         <Folder size={36} className="mx-auto mb-3 text-[var(--mamp-text-dim)]" />
         <p className="text-sm font-semibold text-[var(--mamp-text)]">{t.projectList.emptyTitle}</p>
         <p className="mt-1 text-xs text-[var(--mamp-text-muted)]">{t.projectList.emptyDescription}</p>
@@ -57,7 +57,7 @@ export default function ProjectList({
   }
 
   return (
-    <div className="divide-y divide-white/5">
+    <div className="py-1">
       {projects.map((project) => {
         const isSelected = selectedId === project.id;
 
@@ -67,18 +67,18 @@ export default function ProjectList({
             onClick={() => onSelect(project)}
             aria-current={isSelected || undefined}
             className={cn(
-              'project-row group flex w-full items-center gap-3 px-3 py-3 text-start',
+              'project-row group mx-1.5 my-0.5 flex w-[calc(100%-0.75rem)] items-center gap-3 rounded-lg px-2.5 py-2 text-start',
               isSelected
-                ? 'project-row-selected text-white'
-                : 'text-[var(--mamp-text)] hover:bg-white/[0.04]',
+                ? 'project-row-selected'
+                : 'text-[var(--text-1)] hover:bg-white/[0.04]',
             )}
           >
             <div
               className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-md border text-xs',
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs',
                 isSelected
-                  ? 'border-[rgba(129,140,248,0.35)] bg-[rgba(99,102,241,0.2)] text-[var(--mamp-accent-strong)]'
-                  : 'border-white/8 bg-white/5 text-[var(--mamp-text-muted)]',
+                  ? 'border-transparent bg-[var(--accent-tint)] text-[var(--accent-hover)]'
+                  : 'border-white/8 bg-white/5 text-[var(--text-2)]',
               )}
             >
               <Globe size={14} />
@@ -86,7 +86,7 @@ export default function ProjectList({
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-3">
-                <span className={cn('truncate text-sm', isSelected ? 'font-semibold' : 'font-medium')}>
+                <span className={cn('truncate text-sm', isSelected ? 'font-semibold text-[var(--text-1)]' : 'font-medium')}>
                   {project.name}
                 </span>
                 <span
@@ -94,7 +94,7 @@ export default function ProjectList({
                   title={t.common.status[project.status]}
                 />
               </div>
-              <div className="mt-0.5 truncate text-xs text-[var(--mamp-text-muted)]">
+              <div className="mt-0.5 truncate text-xs text-[var(--text-2)]">
                 {project.domain}
               </div>
             </div>

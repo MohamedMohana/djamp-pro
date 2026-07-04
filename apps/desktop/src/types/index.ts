@@ -1,8 +1,12 @@
+export type Framework = 'django' | 'fastapi' | 'flask' | 'asgi' | 'wsgi';
+
 export interface Project {
   id: string;
   name: string;
   path: string;
+  framework?: Framework;
   settingsModule: string;
+  appModule?: string;
   domain: string;
   aliases: string[];
   port: number;
@@ -81,6 +85,14 @@ export interface CommandResult {
   success: boolean;
   output: string;
   error?: string;
+}
+
+export interface DetectionResult {
+  found: boolean;
+  framework?: Framework | '';
+  managePyPath?: string;
+  settingsModules?: string[];
+  appModules?: string[];
 }
 
 export interface HelperStatus {

@@ -47,11 +47,11 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
     >
       <Icon size={19} className={cn('mt-0.5 shrink-0', ICON_CLASSES[toast.variant])} />
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold leading-snug text-[var(--mamp-text)]">
+        <div className="text-[13px] font-semibold leading-snug text-[var(--text-1)]">
           {toast.title}
         </div>
         {toast.description && (
-          <div className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-[var(--mamp-text-muted)]">
+          <div className="mt-1 whitespace-pre-wrap break-words text-[12px] leading-relaxed text-[var(--text-2)]">
             {toast.description}
           </div>
         )}

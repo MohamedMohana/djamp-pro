@@ -44,17 +44,17 @@ interface ToolbarActionProps {
 function ToolbarAction({ icon: Icon, label, onClick, disabled, busy, tone = 'neutral' }: ToolbarActionProps) {
   const toneClasses =
     tone === 'start'
-      ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20'
+      ? 'border-transparent bg-transparent text-emerald-300 hover:bg-emerald-500/10'
       : tone === 'stop'
-        ? 'border-red-400/20 bg-red-500/10 text-red-200 hover:bg-red-500/20'
-        : 'border-transparent bg-transparent text-[var(--mamp-text-muted)] hover:bg-white/5 hover:text-white';
+        ? 'border-transparent bg-transparent text-red-300 hover:bg-red-500/10'
+        : 'border-transparent bg-transparent text-[var(--text-2)] hover:bg-white/5 hover:text-[var(--text-1)]';
 
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-lg border px-3 py-1.5 text-center text-[11px] font-medium transition',
+        'flex min-w-[56px] flex-col items-center justify-center gap-1 rounded-lg border px-2.5 py-1.5 text-center text-[11px] font-medium transition',
         toneClasses,
         disabled && 'cursor-not-allowed opacity-40 hover:bg-inherit',
       )}
@@ -404,7 +404,7 @@ function App() {
             <div
               role="group"
               aria-label={t.common.language}
-              className="ms-2 inline-flex items-center self-center rounded-lg border border-white/8 bg-black/25 p-1"
+              className="ms-2 inline-flex items-center self-center rounded-lg border border-white/5 bg-black/25 p-0.5"
             >
               {LOCALES.map((item) => {
                 const isActive = locale === item;
@@ -414,10 +414,10 @@ function App() {
                     key={item}
                     onClick={() => setLocale(item)}
                     className={cn(
-                      'rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition',
+                      'rounded-md px-2.5 py-1.5 text-[11px] font-medium transition',
                       isActive
-                        ? 'bg-[var(--mamp-accent)] text-white'
-                        : 'text-[var(--mamp-text-muted)] hover:bg-white/8 hover:text-white',
+                        ? 'bg-[var(--surface-4)] text-white'
+                        : 'text-[var(--text-2)] hover:text-[var(--text-1)]',
                     )}
                   >
                     {label}
@@ -430,7 +430,7 @@ function App() {
 
         <div className="min-h-0 flex flex-1">
           <aside className="mamp-sidebar flex w-[19.5rem] min-w-[19.5rem] flex-col">
-            <div className="flex items-center justify-between border-b border-white/8 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--mamp-text-dim)]">
+            <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5 text-[11px] font-medium text-[var(--text-3)]">
               <span>{t.app.sidebarName}</span>
               <span>{t.app.allProjects}</span>
             </div>
@@ -445,11 +445,11 @@ function App() {
               />
             </div>
 
-            <div className="flex items-center justify-between border-t border-white/8 px-3 py-2">
-              <span className="text-xs text-[var(--mamp-text-muted)]">{t.app.projectCount(projects.length)}</span>
+            <div className="flex items-center justify-between border-t border-[var(--line)] px-3 py-2.5">
+              <span className="text-[11px] font-medium text-[var(--text-3)]">{t.app.projectCount(projects.length)}</span>
               <button
                 onClick={() => void loadProjects()}
-                className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-2.5 py-1.5 text-xs font-semibold text-[var(--mamp-text-muted)] transition hover:bg-white/10 hover:text-white"
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[var(--text-2)] transition hover:bg-white/5 hover:text-[var(--text-1)]"
               >
                 <RefreshCw size={13} />
                 {t.app.refreshList}
@@ -465,31 +465,31 @@ function App() {
                     <div className="flex min-w-0 items-start gap-4">
                       <ProjectAvatar name={selectedProject.name} size="md" />
                       <div className="min-w-0">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--mamp-text-dim)]">
+                        <div className="text-[11px] font-medium text-[var(--text-3)]">
                           {t.projectCard.sectionProject}
                         </div>
-                        <h2 className="truncate text-3xl font-semibold tracking-tight text-white">
+                        <h2 className="truncate text-[22px] font-semibold tracking-[-0.01em] text-white">
                           {selectedProject.name}
                         </h2>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <span
                             className={cn(
-                              'inline-flex items-center gap-2 rounded-full border border-white/8 bg-black/15 px-3 py-1 text-sm',
+                              'inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px]',
                               getStatusColor(selectedProject.status),
                             )}
                           >
                             <span className={statusDotClass(selectedProject.status)} />
                             {t.common.status[selectedProject.status]}
                           </span>
-                          <span className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-black/15 px-3 py-1 text-sm text-[var(--mamp-text-muted)]">
+                          <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] text-[var(--text-2)]">
                             <Globe size={14} />
                             {selectedProject.domain}
                           </span>
-                          <span className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-black/15 px-3 py-1 text-sm text-[var(--mamp-text-muted)]">
+                          <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] text-[var(--text-2)]">
                             {t.common.runtimeModes[selectedRuntime]}
                           </span>
                           {selectedProject.database.type !== 'none' && (
-                            <span className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-black/15 px-3 py-1 text-sm text-[var(--mamp-text-muted)]">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] text-[var(--text-2)]">
                               <Database size={14} />
                               {t.common.databaseTypes[selectedProject.database.type]}
                             </span>
@@ -499,7 +499,7 @@ function App() {
                     </div>
 
                     <div className="hidden max-w-[24rem] text-end lg:block">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--mamp-text-dim)]">
+                      <div className="text-[11px] font-medium text-[var(--text-3)]">
                         {t.projectCard.projectPath}
                       </div>
                       <div className="mt-1 truncate font-mono text-sm text-[var(--mamp-text-muted)]">
@@ -508,21 +508,23 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/6 pt-4">
-                    {APP_TABS.map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={cn(
-                          'rounded-md border px-3 py-1.5 text-sm font-semibold transition',
-                          activeTab === tab
-                            ? 'border-[var(--mamp-accent)] bg-[var(--mamp-accent)] text-white'
-                            : 'border-white/8 bg-black/12 text-[var(--mamp-text-muted)] hover:bg-white/8 hover:text-white',
-                        )}
-                      >
-                        {t.app.tabs[tab]}
-                      </button>
-                    ))}
+                  <div className="mt-4 border-t border-[var(--line)] pt-4">
+                    <div className="inline-flex rounded-lg border border-white/5 bg-black/25 p-0.5">
+                      {APP_TABS.map((tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveTab(tab)}
+                          className={cn(
+                            'rounded-md px-3 py-1.5 text-[12.5px] font-medium transition',
+                            activeTab === tab
+                              ? 'bg-[var(--surface-4)] text-white'
+                              : 'text-[var(--text-2)] hover:text-[var(--text-1)]',
+                          )}
+                        >
+                          {t.app.tabs[tab]}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -537,16 +539,16 @@ function App() {
                   {activeTab === 'logs' && (
                     <div className="mamp-section">
                       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/6 pb-4">
-                        <div className="flex flex-wrap gap-2">
+                        <div className="inline-flex rounded-lg border border-white/5 bg-black/25 p-0.5">
                           {LOG_SOURCES.map((source) => (
                             <button
                               key={source}
                               onClick={() => setLogsSource(source)}
                               className={cn(
-                                'rounded-md border px-3 py-1.5 text-sm font-semibold transition',
+                                'rounded-md px-3 py-1.5 text-[12.5px] font-medium transition',
                                 logsSource === source
-                                  ? 'border-[var(--mamp-accent)] bg-[var(--mamp-accent)] text-white'
-                                  : 'border-white/8 bg-black/12 text-[var(--mamp-text-muted)] hover:bg-white/8 hover:text-white',
+                                  ? 'bg-[var(--surface-4)] text-white'
+                                  : 'text-[var(--text-2)] hover:text-[var(--text-1)]',
                               )}
                             >
                               {t.app.logSources[source]}
@@ -611,8 +613,8 @@ function App() {
 
       {deleteModalProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[var(--mamp-panel)] p-5 shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
-            <h3 className="text-xl font-semibold text-red-300">{t.app.deleteProjectTitle}</h3>
+          <div className="w-full max-w-md rounded-xl border border-red-500/30 bg-[var(--mamp-panel)] p-5 shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
+            <h3 className="text-[17px] font-semibold text-red-300">{t.app.deleteProjectTitle}</h3>
             <p className="mt-3 text-sm text-[var(--mamp-text)]">
               {t.app.deleteProjectIntro(deleteModalProject.name)}
             </p>
@@ -625,7 +627,7 @@ function App() {
               autoFocus
               value={deleteConfirmName}
               onChange={(event) => setDeleteConfirmName(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none transition focus:border-red-400/70"
+              className="mt-2 w-full rounded-[7px] border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none transition focus:border-red-400/70"
               placeholder={deleteModalProject.name}
             />
 
@@ -633,14 +635,14 @@ function App() {
               <button
                 onClick={closeDeleteModal}
                 disabled={deleteSubmitting}
-                className="rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-[var(--mamp-text)] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[7px] border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-[var(--mamp-text)] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {t.common.cancel}
               </button>
               <button
                 onClick={handleConfirmDeleteProject}
                 disabled={deleteSubmitting || deleteConfirmName.trim() !== deleteModalProject.name.trim()}
-                className="rounded-md border border-red-400/30 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[7px] border border-red-400/30 bg-red-500/15 px-4 py-2 text-sm font-medium text-red-100 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {deleteSubmitting ? t.app.deleting : t.app.deleteProjectTitle}
               </button>

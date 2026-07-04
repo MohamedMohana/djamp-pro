@@ -21,11 +21,11 @@ interface InspectorRowProps {
 
 function InspectorRow({ label, value }: InspectorRowProps) {
   return (
-    <div className="grid gap-3 border-b border-white/6 py-3 last:border-b-0 md:grid-cols-[10rem_minmax(0,1fr)]">
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--mamp-text-dim)]">
+    <div className="grid gap-3 py-2 md:grid-cols-[11rem_minmax(0,1fr)]">
+      <div className="text-[12px] font-medium text-[var(--text-2)]">
         {label}
       </div>
-      <div className="min-w-0 text-sm text-[var(--mamp-text)]">{value}</div>
+      <div className="min-w-0 text-[13px] text-[var(--text-1)]">{value}</div>
     </div>
   );
 }
@@ -44,6 +44,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
   const toast = useToast();
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const runtimeMode = project.runtimeMode || 'uv';
+  const framework = project.framework || 'django';
   const projectUrl = `${project.httpsEnabled ? 'https' : 'http'}://${project.domain}`;
 
   const commandDetails = (output?: string, error?: string) =>
@@ -176,10 +177,18 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
           label={t.projectCard.projectPath}
           value={<span className="block truncate font-mono text-[13px]">{project.path}</span>}
         />
-        <InspectorRow
-          label={t.projectCard.settingsModule}
-          value={<span className="font-mono text-[13px]">{project.settingsModule}</span>}
-        />
+        <InspectorRow label={t.projectCard.framework} value={t.common.frameworks[framework]} />
+        {framework === 'django' ? (
+          <InspectorRow
+            label={t.projectCard.settingsModule}
+            value={<span className="font-mono text-[13px]">{project.settingsModule}</span>}
+          />
+        ) : (
+          <InspectorRow
+            label={t.projectCard.appModule}
+            value={<span className="font-mono text-[13px]">{project.appModule || '--'}</span>}
+          />
+        )}
         <InspectorRow label={t.projectCard.pythonVersion} value={project.pythonVersion} />
         <InspectorRow label={t.projectCard.runtimeMode} value={t.common.runtimeModes[runtimeMode]} />
         <InspectorRow
@@ -187,7 +196,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
           value={
             <span
               className={cn(
-                'inline-flex items-center gap-2 rounded-full border border-white/8 bg-black/15 px-3 py-1',
+                'inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px]',
                 getStatusColor(project.status),
               )}
             >
@@ -201,7 +210,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
           value={
             <span
               className={cn(
-                'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                'inline-flex rounded-full px-2.5 py-1 text-[12px] font-medium',
                 project.debug
                   ? 'bg-emerald-500/15 text-emerald-300'
                   : 'bg-red-500/15 text-red-300',
@@ -234,14 +243,14 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
                 {project.aliases.map((alias) => (
                   <span
                     key={alias}
-                    className="rounded-md border border-white/8 bg-black/15 px-2.5 py-1 font-mono text-[12px]"
+                    className="rounded-full bg-white/[0.06] px-2.5 py-1 font-mono text-[12px]"
                   >
                     {alias}
                   </span>
                 ))}
               </div>
             ) : (
-              <span className="text-[var(--mamp-text-muted)]">{t.projectCard.noAliases}</span>
+              <span className="text-[var(--text-2)]">{t.projectCard.noAliases}</span>
             )
           }
         />
@@ -254,7 +263,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
             <InspectorRow label={t.projectCard.port} value={project.database.port} />
             <InspectorRow label={t.projectCard.databaseName} value={project.database.name || '--'} />
             <InspectorRow label={t.projectCard.username} value={project.database.username || '--'} />
-            <div className="border-t border-white/6 pt-4">
+            <div className="pt-3">
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleOpenDbShell}
@@ -280,7 +289,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
             </div>
           </>
         ) : (
-          <div className="text-sm text-[var(--mamp-text-muted)]">{t.projectCard.noDatabase}</div>
+          <div className="text-[13px] text-[var(--text-2)]">{t.projectCard.noDatabase}</div>
         )}
       </InspectorSection>
 
@@ -294,14 +303,16 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
             {busyAction === 'migrate' ? <Spinner size={15} /> : <PlayCircle size={15} />}
             {t.projectCard.migrate}
           </button>
-          <button
-            onClick={handleCollectstatic}
-            disabled={project.status !== 'running' || busyAction !== null}
-            className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busyAction === 'collectstatic' ? <Spinner size={15} /> : <ExternalLink size={15} />}
-            {t.projectCard.collectstatic}
-          </button>
+          {framework === 'django' && (
+            <button
+              onClick={handleCollectstatic}
+              disabled={project.status !== 'running' || busyAction !== null}
+              className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busyAction === 'collectstatic' ? <Spinner size={15} /> : <ExternalLink size={15} />}
+              {t.projectCard.collectstatic}
+            </button>
+          )}
           <button
             onClick={handleOpenShell}
             disabled={project.status !== 'running' || busyAction !== null}
@@ -330,12 +341,12 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
         </div>
       </InspectorSection>
 
-      <section className="rounded-xl border border-red-500/20 bg-red-950/20 p-4">
+      <section className="rounded-[10px] border border-red-500/20 bg-red-950/20 px-[1.1rem] py-4">
         <div className="mamp-section-title text-red-300">{t.projectCard.dangerZone}</div>
-        <p className="mb-4 text-sm text-red-100/75">{t.app.deleteProjectNote}</p>
+        <p className="mb-3 text-[13px] text-red-100/75">{t.app.deleteProjectNote}</p>
         <button
           onClick={onDelete}
-          className="inline-flex items-center gap-2 rounded-md border border-red-400/30 bg-red-500/15 px-3 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/25"
+          className="inline-flex items-center gap-2 rounded-[7px] border border-red-400/30 bg-red-500/15 px-3 py-1.5 text-[13px] font-medium text-red-100 transition hover:bg-red-500/25"
         >
           <Trash2 size={15} />
           {t.projectCard.deleteProject}

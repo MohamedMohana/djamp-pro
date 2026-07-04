@@ -2,10 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * DJAMP PRO design system — "refined native dark".
+ * Direction: Fluent/Material-grade discipline in a macOS-native shell.
+ *  - True neutral dark surfaces with a clear elevation ramp
+ *  - One azure accent, used sparingly (primary action, selection, focus)
+ *  - 13px UI base, sentence-case labels, tight but breathable density
+ *  - Filled rounded selection (macOS source list), no full-bleed bars
+ */
+
 :root {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI',
     'Helvetica Neue', 'Geeza Pro', 'Noto Sans Arabic', Tahoma, sans-serif;
-  line-height: 1.5;
+  line-height: 1.45;
   font-weight: 400;
   color-scheme: dark;
   font-synthesis: none;
@@ -13,20 +22,43 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Neutral near-black surfaces with a single indigo accent. */
-  --mamp-bg: #101014;
-  --mamp-bg-deep: #0b0b0e;
-  --mamp-panel: #18181e;
-  --mamp-panel-alt: #141419;
-  --mamp-toolbar-bg: #131318;
-  --mamp-sidebar: #0d0d11;
-  --mamp-content: #121217;
-  --mamp-accent: #6366f1;
-  --mamp-accent-strong: #818cf8;
-  --mamp-text: #ededf2;
-  --mamp-text-muted: #9d9daa;
-  --mamp-text-dim: #6b6b78;
-  --mamp-line: rgba(255, 255, 255, 0.07);
+  /* Elevation ramp (low → high) */
+  --surface-0: #161619; /* window chrome wells, console */
+  --surface-1: #1b1b1e; /* sidebar */
+  --surface-2: #202024; /* content background */
+  --surface-3: #26262b; /* cards */
+  --surface-4: #2d2d33; /* modals, toasts, menus */
+
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.12);
+
+  --accent: #4a8cff;
+  --accent-hover: #5e99ff;
+  --accent-pressed: #3d7ce8;
+  --accent-tint: rgba(74, 140, 255, 0.14);
+
+  --text-1: #ebebee;
+  --text-2: #a4a4ad;
+  --text-3: #71717a;
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+
+  /* Legacy aliases — every component keeps working while it migrates. */
+  --mamp-bg: var(--surface-2);
+  --mamp-bg-deep: var(--surface-0);
+  --mamp-panel: var(--surface-3);
+  --mamp-panel-alt: var(--surface-2);
+  --mamp-toolbar-bg: var(--surface-1);
+  --mamp-sidebar: var(--surface-1);
+  --mamp-content: var(--surface-2);
+  --mamp-accent: var(--accent);
+  --mamp-accent-strong: var(--accent-hover);
+  --mamp-text: var(--text-1);
+  --mamp-text-muted: var(--text-2);
+  --mamp-text-dim: var(--text-3);
+  --mamp-line: var(--line);
 }
 
 * {
@@ -44,24 +76,17 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: var(--mamp-bg-deep);
+  font-size: 13px;
+  background: var(--surface-0);
 }
 
 .app-bg {
   position: relative;
-  background: var(--mamp-bg);
-}
-
-.app-bg::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(900px 420px at 50% -180px, rgba(99, 102, 241, 0.07) 0%, transparent 70%);
+  background: var(--surface-2);
 }
 
 .mamp-window {
-  background: var(--mamp-bg);
+  background: var(--surface-2);
 }
 
 .mamp-toolbar {
@@ -69,53 +94,50 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.65rem 1rem;
-  border-bottom: 1px solid var(--mamp-line);
-  background: var(--mamp-toolbar-bg);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
 }
 
 .mamp-sidebar {
-  background: var(--mamp-sidebar);
-  border-inline-end: 1px solid var(--mamp-line);
+  background: var(--surface-1);
+  border-inline-end: 1px solid var(--line);
 }
 
 .mamp-content {
-  background: var(--mamp-content);
+  background: var(--surface-2);
 }
 
 .mamp-section {
-  border: 1px solid var(--mamp-line);
-  border-radius: 12px;
-  background: var(--mamp-panel);
-  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-3);
+  padding: 1rem 1.1rem;
 }
 
 .mamp-section-title {
-  margin-bottom: 0.9rem;
-  font-size: 0.7rem;
+  margin-bottom: 0.75rem;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mamp-text-dim);
+  color: var(--text-2);
 }
 
 .mamp-inline-action {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  border: 1px solid var(--mamp-line);
-  border-radius: 9px;
+  gap: 0.45rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
   background: rgba(255, 255, 255, 0.04);
-  color: var(--mamp-text);
-  padding: 0.5rem 0.8rem;
-  font-size: 0.82rem;
+  color: var(--text-1);
+  padding: 0.4rem 0.75rem;
+  font-size: 12.5px;
   font-weight: 500;
-  transition: background 140ms ease, border-color 140ms ease;
+  transition: background 120ms ease, border-color 120ms ease;
 }
 
 .mamp-inline-action:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .mamp-inline-action:active {
@@ -123,50 +145,48 @@ body {
 }
 
 .mamp-modal {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-  background: var(--mamp-panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface-4);
   box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.55),
-    0 4px 16px rgba(0, 0, 0, 0.35);
+    0 24px 64px rgba(0, 0, 0, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .mamp-modal-header {
-  border-bottom: 1px solid var(--mamp-line);
+  border-bottom: 1px solid var(--line);
   background: transparent;
 }
 
 .mamp-input,
 .mamp-select {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 9px;
-  background: var(--mamp-bg-deep);
-  color: var(--mamp-text);
-  padding: 0.7rem 0.85rem;
-  font-size: 0.92rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  padding: 0.55rem 0.75rem;
+  font-size: 13px;
   outline: none;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .mamp-input::placeholder {
-  color: var(--mamp-text-dim);
+  color: var(--text-3);
 }
 
 .mamp-input:focus,
 .mamp-select:focus {
-  border-color: var(--mamp-accent);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
 }
 
 .mamp-field-label {
   display: block;
-  margin-bottom: 0.45rem;
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--mamp-text-dim);
+  margin-bottom: 0.35rem;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
 }
 
 .mamp-button-neutral,
@@ -176,19 +196,19 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  border-radius: 9px;
+  gap: 0.45rem;
+  border-radius: 7px;
   border: 1px solid transparent;
-  padding: 0.6rem 0.95rem;
-  font-size: 0.88rem;
-  font-weight: 600;
-  transition: background 140ms ease, border-color 140ms ease, opacity 140ms ease;
+  padding: 0.5rem 0.9rem;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
 }
 
 .mamp-button-neutral {
-  border-color: var(--mamp-line);
+  border-color: var(--line-strong);
   background: rgba(255, 255, 255, 0.05);
-  color: var(--mamp-text);
+  color: var(--text-1);
 }
 
 .mamp-button-neutral:hover {
@@ -196,21 +216,25 @@ body {
 }
 
 .mamp-button-primary {
-  background: var(--mamp-accent);
+  background: var(--accent);
   color: white;
 }
 
 .mamp-button-primary:hover {
-  background: #6f72f3;
+  background: var(--accent-hover);
+}
+
+.mamp-button-primary:active {
+  background: var(--accent-pressed);
 }
 
 .mamp-button-success {
-  background: #0d9668;
+  background: #0e9f6e;
   color: white;
 }
 
 .mamp-button-success:hover {
-  background: #10a874;
+  background: #10b077;
 }
 
 .mamp-button-danger {
@@ -222,13 +246,6 @@ body {
   background: #e35252;
 }
 
-.mamp-button-neutral:active,
-.mamp-button-primary:active,
-.mamp-button-success:active,
-.mamp-button-danger:active {
-  transform: translateY(1px);
-}
-
 .mamp-button-neutral:disabled,
 .mamp-button-primary:disabled,
 .mamp-button-success:disabled,
@@ -238,85 +255,85 @@ body {
 }
 
 .mamp-note {
-  border: 1px solid var(--mamp-line);
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
-  font-size: 0.88rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  font-size: 12.5px;
 }
 
 .mamp-note-success {
   border-color: rgba(52, 211, 153, 0.25);
-  background: rgba(16, 185, 129, 0.09);
+  background: rgba(16, 185, 129, 0.08);
   color: #a7f3d0;
 }
 
 .mamp-note-warning {
   border-color: rgba(251, 191, 36, 0.25);
-  background: rgba(217, 119, 6, 0.1);
+  background: rgba(217, 119, 6, 0.09);
   color: #fde68a;
 }
 
 .mamp-note-danger {
   border-color: rgba(248, 113, 113, 0.25);
-  background: rgba(220, 38, 38, 0.1);
+  background: rgba(220, 38, 38, 0.09);
   color: #fecaca;
 }
 
 .mamp-check-card {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  border: 1px solid var(--mamp-line);
-  border-radius: 10px;
+  gap: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
-  padding: 0.85rem 1rem;
+  padding: 0.7rem 0.85rem;
 }
 
 .mamp-step {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  color: var(--mamp-text-dim);
+  gap: 0.6rem;
+  color: var(--text-3);
 }
 
 .mamp-step-badge {
   display: flex;
-  height: 2rem;
-  width: 2rem;
+  height: 1.75rem;
+  width: 1.75rem;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid var(--mamp-line);
+  border: 1px solid var(--line-strong);
   background: rgba(255, 255, 255, 0.04);
 }
 
 .mamp-step-active {
-  color: var(--mamp-text);
+  color: var(--text-1);
 }
 
 .mamp-step-active .mamp-step-badge {
   border-color: transparent;
-  background: var(--mamp-accent);
+  background: var(--accent);
   color: white;
 }
 
 .mamp-step-line {
   height: 1px;
-  width: 3rem;
-  background: var(--mamp-line);
+  width: 2.5rem;
+  background: var(--line-strong);
 }
 
 .mamp-console {
   min-height: 24rem;
   overflow: auto;
-  border: 1px solid var(--mamp-line);
-  border-radius: 10px;
-  background: #0a0a0d;
-  padding: 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-0);
+  padding: 0.85rem;
   font-family: 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.78rem;
-  line-height: 1.65;
-  color: #d6d3e0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #d7d7dc;
   white-space: pre-wrap;
 }
 
@@ -332,10 +349,14 @@ body {
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.13);
   border-radius: 999px;
+  background-clip: padding-box;
+  border: 2px solid transparent;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.22);
+  background-clip: padding-box;
+  border: 2px solid transparent;
 }
 
 @layer utilities {
@@ -351,7 +372,7 @@ body {
 
 /* Keyboard-only focus rings */
 :focus-visible {
-  outline: 2px solid rgba(129, 140, 248, 0.8);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -364,8 +385,8 @@ body {
   z-index: 100;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  width: min(23rem, calc(100vw - 2rem));
+  gap: 0.5rem;
+  width: min(22rem, calc(100vw - 2rem));
   pointer-events: none;
 }
 
@@ -373,21 +394,21 @@ body {
   pointer-events: auto;
   display: flex;
   align-items: flex-start;
-  gap: 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 11px;
-  background: #1c1c23;
+  gap: 0.65rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface-4);
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.5),
+    0 12px 40px rgba(0, 0, 0, 0.45),
     0 2px 8px rgba(0, 0, 0, 0.3);
-  padding: 0.8rem 0.9rem;
-  animation: toast-in 220ms cubic-bezier(0.21, 1.02, 0.73, 1);
+  padding: 0.7rem 0.8rem;
+  animation: toast-in 200ms cubic-bezier(0.21, 1.02, 0.73, 1);
 }
 
 .toast-leave {
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity 180ms ease, transform 180ms ease;
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
 @keyframes toast-in {
@@ -399,7 +420,7 @@ body {
 
 /* Confirm dialog entrance */
 .confirm-pop {
-  animation: confirm-pop 180ms cubic-bezier(0.21, 1.02, 0.73, 1);
+  animation: confirm-pop 170ms cubic-bezier(0.21, 1.02, 0.73, 1);
 }
 
 @keyframes confirm-pop {
@@ -420,7 +441,7 @@ body {
 }
 
 .status-dot-running {
-  background: #34d399;
+  background: var(--success);
 }
 
 .status-dot-running::after {
@@ -433,16 +454,16 @@ body {
 }
 
 .status-dot-stopped {
-  background: #55555f;
+  background: #55555e;
 }
 
 .status-dot-busy {
-  background: #fbbf24;
+  background: var(--warning);
   animation: status-blink 1s ease-in-out infinite;
 }
 
 .status-dot-error {
-  background: #f87171;
+  background: var(--danger);
 }
 
 @keyframes status-ping {
@@ -465,11 +486,11 @@ body {
 
 /* Loading skeletons */
 .skeleton {
-  border-radius: 0.5rem;
+  border-radius: 6px;
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0.05) 25%,
-    rgba(255, 255, 255, 0.11) 50%,
+    rgba(255, 255, 255, 0.1) 50%,
     rgba(255, 255, 255, 0.05) 75%
   );
   background-size: 200% 100%;
@@ -482,23 +503,14 @@ body {
   }
 }
 
-/* Sidebar project rows */
+/* Sidebar project rows — macOS source-list: filled rounded selection */
 .project-row {
-  position: relative;
-  transition: background 140ms ease;
+  border-radius: 8px;
+  transition: background 120ms ease;
 }
 
 .project-row-selected {
-  background: rgba(99, 102, 241, 0.13);
-}
-
-.project-row-selected::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 2px;
-  background: var(--mamp-accent);
+  background: var(--accent-tint);
 }
 
 @media (prefers-reduced-motion: reduce) {

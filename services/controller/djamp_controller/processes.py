@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from .domains import _project_domains
+from .frameworks import project_framework, validate_app_module
 from .models import (
     MANAGED_MYSQL_PORT,
     MANAGED_POSTGRES_PORT,
@@ -92,12 +93,24 @@ def _kill_processes_on_port(port: int) -> None:
         return
 
 
-def _kill_stray_project_processes(manage_py: Path, port: int) -> None:
-    """Best-effort cleanup for orphaned runserver processes that may not be listening anymore."""
+def _stray_process_pattern(project: Project, port: int) -> str:
+    """pgrep -f pattern matching this project's dev-server processes."""
+    framework = project_framework(project)
+    if framework == "django":
+        manage_py = _find_manage_py(project)
+        return f"{str(manage_py)}.*runserver.*{int(port)}"
+
+    app_module = re.escape((project.appModule or "").strip())
+    if framework == "flask":
+        return f"flask.*{app_module}.*{int(port)}"
+    return f"uvicorn.*{app_module}.*{int(port)}"
+
+
+def _kill_stray_project_processes(pattern: str) -> None:
+    """Best-effort cleanup for orphaned dev-server processes that may not be listening anymore."""
     if platform.system() == "Windows" or not shutil.which("pgrep"):
         return
 
-    pattern = f"{str(manage_py)}.*runserver.*{int(port)}"
     try:
         result = subprocess.run(
             ["pgrep", "-f", pattern],
@@ -265,7 +278,7 @@ def _ensure_django_settings_override(project: Project) -> str:
 def _base_env(project: Project) -> Dict[str, str]:
     env = os.environ.copy()
     env.update(project.environmentVars)
-    if project.settingsModule:
+    if project_framework(project) == "django" and project.settingsModule:
         env.setdefault("DJANGO_SETTINGS_MODULE", project.settingsModule)
     # Ensure logs flush promptly even when redirected to files.
     env.setdefault("PYTHONUNBUFFERED", "1")
@@ -275,14 +288,15 @@ def _base_env(project: Project) -> Dict[str, str]:
 def _apply_djamp_project_env(project: Project, env: Dict[str, str]) -> Dict[str, str]:
     out = dict(env)
 
-    # Settings override module + PYTHONPATH so Django can import it.
-    module_name = _ensure_django_settings_override(project)
-    out["DJANGO_SETTINGS_MODULE"] = module_name
+    if project_framework(project) == "django":
+        # Settings override module + PYTHONPATH so Django can import it.
+        module_name = _ensure_django_settings_override(project)
+        out["DJANGO_SETTINGS_MODULE"] = module_name
 
-    overrides_root = str(paths()["overrides"])
-    sep = ";" if platform.system() == "Windows" else ":"
-    existing = out.get("PYTHONPATH", "").strip()
-    out["PYTHONPATH"] = f"{overrides_root}{sep}{existing}" if existing else overrides_root
+        overrides_root = str(paths()["overrides"])
+        sep = ";" if platform.system() == "Windows" else ":"
+        existing = out.get("PYTHONPATH", "").strip()
+        out["PYTHONPATH"] = f"{overrides_root}{sep}{existing}" if existing else overrides_root
 
     # Common DB env var conventions (many projects use python-dotenv without override=True).
     if project.database.type == "postgres":
@@ -382,7 +396,8 @@ def _conda_python_from_prefix(prefix: Path) -> Path:
     raise RuntimeError(f"Python interpreter not found in conda env: {prefix}")
 
 
-def _build_manage_command(project: Project, manage_py: Path, django_args: List[str]) -> Tuple[List[str], Dict[str, str]]:
+def _resolve_runtime(project: Project) -> Tuple[List[str], Dict[str, str]]:
+    """Resolve the interpreter argv prefix and environment for the project's runtime mode."""
     mode = project.runtimeMode
     env = _base_env(project)
 
@@ -393,7 +408,7 @@ def _build_manage_command(project: Project, manage_py: Path, django_args: List[s
 
         python_bin = _platform_python(project)
         _prepend_path_env(env, python_bin.parent)
-        return ["python", str(manage_py), *django_args], env
+        return ["python"], env
 
     if mode == "conda":
         env_name = project.condaEnv.strip()
@@ -410,7 +425,7 @@ def _build_manage_command(project: Project, manage_py: Path, django_args: List[s
         if platform.system() != "Windows":
             _prepend_path_env(env, prefix / "bin")
 
-        return ["python", str(manage_py), *django_args], env
+        return ["python"], env
 
     if mode == "custom":
         custom = project.customInterpreter.strip()
@@ -423,19 +438,57 @@ def _build_manage_command(project: Project, manage_py: Path, django_args: List[s
         if not custom_exec:
             raise RuntimeError("Custom runtime executable is empty")
 
-        exec_name = custom_exec
         if "/" in custom_exec or "\\" in custom_exec:
-            custom_path = Path(custom_exec).expanduser().resolve()
+            custom_path = Path(custom_exec).expanduser()
+            # Do not resolve symlinks on absolute paths: a venv's bin/python is a
+            # symlink to the base interpreter, and resolving it would escape the venv.
+            if not custom_path.is_absolute():
+                custom_path = custom_path.resolve()
             if not custom_path.exists() or not custom_path.is_file():
                 raise RuntimeError(f"Custom interpreter not found: {custom_path}")
-            return [str(custom_path), str(manage_py), *django_args], env
+            return [str(custom_path)], env
 
-        if not re.fullmatch(r"[A-Za-z0-9._+-]+", exec_name):
+        if not re.fullmatch(r"[A-Za-z0-9._+-]+", custom_exec):
             raise RuntimeError("Custom interpreter contains unsupported characters")
-        return [exec_name, str(manage_py), *django_args], env
+        return [custom_exec], env
 
     interpreter = shutil.which("python3") or shutil.which("python")
     if not interpreter:
         raise RuntimeError("No Python interpreter found")
 
-    return [Path(interpreter).name, str(manage_py), *django_args], env
+    return [Path(interpreter).name], env
+
+
+def _build_manage_command(project: Project, manage_py: Path, django_args: List[str]) -> Tuple[List[str], Dict[str, str]]:
+    prefix, env = _resolve_runtime(project)
+    return [*prefix, str(manage_py), *django_args], env
+
+
+def _build_python_command(project: Project, args: List[str]) -> Tuple[List[str], Dict[str, str]]:
+    prefix, env = _resolve_runtime(project)
+    return [*prefix, *args], env
+
+
+def _build_server_command(project: Project) -> Tuple[List[str], Dict[str, str]]:
+    """Build the dev-server command for the project's framework."""
+    framework = project_framework(project)
+
+    if framework == "django":
+        manage_py = _find_manage_py(project)
+        return _build_manage_command(project, manage_py, ["runserver", f"127.0.0.1:{project.port}"])
+
+    app_module = validate_app_module(project.appModule)
+
+    if framework == "flask":
+        args = ["-m", "flask", "--app", app_module, "run", "--host", "127.0.0.1", "--port", str(project.port)]
+        if project.debug:
+            args.append("--debug")
+        return _build_python_command(project, args)
+
+    # fastapi / asgi / wsgi all run behind uvicorn.
+    args = ["-m", "uvicorn", app_module, "--host", "127.0.0.1", "--port", str(project.port)]
+    if framework == "wsgi":
+        args += ["--interface", "wsgi"]
+    if project.debug:
+        args.append("--reload")
+    return _build_python_command(project, args)

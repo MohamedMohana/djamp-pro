@@ -41,12 +41,12 @@ export default function ProjectAvatar({ name, size = 'sm', className }: ProjectA
     background: `linear-gradient(135deg, hsl(${hue1} 70% 50%), hsl(${hue2} 70% 38%))`,
   };
 
-  const sizeClass = size === 'md' ? 'h-12 w-12 text-base' : 'h-9 w-9 text-xs';
+  const sizeClass = size === 'md' ? 'h-12 w-12 rounded-[10px] text-base' : 'h-9 w-9 rounded-lg text-xs';
 
   return (
     <div
       className={cn(
-        'shrink-0 rounded-lg font-semibold text-white shadow-md ring-1 ring-white/10',
+        'shrink-0 font-semibold text-white shadow-md ring-1 ring-black/20',
         'flex items-center justify-center',
         sizeClass,
         className,

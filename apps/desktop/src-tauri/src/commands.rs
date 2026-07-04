@@ -15,12 +15,18 @@ pub struct CommandResult {
 #[serde(rename_all = "camelCase")]
 pub struct DetectionResult {
     pub found: bool,
+    #[serde(default)]
+    pub framework: Option<String>,
     #[serde(alias = "manage_py_path", alias = "managePyPath")]
     #[serde(rename = "managePyPath")]
     pub manage_py_path: Option<String>,
     #[serde(alias = "settings_modules", alias = "settingsModules")]
     #[serde(rename = "settingsModules")]
     pub settings_modules: Option<Vec<String>>,
+    #[serde(alias = "app_modules", alias = "appModules")]
+    #[serde(rename = "appModules")]
+    #[serde(default)]
+    pub app_modules: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

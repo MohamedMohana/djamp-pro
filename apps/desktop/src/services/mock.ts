@@ -36,6 +36,8 @@ function makeProject(overrides: Partial<Project>): Project {
     },
     createdAt: new Date().toISOString(),
     runtimeMode: 'uv',
+    framework: 'django',
+    appModule: '',
     ...overrides,
   };
 }
@@ -53,6 +55,9 @@ const projects: Project[] = [
     domain: 'store.test',
     path: '/Users/dev/projects/storefront',
     port: 8002,
+    framework: 'fastapi',
+    settingsModule: '',
+    appModule: 'main:app',
     database: { type: 'mysql', port: 33069, name: 'store', username: 'store', password: '' },
   }),
   makeProject({
@@ -270,10 +275,17 @@ export function createMockApi(): Api {
         `[${now}] [${source}] "POST /api/login HTTP/1.1" 302 0`,
       ].join('\n');
     },
-    detectDjangoProject: async (path) => {
+    detectProject: async (path) => {
       await delay(700);
+      if (path.toLowerCase().includes('fastapi')) {
+        return { found: true, framework: 'fastapi' as const, appModules: ['main:app', 'backend.api:app'] };
+      }
+      if (path.toLowerCase().includes('flask')) {
+        return { found: true, framework: 'flask' as const, appModules: ['app:app'] };
+      }
       return {
         found: true,
+        framework: 'django' as const,
         managePyPath: `${path}/manage.py`,
         settingsModules: ['config.settings', 'config.settings.local'],
       };

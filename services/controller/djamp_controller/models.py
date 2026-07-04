@@ -9,6 +9,10 @@ MANAGED_POSTGRES_PORT = 54329
 MANAGED_MYSQL_PORT = 33069
 MANAGED_REDIS_PORT = 6389
 
+# Supported project frameworks. "asgi"/"wsgi" cover any generic app served by uvicorn.
+Framework = Literal["django", "fastapi", "flask", "asgi", "wsgi"]
+SUPPORTED_FRAMEWORKS = ("django", "fastapi", "flask", "asgi", "wsgi")
+
 
 class DatabaseConfig(BaseModel):
     type: Literal["postgres", "mysql", "none"] = "none"
@@ -27,7 +31,10 @@ class Project(BaseModel):
     id: str
     name: str
     path: str
-    settingsModule: str
+    framework: Framework = "django"
+    settingsModule: str = ""
+    # Import path of the app object for non-Django projects, e.g. "main:app".
+    appModule: str = ""
     domain: str
     aliases: List[str] = Field(default_factory=list)
     port: int = 8000
@@ -74,8 +81,10 @@ class CommandResult(BaseModel):
 
 class DetectionResult(BaseModel):
     found: bool
+    framework: str = ""
     managePyPath: Optional[str] = None
     settingsModules: List[str] = Field(default_factory=list)
+    appModules: List[str] = Field(default_factory=list)
 
 
 class CertificateInfo(BaseModel):

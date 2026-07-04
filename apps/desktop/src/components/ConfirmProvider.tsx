@@ -68,15 +68,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 className={cn(
                   'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border',
                   danger
-                    ? 'border-red-400/25 bg-red-500/12 text-red-300'
-                    : 'border-[rgba(80,128,244,0.35)] bg-[rgba(80,128,244,0.12)] text-[var(--mamp-accent-strong)]',
+                    ? 'border-transparent bg-red-500/12 text-red-300'
+                    : 'border-transparent bg-[var(--accent-tint)] text-[var(--accent-hover)]',
                 )}
               >
                 {danger ? <AlertTriangle size={19} /> : <ShieldQuestion size={19} />}
               </div>
               <div className="min-w-0">
-                <h3 className="text-lg font-semibold text-white">{pending.options.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--mamp-text-muted)]">
+                <h3 className="text-[16px] font-semibold text-[var(--text-1)]">{pending.options.title}</h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-[var(--text-2)]">
                   {pending.options.message}
                 </p>
               </div>

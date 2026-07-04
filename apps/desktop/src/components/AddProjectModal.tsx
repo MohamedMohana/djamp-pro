@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { X, FolderOpen, Plus, Globe, Database, Check } from 'lucide-react';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import type { DetectionResult, Framework } from '../types';
 import { useI18n } from '../i18n';
 import { api } from '../services/api';
 import { useToast } from '../toast';
 import Spinner from './Spinner';
+
+const FRAMEWORKS: Framework[] = ['django', 'fastapi', 'flask', 'asgi', 'wsgi'];
 
 interface AddProjectModalProps {
   onClose: () => void;
@@ -27,11 +30,7 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
   const [hasDetected, setHasDetected] = useState(false);
 
   const [projectPath, setProjectPath] = useState('');
-  const [detectionResult, setDetectionResult] = useState<{
-    found: boolean;
-    managePyPath?: string;
-    settingsModules?: string[];
-  }>({ found: false });
+  const [detectionResult, setDetectionResult] = useState<DetectionResult>({ found: false });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -43,7 +42,9 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
     httpsEnabled: true,
     staticPath: 'static',
     mediaPath: 'media',
+    framework: 'django' as Framework,
     settingsModule: '',
+    appModule: '',
     databaseType: 'postgres',
     runtimeMode: 'uv',
     condaEnv: '',
@@ -69,17 +70,20 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
     setHasDetected(false);
     try {
       const result = await withTimeout(
-        api.detectDjangoProject(normalizedPath),
+        api.detectProject(normalizedPath),
         12000,
         t.addProject.detectionTimedOut,
       );
       setDetectionResult(result);
       setHasDetected(true);
-      if (result.found && result.settingsModules && result.settingsModules.length > 0) {
-        const inferredName = normalizedPath.split('/').pop() || normalizedPath.split('\\').pop() || 'My Django Project';
+      if (result.found) {
+        const inferredName = normalizedPath.split('/').pop() || normalizedPath.split('\\').pop() || 'My Project';
+        const framework = (result.framework || 'django') as Framework;
         setFormData((prev) => ({
           ...prev,
-          settingsModule: result.settingsModules![0],
+          framework,
+          settingsModule: result.settingsModules?.[0] ?? '',
+          appModule: result.appModules?.[0] ?? '',
           name: inferredName,
           domain: `${inferredName.toLowerCase().replace(/[^a-z0-9]/g, '')}.test`,
           domainMode: 'local_only',
@@ -144,12 +148,18 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
         }
       }
 
+      if (formData.framework !== 'django' && !formData.appModule.trim()) {
+        throw new Error(t.addProject.appModuleHelp);
+      }
+
       const dbPort = formData.databaseType === 'postgres' ? 54329 : formData.databaseType === 'mysql' ? 33069 : 0;
       await api.addProject({
         ...formData,
         domain: normalizedDomain,
         path: projectPath,
-        settingsModule: formData.settingsModule,
+        framework: formData.framework,
+        settingsModule: formData.framework === 'django' ? formData.settingsModule : '',
+        appModule: formData.framework === 'django' ? '' : formData.appModule.trim(),
         aliases: formData.aliases
           .split(',')
           .map((alias) => alias.trim())
@@ -209,8 +219,8 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
       <div className="mamp-modal my-4 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden sm:my-0 sm:max-h-[90vh]">
         <div className="mamp-modal-header flex items-center justify-between px-6 py-5">
           <div>
-            <h2 className="text-2xl font-semibold text-white">{t.addProject.title}</h2>
-            <p className="mt-1 text-sm text-[var(--mamp-text-muted)]">{activeStep?.title}</p>
+            <h2 className="text-[17px] font-semibold text-[var(--text-1)]">{t.addProject.title}</h2>
+            <p className="mt-1 text-[12px] text-[var(--text-2)]">{activeStep?.title}</p>
           </div>
           <button
             onClick={onClose}
@@ -220,7 +230,7 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
           </button>
         </div>
 
-        <div className="border-b border-white/8 px-6 py-4">
+        <div className="border-b border-[var(--line)] px-6 py-4">
           <div className="flex flex-wrap items-center gap-3">
             {steps.map((item, index) => (
               <div key={item.id} className="flex items-center gap-3">
@@ -228,7 +238,7 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
                   <div className="mamp-step-badge">
                     {step === item.id ? <Check size={16} /> : <item.icon size={16} />}
                   </div>
-                  <span className="text-sm font-semibold">{item.title}</span>
+                  <span className="text-[13px] font-medium">{item.title}</span>
                 </div>
                 {index < steps.length - 1 && <div className="mamp-step-line" />}
               </div>
@@ -252,7 +262,7 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
                           setProjectPath(event.target.value);
                           setHasDetected(false);
                         }}
-                        placeholder="/Users/dev/projects/my-django-app"
+                        placeholder="/Users/dev/projects/my-app"
                         className="mamp-input flex-1"
                       />
                       <button
@@ -284,13 +294,28 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
                     <Check size={18} />
                     {t.addProject.projectFound}
                   </div>
-                  <div className="space-y-1 text-sm">
+                  <div className="space-y-1">
                     <div>
-                      {t.addProject.managePy}: <span className="font-mono">{detectionResult.managePyPath}</span>
+                      {t.addProject.frameworkLabel}:{' '}
+                      <span className="font-mono">
+                        {t.common.frameworks[(detectionResult.framework || 'django') as Framework]}
+                      </span>
                     </div>
-                    <div>
-                      {t.addProject.settings}: <span className="font-mono">{detectionResult.settingsModules?.join(', ')}</span>
-                    </div>
+                    {detectionResult.managePyPath && (
+                      <div>
+                        {t.addProject.managePy}: <span className="font-mono">{detectionResult.managePyPath}</span>
+                      </div>
+                    )}
+                    {detectionResult.settingsModules && detectionResult.settingsModules.length > 0 && (
+                      <div>
+                        {t.addProject.settings}: <span className="font-mono">{detectionResult.settingsModules.join(', ')}</span>
+                      </div>
+                    )}
+                    {detectionResult.appModules && detectionResult.appModules.length > 0 && (
+                      <div>
+                        {t.addProject.appModuleLabel}: <span className="font-mono">{detectionResult.appModules.join(', ')}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : hasDetected && !loading && detectionResult.found === false && projectPath ? (
@@ -313,6 +338,59 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
                       className="mamp-input"
                     />
                   </div>
+
+                  <div>
+                    <label className="mamp-field-label">{t.addProject.frameworkLabel}</label>
+                    <select
+                      value={formData.framework}
+                      onChange={(event) => setFormData({ ...formData, framework: event.target.value as Framework })}
+                      className="mamp-select"
+                    >
+                      {FRAMEWORKS.map((framework) => (
+                        <option key={framework} value={framework}>
+                          {t.common.frameworks[framework]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {formData.framework === 'django' ? (
+                    <div>
+                      <label className="mamp-field-label">{t.addProject.settingsModuleLabel}</label>
+                      <select
+                        value={formData.settingsModule}
+                        onChange={(event) => setFormData({ ...formData, settingsModule: event.target.value })}
+                        className="mamp-select"
+                      >
+                        {(detectionResult.settingsModules?.length
+                          ? detectionResult.settingsModules
+                          : [formData.settingsModule].filter(Boolean)
+                        ).map((module) => (
+                          <option key={module} value={module}>
+                            {module}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="mamp-field-label">{t.addProject.appModuleLabel}</label>
+                      <input
+                        type="text"
+                        value={formData.appModule}
+                        onChange={(event) => setFormData({ ...formData, appModule: event.target.value })}
+                        placeholder="main:app"
+                        list="djamp-app-module-candidates"
+                        className="mamp-input"
+                      />
+                      <datalist id="djamp-app-module-candidates">
+                        {(detectionResult.appModules ?? []).map((module) => (
+                          <option key={module} value={module} />
+                        ))}
+                      </datalist>
+                      <p className="mt-1 text-[12px] text-[var(--text-2)]">{t.addProject.appModuleHelp}</p>
+                    </div>
+                  )}
 
                   <div>
                     <label className="mamp-field-label">{t.addProject.primaryDomain}</label>
@@ -424,18 +502,18 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
                       type="checkbox"
                       checked={formData.debug}
                       onChange={(event) => setFormData({ ...formData, debug: event.target.checked })}
-                      className="h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
+                      className="h-4 w-4 accent-[var(--accent)]"
                     />
-                    <span className="font-semibold text-[var(--mamp-text)]">{t.addProject.debugMode}</span>
+                    <span className="text-[13px] font-medium text-[var(--text-1)]">{t.addProject.debugMode}</span>
                   </label>
                   <label className="mamp-check-card cursor-pointer">
                     <input
                       type="checkbox"
                       checked={formData.httpsEnabled}
                       onChange={(event) => setFormData({ ...formData, httpsEnabled: event.target.checked })}
-                      className="h-5 w-5 rounded border-gray-500 bg-gray-600 text-brand-600 focus:ring-brand-500"
+                      className="h-4 w-4 accent-[var(--accent)]"
                     />
-                    <span className="font-semibold text-[var(--mamp-text)]">{t.addProject.enableHttps}</span>
+                    <span className="text-[13px] font-medium text-[var(--text-1)]">{t.addProject.enableHttps}</span>
                   </label>
                 </div>
               </section>
@@ -461,9 +539,9 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
                   </div>
 
                   {formData.databaseType !== 'none' && (
-                    <div className="mamp-note border-white/8 bg-black/14 text-[var(--mamp-text)]">
+                    <div className="mamp-note text-[var(--text-1)]">
                       <p>{t.addProject.databaseHelp}</p>
-                      <div className="mt-2 text-sm text-[var(--mamp-text-muted)]">{t.addProject.databaseHelpNote}</div>
+                      <div className="mt-2 text-[12px] text-[var(--text-2)]">{t.addProject.databaseHelpNote}</div>
                     </div>
                   )}
                 </div>
@@ -472,7 +550,7 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
           )}
         </div>
 
-        <div className="border-t border-white/8 px-6 py-5">
+        <div className="border-t border-[var(--line)] px-6 py-5">
           {submitError && (
             <div className="mamp-note mamp-note-danger mb-4">{submitError}</div>
           )}
