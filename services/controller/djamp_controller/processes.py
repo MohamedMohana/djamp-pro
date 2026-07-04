@@ -356,9 +356,11 @@ def _ensure_uv_runtime(project: Project) -> CommandResult:
     elif uv_lock.exists():
         # Modern uv-managed projects (pyproject.toml + uv.lock): sync the locked
         # dependencies into the DJAMP-managed venv instead of requirements.txt.
+        # --inexact keeps packages DJAMP adds on top (e.g. auto-installed uvicorn)
+        # from being uninstalled on the next sync.
         sync_env = os.environ.copy()
         sync_env["UV_PROJECT_ENVIRONMENT"] = str(python_path.parent.parent)
-        install = _run_blocking([uv_bin, "sync", "--frozen"], project_root, sync_env)
+        install = _run_blocking([uv_bin, "sync", "--frozen", "--inexact"], project_root, sync_env)
         if not install.success:
             return install
 

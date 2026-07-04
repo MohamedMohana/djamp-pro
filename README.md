@@ -51,7 +51,8 @@ Point it at a project folder and it detects the framework — `manage.py` + sett
 
 - 🗂️ **Multi-project control panel** — add existing Django, FastAPI, or Flask projects from disk and run them concurrently, virtual-host style.
 - 🔍 **Auto-detection** — finds `manage.py` + settings modules (Django) or the app object like `main:app` (FastAPI/Flask/ASGI/WSGI) for you.
-- 🐍 **Multi-framework** — Django runs via `runserver`, FastAPI and generic ASGI/WSGI apps via `uvicorn`, Flask via `flask run`; migrations work through Django, Alembic, or Flask-Migrate.
+- 🐍 **Multi-framework** — Django runs via `runserver`, FastAPI and generic ASGI/WSGI apps via `uvicorn` (with proxy headers so apps see `https://`), Flask via `flask run`; migrations work through Django, Alembic, or Flask-Migrate.
+- 📦 **Zero-setup bootstrap** — the managed `uv` runtime installs from `requirements.txt` or syncs `uv.lock` projects, and auto-installs the dev server (`uvicorn`/`flask`) when a project doesn't list it.
 - 🌐 **Domain-first workflow** — per-project primary domain + aliases (e.g. `myapp.test`, `api.myapp.test`), synced into `/etc/hosts` behind a scoped managed block.
 - 🔒 **Trusted local HTTPS** — a DJAMP-managed root CA issues per-domain certificates; Caddy serves TLS automatically.
 - ⚡ **Flexible runtimes** — `uv` (recommended), `conda`, system Python, or a custom interpreter path — per project.
