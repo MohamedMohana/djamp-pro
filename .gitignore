@@ -64,3 +64,6 @@ setup-blockchain.sh
 *.tmp
 *.temp
 .cache/
+
+# Local preview scaffold
+.claude/launch.json

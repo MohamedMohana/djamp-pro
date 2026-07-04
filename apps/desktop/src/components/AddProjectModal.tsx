@@ -3,6 +3,8 @@ import { X, FolderOpen, Plus, Globe, Database, Check } from 'lucide-react';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { useI18n } from '../i18n';
 import { api } from '../services/api';
+import { useToast } from '../toast';
+import Spinner from './Spinner';
 
 interface AddProjectModalProps {
   onClose: () => void;
@@ -18,6 +20,7 @@ function isLocalDomain(value: string): boolean {
 
 export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps) {
   const { t } = useI18n();
+  const toast = useToast();
   const [step, setStep] = useState<'path' | 'details' | 'database'>('path');
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -181,13 +184,14 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
         customInterpreter: formData.customInterpreter,
         domainMode,
       });
+      toast.success(t.addProject.createdSuccess(formData.name));
       onAdd();
       onClose();
     } catch (error) {
       console.error('Failed to add project:', error);
       const message = error instanceof Error ? error.message : String(error);
       setSubmitError(message);
-      alert(t.addProject.failedToAdd(message));
+      toast.error(t.addProject.failedToAdd(message));
       setLoading(false);
     }
   };
@@ -268,6 +272,7 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
                     disabled={loading || !projectPath}
                     className="mamp-button-primary w-full"
                   >
+                    {loading && <Spinner size={16} />}
                     {loading ? t.addProject.detecting : t.addProject.detectProject}
                   </button>
                 </div>
@@ -496,7 +501,7 @@ export default function AddProjectModal({ onClose, onAdd }: AddProjectModalProps
               </button>
             ) : (
               <button onClick={handleSubmit} disabled={loading} className="mamp-button-success">
-                <Plus size={18} />
+                {loading ? <Spinner size={18} /> : <Plus size={18} />}
                 {loading ? t.addProject.creating : t.addProject.createProject}
               </button>
             )}

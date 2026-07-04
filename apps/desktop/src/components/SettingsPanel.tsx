@@ -3,6 +3,9 @@ import { X, Shield, Globe, RefreshCw, Lock } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { api } from '../services/api';
 import type { AppSettings, ProxyStatus, HelperStatus } from '../types';
+import { useToast } from '../toast';
+import { useConfirm } from '../confirm';
+import Spinner from './Spinner';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -57,11 +60,13 @@ function ToggleCard({
 
 export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { t } = useI18n();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [caStatus, setCaStatus] = useState<{ installed: boolean; valid: boolean } | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [proxyStatus, setProxyStatus] = useState<ProxyStatus | null>(null);
   const [helperStatus, setHelperStatus] = useState<HelperStatus | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
 
   const withTimeout = async <T,>(promise: Promise<T>, ms: number, timeoutMessage: string): Promise<T> => {
     return await Promise.race([
@@ -101,168 +106,216 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   }, [loadAll]);
 
   const handleInstallCA = async () => {
-    if (!confirm(t.settingsPanel.confirmInstallRootCa)) {
+    const ok = await confirm({
+      title: t.settingsPanel.installRootCa,
+      message: t.settingsPanel.confirmInstallRootCa,
+    });
+    if (!ok) {
       return;
     }
-    setBusy(true);
+    setBusy('ca-install');
     try {
       await withTimeout(api.installRootCA(), 120000, 'Install Root CA timed out.');
+      toast.success(t.settingsPanel.rootCaInstalled);
       await loadAll();
     } catch (error) {
       console.error('Failed to install CA:', error);
-      alert(t.settingsPanel.installRootCaError);
+      toast.error(t.settingsPanel.installRootCaError);
     }
-    setBusy(false);
+    setBusy(null);
   };
 
   const handleUninstallCA = async () => {
-    if (!confirm(t.settingsPanel.confirmUninstallRootCa)) {
+    const ok = await confirm({
+      title: t.settingsPanel.uninstallRootCa,
+      message: t.settingsPanel.confirmUninstallRootCa,
+      tone: 'danger',
+    });
+    if (!ok) {
       return;
     }
-    setBusy(true);
+    setBusy('ca-uninstall');
     try {
       const result = await withTimeout(api.uninstallRootCA(), 30000, 'Uninstall Root CA timed out.');
       if (!result.success) {
-        alert(result.error || result.output || t.settingsPanel.uninstallRootCaError);
+        toast.error(t.settingsPanel.uninstallRootCaError, result.error || result.output);
+      } else {
+        toast.success(t.settingsPanel.rootCaUninstalled);
       }
       await loadAll();
     } catch (error) {
       console.error('Failed to uninstall CA:', error);
-      alert(t.settingsPanel.uninstallRootCaError);
+      toast.error(t.settingsPanel.uninstallRootCaError);
     }
-    setBusy(false);
+    setBusy(null);
   };
 
   const handleReloadProxy = async () => {
-    setBusy(true);
+    setBusy('proxy-reload');
     try {
       const result = await withTimeout(api.reloadProxy(), 30000, 'Proxy reload timed out.');
       if (!result.success) {
-        alert(result.error || result.output || t.settingsPanel.proxyReloadError);
+        toast.error(t.settingsPanel.proxyReloadError, result.error || result.output);
+      } else {
+        toast.success(t.settingsPanel.proxyReloaded);
       }
       await loadAll();
     } catch (error) {
       console.error('Failed to reload proxy:', error);
-      alert(t.settingsPanel.proxyReloadError);
+      toast.error(t.settingsPanel.proxyReloadError);
     }
-    setBusy(false);
+    setBusy(null);
   };
 
   const handleSyncHosts = async () => {
-    setBusy(true);
+    setBusy('hosts-sync');
     try {
       const result = await withTimeout(api.syncHosts(), 30000, 'Hosts sync timed out.');
       if (!result.success) {
-        alert(result.error || result.output || t.settingsPanel.hostsSyncError);
+        toast.error(t.settingsPanel.hostsSyncError, result.error || result.output);
+      } else {
+        toast.success(t.settingsPanel.hostsSynced);
       }
       await loadAll();
     } catch (error) {
       console.error('Failed to sync hosts:', error);
-      alert(t.settingsPanel.hostsSyncError);
+      toast.error(t.settingsPanel.hostsSyncError);
     }
-    setBusy(false);
+    setBusy(null);
   };
 
   const handleClearHosts = async () => {
-    if (!confirm(t.settingsPanel.confirmClearHosts)) {
+    const ok = await confirm({
+      title: t.settingsPanel.clearHostsOverrides,
+      message: t.settingsPanel.confirmClearHosts,
+      tone: 'danger',
+    });
+    if (!ok) {
       return;
     }
-    setBusy(true);
+    setBusy('hosts-clear');
     try {
       const result = await withTimeout(api.clearHosts(), 30000, 'Hosts clear timed out.');
       if (!result.success) {
-        alert(result.error || result.output || t.settingsPanel.hostsClearError);
+        toast.error(t.settingsPanel.hostsClearError, result.error || result.output);
+      } else {
+        toast.success(t.settingsPanel.hostsCleared);
       }
       await loadAll();
     } catch (error) {
       console.error('Failed to clear hosts:', error);
-      alert(t.settingsPanel.hostsClearError);
+      toast.error(t.settingsPanel.hostsClearError);
     }
-    setBusy(false);
+    setBusy(null);
   };
 
   const handleDisableStandardPorts = async () => {
-    if (!confirm(t.settingsPanel.confirmDisableStandardPorts)) {
+    const ok = await confirm({
+      title: t.settingsPanel.releaseStandardPortsNow,
+      message: t.settingsPanel.confirmDisableStandardPorts,
+      tone: 'danger',
+    });
+    if (!ok) {
       return;
     }
-    setBusy(true);
+    setBusy('ports-release');
     try {
       const result = await withTimeout(api.disableStandardPorts(), 30000, 'Disable standard ports timed out.');
       if (!result.success) {
-        alert(result.error || result.output || t.settingsPanel.disableStandardPortsError);
+        toast.error(t.settingsPanel.disableStandardPortsError, result.error || result.output);
+      } else {
+        toast.success(t.settingsPanel.standardPortsReleased);
       }
       await loadAll();
     } catch (error) {
       console.error('Failed to disable standard ports:', error);
-      alert(t.settingsPanel.disableStandardPortsError);
+      toast.error(t.settingsPanel.disableStandardPortsError);
     }
-    setBusy(false);
+    setBusy(null);
   };
 
   const handleInstallHelper = async () => {
-    if (!confirm(t.settingsPanel.confirmInstallHelper)) {
+    const ok = await confirm({
+      title: t.settingsPanel.installHelper,
+      message: t.settingsPanel.confirmInstallHelper,
+    });
+    if (!ok) {
       return;
     }
-    setBusy(true);
+    setBusy('helper-install');
     try {
       const result = await withTimeout(api.installHelper(), 180000, 'Helper install timed out.');
       if (!result.success) {
         const details = [result.error, result.output].filter(Boolean).join('\n');
-        alert(details || t.settingsPanel.helperInstallError);
+        toast.error(t.settingsPanel.helperInstallError, details || undefined);
       } else {
         const helper = await withTimeout(api.getHelperStatus(), 10000, 'Helper status request timed out.');
         if (!helper.running) {
-          alert(t.settingsPanel.helperNotRunningYet);
+          toast.warning(t.settingsPanel.helperNotRunningYet);
+        } else {
+          toast.success(t.settingsPanel.helperInstalled);
         }
 
         const sync = await withTimeout(api.reloadProxy(), 30000, 'Proxy reload timed out.');
         if (!sync.success) {
-          alert(sync.error || sync.output || t.settingsPanel.helperStandardPortsActivationError);
+          toast.warning(
+            t.settingsPanel.helperStandardPortsActivationError,
+            sync.error || sync.output,
+          );
         }
       }
       await loadAll();
     } catch (error) {
       console.error('Failed to install helper:', error);
-      alert(t.settingsPanel.helperInstallError);
+      toast.error(t.settingsPanel.helperInstallError);
     }
-    setBusy(false);
+    setBusy(null);
   };
 
   const handleUninstallHelper = async () => {
-    if (!confirm(t.settingsPanel.confirmUninstallHelper)) {
+    const ok = await confirm({
+      title: t.settingsPanel.uninstallHelper,
+      message: t.settingsPanel.confirmUninstallHelper,
+      tone: 'danger',
+    });
+    if (!ok) {
       return;
     }
-    setBusy(true);
+    setBusy('helper-uninstall');
     try {
       const result = await withTimeout(api.uninstallHelper(), 60000, 'Helper uninstall timed out.');
       if (!result.success) {
-        alert(result.error || result.output || t.settingsPanel.helperUninstallError);
+        toast.error(t.settingsPanel.helperUninstallError, result.error || result.output);
+      } else {
+        toast.success(t.settingsPanel.helperUninstalled);
       }
       await loadAll();
     } catch (error) {
       console.error('Failed to uninstall helper:', error);
-      alert(t.settingsPanel.helperUninstallError);
+      toast.error(t.settingsPanel.helperUninstallError);
     }
-    setBusy(false);
+    setBusy(null);
   };
 
   const handleSaveAndApply = async () => {
     if (!settings) {
       return;
     }
-    setBusy(true);
+    setBusy('save');
     try {
       await withTimeout(api.updateSettings(settings), 20000, 'Update settings timed out.');
       const result = await withTimeout(api.reloadProxy(), 30000, 'Proxy reload timed out.');
       if (!result.success) {
-        alert(result.error || result.output || t.settingsPanel.applyFailed);
+        toast.error(t.settingsPanel.applyFailed, result.error || result.output);
+      } else {
+        toast.success(t.settingsPanel.settingsSaved);
       }
       await loadAll();
     } catch (error) {
       console.error('Failed to save settings:', error);
-      alert(t.settingsPanel.saveSettingsError);
+      toast.error(t.settingsPanel.saveSettingsError);
     }
-    setBusy(false);
+    setBusy(null);
   };
 
   const caOk = Boolean(caStatus?.installed && caStatus?.valid);
@@ -304,17 +357,19 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={handleInstallCA}
-                disabled={busy || caOk}
+                disabled={busy !== null || caOk}
                 className="mamp-button-primary"
               >
-                {busy ? t.common.working : caOk ? t.settingsPanel.alreadyInstalled : t.settingsPanel.installRootCa}
+                {busy === 'ca-install' && <Spinner size={16} />}
+                {caOk ? t.settingsPanel.alreadyInstalled : t.settingsPanel.installRootCa}
               </button>
               <button
                 onClick={handleUninstallCA}
-                disabled={busy || !caStatus?.installed}
+                disabled={busy !== null || !caStatus?.installed}
                 className="mamp-button-neutral"
               >
-                {busy ? t.common.working : t.settingsPanel.uninstallRootCa}
+                {busy === 'ca-uninstall' && <Spinner size={16} />}
+                {t.settingsPanel.uninstallRootCa}
               </button>
             </div>
           </SettingsSection>
@@ -335,18 +390,19 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   onClick={handleInstallHelper}
-                  disabled={busy || helperOk}
+                  disabled={busy !== null || helperOk}
                   className="mamp-button-primary"
                 >
-                  <Lock size={16} />
-                  {busy ? t.common.working : helperOk ? t.settingsPanel.helperRunningButton : t.settingsPanel.installHelper}
+                  {busy === 'helper-install' ? <Spinner size={16} /> : <Lock size={16} />}
+                  {helperOk ? t.settingsPanel.helperRunningButton : t.settingsPanel.installHelper}
                 </button>
                 <button
                   onClick={handleUninstallHelper}
-                  disabled={busy || !helperStatus?.installed}
+                  disabled={busy !== null || !helperStatus?.installed}
                   className="mamp-button-neutral"
                 >
-                  {busy ? t.common.working : t.settingsPanel.uninstallHelper}
+                  {busy === 'helper-uninstall' && <Spinner size={16} />}
+                  {t.settingsPanel.uninstallHelper}
                 </button>
               </div>
             </div>
@@ -427,17 +483,24 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
               </div>
 
               <div className="flex flex-wrap gap-3 pt-2">
-                <button onClick={handleReloadProxy} disabled={busy} className="mamp-button-neutral">
-                  <RefreshCw size={16} />
-                  {busy ? t.common.working : t.settingsPanel.reloadProxy}
+                <button onClick={handleReloadProxy} disabled={busy !== null} className="mamp-button-neutral">
+                  {busy === 'proxy-reload' ? <Spinner size={16} /> : <RefreshCw size={16} />}
+                  {t.settingsPanel.reloadProxy}
                 </button>
-                <button onClick={handleSyncHosts} disabled={busy} className="mamp-button-neutral">
+                <button onClick={handleSyncHosts} disabled={busy !== null} className="mamp-button-neutral">
+                  {busy === 'hosts-sync' && <Spinner size={16} />}
                   {t.settingsPanel.syncHostsNow}
                 </button>
-                <button onClick={handleClearHosts} disabled={busy} className="mamp-button-neutral">
+                <button onClick={handleClearHosts} disabled={busy !== null} className="mamp-button-neutral">
+                  {busy === 'hosts-clear' && <Spinner size={16} />}
                   {t.settingsPanel.clearHostsOverrides}
                 </button>
-                <button onClick={handleDisableStandardPorts} disabled={busy} className="mamp-button-neutral">
+                <button
+                  onClick={handleDisableStandardPorts}
+                  disabled={busy !== null}
+                  className="mamp-button-neutral"
+                >
+                  {busy === 'ports-release' && <Spinner size={16} />}
                   {t.settingsPanel.releaseStandardPortsNow}
                 </button>
               </div>
@@ -448,10 +511,11 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
         <div className="flex items-center justify-end gap-3 border-t border-white/8 px-6 py-5">
           <button
             onClick={handleSaveAndApply}
-            disabled={busy || !settings}
+            disabled={busy !== null || !settings}
             className="mamp-button-primary"
           >
-            {busy ? t.common.working : t.common.saveAndApply}
+            {busy === 'save' && <Spinner size={16} />}
+            {t.common.saveAndApply}
           </button>
           <button onClick={onClose} className="mamp-button-neutral">
             {t.common.close}

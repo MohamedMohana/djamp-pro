@@ -1,9 +1,13 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Trash2, ExternalLink, PlayCircle, Database, Terminal, Code } from 'lucide-react';
 import type { Project, ProxyStatus } from '../types';
 import { useI18n } from '../i18n';
-import { cn, commandErrorMessage, computeProjectUrl, getStatusColor, getStatusIcon } from '../utils';
+import { cn, computeProjectUrl, getStatusColor, statusDotClass } from '../utils';
 import { api } from '../services/api';
+import { useToast } from '../toast';
+import Spinner from './Spinner';
+
+type BusyAction = 'migrate' | 'collectstatic' | 'shell' | 'dbshell' | 'dbadmin' | null;
 
 interface ProjectCardProps {
   project: Project;
@@ -37,100 +41,123 @@ function InspectorSection({ title, children }: { title: string; children: ReactN
 
 export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
   const { t } = useI18n();
+  const toast = useToast();
+  const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const runtimeMode = project.runtimeMode || 'uv';
   const projectUrl = `${project.httpsEnabled ? 'https' : 'http'}://${project.domain}`;
 
+  const commandDetails = (output?: string, error?: string) =>
+    [error, output].filter(Boolean).join('\n').trim() || undefined;
+
   const handleMigrate = async () => {
+    setBusyAction('migrate');
     try {
       const result = await api.runMigrate(project.id);
       if (!result.success) {
-        alert(commandErrorMessage(t.projectCard.migrateFailed, result.output, result.error));
+        toast.error(t.projectCard.migrateFailed, commandDetails(result.output, result.error));
         return;
       }
-      alert(t.projectCard.migrateSuccess);
+      toast.success(t.projectCard.migrateSuccess);
     } catch (error) {
       console.error('Migration failed:', error);
-      alert(t.projectCard.migrateError);
+      toast.error(t.projectCard.migrateError);
+    } finally {
+      setBusyAction(null);
     }
   };
 
   const handleCollectstatic = async () => {
+    setBusyAction('collectstatic');
     try {
       const result = await api.runCollectstatic(project.id);
       if (!result.success) {
-        alert(commandErrorMessage(t.projectCard.collectstaticFailed, result.output, result.error));
+        toast.error(t.projectCard.collectstaticFailed, commandDetails(result.output, result.error));
         return;
       }
-      alert(t.projectCard.collectstaticSuccess);
+      toast.success(t.projectCard.collectstaticSuccess);
     } catch (error) {
       console.error('Collectstatic failed:', error);
-      alert(t.projectCard.collectstaticError);
+      toast.error(t.projectCard.collectstaticError);
+    } finally {
+      setBusyAction(null);
     }
   };
 
   const handleOpenShell = async () => {
+    setBusyAction('shell');
     try {
       await api.openShell(project.id);
     } catch (error) {
       console.error('Failed to open shell:', error);
+      toast.error(t.projectCard.openDbShellError);
+    } finally {
+      setBusyAction(null);
     }
   };
 
   const handleOpenDbShell = async () => {
+    setBusyAction('dbshell');
     try {
       await api.openDatabaseShell(project.id);
     } catch (error) {
       console.error('Failed to open database shell:', error);
-      alert(t.projectCard.openDbShellError);
+      toast.error(t.projectCard.openDbShellError);
+    } finally {
+      setBusyAction(null);
     }
   };
 
   const handleOpenDbAdmin = async () => {
     if (project.database.type !== 'postgres') {
-      alert(t.projectCard.dbAdminPostgresOnly);
+      toast.info(t.projectCard.dbAdminPostgresOnly);
       return;
     }
 
     if (project.status !== 'running') {
-      alert(t.projectCard.dbAdminStartFirst);
+      toast.info(t.projectCard.dbAdminStartFirst);
       return;
     }
 
-    let proxyStatus: ProxyStatus | null = null;
+    setBusyAction('dbadmin');
     try {
-      proxyStatus = await api.getProxyStatus();
-    } catch (error) {
-      console.error('Failed to detect proxy status for DB admin URL:', error);
-    }
-    let url = computeProjectUrl(project, proxyStatus, '/phpmyadmin/');
-
-    try {
-      const response = await api.getDatabaseAdminUrl(project.id);
-      if (response?.url) {
-        url = response.url;
+      let proxyStatus: ProxyStatus | null = null;
+      try {
+        proxyStatus = await api.getProxyStatus();
+      } catch (error) {
+        console.error('Failed to detect proxy status for DB admin URL:', error);
       }
-    } catch (error) {
-      console.error('Failed to resolve DB admin URL from backend, using computed URL:', error);
-    }
+      let url = computeProjectUrl(project, proxyStatus, '/phpmyadmin/');
 
-    try {
-      await api.openInBrowser(url);
-      return;
-    } catch (error) {
-      console.error('Native open failed for DB admin, trying window.open fallback:', error);
-    }
+      try {
+        const response = await api.getDatabaseAdminUrl(project.id);
+        if (response?.url) {
+          url = response.url;
+        }
+      } catch (error) {
+        console.error('Failed to resolve DB admin URL from backend, using computed URL:', error);
+      }
 
-    const opened = window.open(url, '_blank');
-    if (opened) {
-      return;
-    }
+      try {
+        await api.openInBrowser(url);
+        return;
+      } catch (error) {
+        console.error('Native open failed for DB admin, trying window.open fallback:', error);
+      }
 
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      // Clipboard may be unavailable; continue with manual URL alert.
+      const opened = window.open(url, '_blank');
+      if (opened) {
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        // Clipboard may be unavailable; continue with the manual URL toast.
+      }
+      toast.info(t.projectCard.dbAdminManualOpen(url));
+    } finally {
+      setBusyAction(null);
     }
-    alert(t.projectCard.dbAdminManualOpen(url));
   };
 
   const handleOpenVSCode = async () => {
@@ -138,6 +165,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
       await api.openVSCode(project.id);
     } catch (error) {
       console.error('Failed to open VS Code:', error);
+      toast.error(t.app.unknownError);
     }
   };
 
@@ -163,7 +191,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
                 getStatusColor(project.status),
               )}
             >
-              <span>{getStatusIcon(project.status)}</span>
+              <span className={statusDotClass(project.status)} />
               {t.common.status[project.status]}
             </span>
           }
@@ -230,18 +258,22 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleOpenDbShell}
-                  disabled={project.status !== 'running'}
+                  disabled={project.status !== 'running' || busyAction !== null}
                   className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Database size={15} />
+                  {busyAction === 'dbshell' ? <Spinner size={15} /> : <Database size={15} />}
                   {t.projectCard.openDbShell}
                 </button>
                 <button
                   onClick={handleOpenDbAdmin}
-                  disabled={project.status !== 'running' || project.database.type !== 'postgres'}
+                  disabled={
+                    project.status !== 'running' ||
+                    project.database.type !== 'postgres' ||
+                    busyAction !== null
+                  }
                   className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <ExternalLink size={15} />
+                  {busyAction === 'dbadmin' ? <Spinner size={15} /> : <ExternalLink size={15} />}
                   {t.projectCard.openDbAdmin}
                 </button>
               </div>
@@ -256,34 +288,36 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={handleMigrate}
-            disabled={project.status !== 'running'}
+            disabled={project.status !== 'running' || busyAction !== null}
             className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <PlayCircle size={15} />
+            {busyAction === 'migrate' ? <Spinner size={15} /> : <PlayCircle size={15} />}
             {t.projectCard.migrate}
           </button>
           <button
             onClick={handleCollectstatic}
-            disabled={project.status !== 'running'}
+            disabled={project.status !== 'running' || busyAction !== null}
             className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <ExternalLink size={15} />
+            {busyAction === 'collectstatic' ? <Spinner size={15} /> : <ExternalLink size={15} />}
             {t.projectCard.collectstatic}
           </button>
           <button
             onClick={handleOpenShell}
-            disabled={project.status !== 'running'}
+            disabled={project.status !== 'running' || busyAction !== null}
             className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Terminal size={15} />
+            {busyAction === 'shell' ? <Spinner size={15} /> : <Terminal size={15} />}
             {t.projectCard.shell}
           </button>
           <button
             onClick={handleOpenDbShell}
-            disabled={project.status !== 'running' || project.database.type === 'none'}
+            disabled={
+              project.status !== 'running' || project.database.type === 'none' || busyAction !== null
+            }
             className="mamp-inline-action disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Database size={15} />
+            {busyAction === 'dbshell' ? <Spinner size={15} /> : <Database size={15} />}
             {t.projectCard.dbShell}
           </button>
           <button

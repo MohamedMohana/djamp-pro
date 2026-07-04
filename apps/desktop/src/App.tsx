@@ -13,13 +13,15 @@ import {
 import { api } from './services/api';
 import type { Project, ProxyStatus } from './types';
 import { useI18n, type Locale } from './i18n';
-import { cn, computeProjectUrl, extractErrorMessage, getStatusColor, getStatusIcon } from './utils';
+import { cn, computeProjectUrl, extractErrorMessage, getStatusColor, statusDotClass } from './utils';
 
 import ProjectList from './components/ProjectList';
 import ProjectCard from './components/ProjectCard';
 import ProjectAvatar from './components/ProjectAvatar';
 import AddProjectModal from './components/AddProjectModal';
 import SettingsPanel from './components/SettingsPanel';
+import Spinner from './components/Spinner';
+import { useToast } from './toast';
 import djampMark from './assets/djamp-mark.png';
 
 type AppTab = 'projects' | 'logs' | 'environment';
@@ -35,10 +37,11 @@ interface ToolbarActionProps {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  busy?: boolean;
   tone?: ToolbarActionTone;
 }
 
-function ToolbarAction({ icon: Icon, label, onClick, disabled, tone = 'neutral' }: ToolbarActionProps) {
+function ToolbarAction({ icon: Icon, label, onClick, disabled, busy, tone = 'neutral' }: ToolbarActionProps) {
   const toneClasses =
     tone === 'start'
       ? 'border-emerald-400/20 bg-emerald-500/12 text-emerald-50 hover:bg-emerald-500/22'
@@ -56,7 +59,7 @@ function ToolbarAction({ icon: Icon, label, onClick, disabled, tone = 'neutral' 
         disabled && 'cursor-not-allowed opacity-40 hover:bg-inherit',
       )}
     >
-      <Icon size={18} />
+      {busy ? <Spinner size={18} /> : <Icon size={18} />}
       <span className="leading-none">{label}</span>
     </button>
   );
@@ -64,6 +67,7 @@ function ToolbarAction({ icon: Icon, label, onClick, disabled, tone = 'neutral' 
 
 function App() {
   const { direction, locale, setLocale, t } = useI18n();
+  const toast = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -171,6 +175,9 @@ function App() {
     setSelectedProject((prev) => (prev && prev.id === id ? { ...prev, status } : prev));
   };
 
+  const projectName = (id: string) =>
+    projects.find((project) => project.id === id)?.name ?? '';
+
   const handleStartProject = async (id: string) => {
     setActionProjectId(id);
     setActionKind('start');
@@ -178,24 +185,25 @@ function App() {
     try {
       const result = await api.startProject(id);
       if (result?.message && result.message !== 'Project started') {
-        alert(result.message);
+        toast.info(result.message);
       }
       if (result?.certificateWarning) {
-        alert(t.app.httpsWarning(result.certificateWarning));
+        toast.warning(t.app.httpsWarning(result.certificateWarning));
       }
       if (result?.hosts && !result.hosts.success) {
-        alert(t.app.domainWarning(result.hosts.error || t.app.hostsUpdateFallback));
+        toast.warning(t.app.domainWarning(result.hosts.error || t.app.hostsUpdateFallback));
       }
       if (result?.proxy && !result.proxy.success) {
-        alert(t.app.proxyWarning(result.proxy.error || t.app.proxyReloadFallback));
+        toast.warning(t.app.proxyWarning(result.proxy.error || t.app.proxyReloadFallback));
       }
       if (result?.proxy?.success && result.proxy.output?.includes('Use https://')) {
-        alert(t.app.proxyInfo(result.proxy.output));
+        toast.info(t.app.proxyInfo(result.proxy.output));
       }
+      toast.success(t.app.projectStarted(projectName(id)));
       await loadProjects();
     } catch (error) {
       console.error('Failed to start project:', error);
-      alert(t.app.failedStart(extractErrorMessage(error, t.app.unknownError)));
+      toast.error(t.app.failedStart(extractErrorMessage(error, t.app.unknownError)));
       setProjectStatusLocal(id, 'error');
     } finally {
       setActionProjectId(null);
@@ -209,10 +217,11 @@ function App() {
     setProjectStatusLocal(id, 'stopping');
     try {
       await api.stopProject(id);
+      toast.success(t.app.projectStopped(projectName(id)));
       await loadProjects();
     } catch (error) {
       console.error('Failed to stop project:', error);
-      alert(t.app.failedStop(extractErrorMessage(error, t.app.unknownError)));
+      toast.error(t.app.failedStop(extractErrorMessage(error, t.app.unknownError)));
       setProjectStatusLocal(id, 'running');
     } finally {
       setActionProjectId(null);
@@ -226,10 +235,11 @@ function App() {
     setProjectStatusLocal(id, 'starting');
     try {
       await api.restartProject(id);
+      toast.success(t.app.projectRestarted(projectName(id)));
       await loadProjects();
     } catch (error) {
       console.error('Failed to restart project:', error);
-      alert(t.app.failedRestart(extractErrorMessage(error, t.app.unknownError)));
+      toast.error(t.app.failedRestart(extractErrorMessage(error, t.app.unknownError)));
       setProjectStatusLocal(id, 'error');
     } finally {
       setActionProjectId(null);
@@ -256,7 +266,7 @@ function App() {
       console.error('Failed to open browser via Tauri API, falling back to window.open:', error);
       const opened = window.open(url, '_blank');
       if (!opened) {
-        alert(t.projectCard.browserManualOpen(url));
+        toast.info(t.projectCard.browserManualOpen(url));
       }
     }
   };
@@ -270,6 +280,7 @@ function App() {
       await api.openVSCode(selectedProject.id);
     } catch (error) {
       console.error('Failed to open VS Code:', error);
+      toast.error(extractErrorMessage(error, t.app.unknownError));
     }
   };
 
@@ -294,13 +305,14 @@ function App() {
 
     const expectedName = deleteModalProject.name.trim();
     if (deleteConfirmName.trim() !== expectedName) {
-      alert(t.app.deleteProjectTypeExact(expectedName));
+      toast.warning(t.app.deleteProjectTypeExact(expectedName));
       return;
     }
 
     setDeleteSubmitting(true);
     try {
       const id = deleteModalProject.id;
+      const name = deleteModalProject.name;
       await api.deleteProject(id);
       await loadProjects();
       if (selectedProject?.id === id) {
@@ -308,9 +320,10 @@ function App() {
       }
       setDeleteModalProject(null);
       setDeleteConfirmName('');
+      toast.success(t.app.projectDeleted(name));
     } catch (error) {
       console.error('Failed to delete project:', error);
-      alert(t.app.failedDelete(extractErrorMessage(error, t.app.unknownError)));
+      toast.error(t.app.failedDelete(extractErrorMessage(error, t.app.unknownError)));
     } finally {
       setDeleteSubmitting(false);
     }
@@ -369,6 +382,7 @@ function App() {
               label={t.app.restart}
               onClick={() => selectedProject && void handleRestartProject(selectedProject.id)}
               disabled={!selectedProject || isSelectedBusy}
+              busy={isSelectedBusy && actionKind === 'restart'}
             />
             {selectedProject?.status === 'running' ? (
               <ToolbarAction
@@ -376,6 +390,7 @@ function App() {
                 label={isSelectedBusy && actionKind === 'stop' ? t.app.stopping : t.app.stop}
                 onClick={() => selectedProject && void handleStopProject(selectedProject.id)}
                 disabled={!selectedProject || isSelectedBusy}
+                busy={isSelectedBusy && actionKind === 'stop'}
                 tone="stop"
               />
             ) : (
@@ -384,6 +399,7 @@ function App() {
                 label={isSelectedBusy && actionKind === 'start' ? t.app.starting : t.app.start}
                 onClick={() => selectedProject && void handleStartProject(selectedProject.id)}
                 disabled={!selectedProject || isSelectedBusy}
+                busy={isSelectedBusy && actionKind === 'start'}
                 tone="start"
               />
             )}
@@ -433,6 +449,7 @@ function App() {
                 projects={projects}
                 selectedId={selectedProject?.id}
                 onSelect={setSelectedProject}
+                onAddProject={() => setShowAddModal(true)}
                 loading={loading}
               />
             </div>
@@ -470,7 +487,7 @@ function App() {
                               getStatusColor(selectedProject.status),
                             )}
                           >
-                            <span>{getStatusIcon(selectedProject.status)}</span>
+                            <span className={statusDotClass(selectedProject.status)} />
                             {t.common.status[selectedProject.status]}
                           </span>
                           <span className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-black/15 px-3 py-1 text-sm text-[var(--mamp-text-muted)]">

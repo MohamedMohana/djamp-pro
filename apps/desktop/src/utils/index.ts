@@ -76,19 +76,17 @@ export function getStatusColor(status: string): string {
   }
 }
 
-export function getStatusIcon(status: string): string {
+export function statusDotClass(status: string): string {
   switch (status) {
     case 'running':
-      return '●';
-    case 'stopped':
-      return '○';
+      return 'status-dot status-dot-running';
     case 'starting':
     case 'stopping':
-      return '◐';
+      return 'status-dot status-dot-busy';
     case 'error':
-      return '✕';
+      return 'status-dot status-dot-error';
     default:
-      return '○';
+      return 'status-dot status-dot-stopped';
   }
 }
 

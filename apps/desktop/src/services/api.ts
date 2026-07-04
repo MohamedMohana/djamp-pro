@@ -1,14 +1,15 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { 
-  Project, 
-  AppSettings, 
+import type {
+  Project,
+  AppSettings,
   ProxyStatus,
   CertificateInfo,
   CommandResult,
   HelperStatus,
 } from '../types';
+import { createMockApi } from './mock';
 
-export const api = {
+const tauriApi = {
   // Projects
   getProjects: async (): Promise<Project[]> => {
     return invoke('get_projects');
@@ -187,3 +188,11 @@ export const api = {
     return invoke('install_dependencies', { projectId });
   },
 };
+
+export type DjampApi = typeof tauriApi;
+
+const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+// Outside Tauri (plain-browser `npm run dev`) fall back to an in-memory mock
+// so the UI can be developed and reviewed without the desktop shell.
+export const api: DjampApi = isTauri ? tauriApi : createMockApi();
