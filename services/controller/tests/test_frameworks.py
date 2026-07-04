@@ -4,9 +4,14 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from djamp_controller import processes
 from djamp_controller.frameworks import detect_project, project_framework, validate_app_module
-from djamp_controller.models import Project
-from djamp_controller.processes import _build_server_command, _stray_process_pattern
+from djamp_controller.models import CommandResult, Project
+from djamp_controller.processes import (
+    _build_server_command,
+    _ensure_server_package,
+    _stray_process_pattern,
+)
 
 
 def _make_project(tmp_path: Path, **overrides) -> Project:
@@ -132,7 +137,7 @@ def test_build_server_command_fastapi(tmp_path: Path) -> None:
     command, _env = _build_server_command(project)
     assert command == [
         "python3", "-m", "uvicorn", "main:app",
-        "--host", "127.0.0.1", "--port", "8010", "--reload",
+        "--host", "127.0.0.1", "--port", "8010", "--proxy-headers", "--reload",
     ]
 
 
@@ -150,7 +155,7 @@ def test_build_server_command_wsgi_uses_uvicorn_wsgi_interface(tmp_path: Path) -
     command, _env = _build_server_command(project)
     assert command == [
         "python3", "-m", "uvicorn", "wsgi:application",
-        "--host", "127.0.0.1", "--port", "8010", "--interface", "wsgi",
+        "--host", "127.0.0.1", "--port", "8010", "--proxy-headers", "--interface", "wsgi",
     ]
 
 
@@ -165,6 +170,60 @@ def test_build_server_command_requires_app_module(tmp_path: Path) -> None:
     project = _make_project(tmp_path, framework="fastapi", appModule="")
     with pytest.raises(ValueError):
         _build_server_command(project)
+
+
+def test_ensure_server_package_passes_when_importable(tmp_path: Path) -> None:
+    # The controller venv runs FastAPI/uvicorn, so `import uvicorn` succeeds.
+    project = _make_project(
+        tmp_path,
+        framework="fastapi",
+        appModule="main:app",
+        customInterpreter=sys.executable,
+    )
+    _ensure_server_package(project)  # must not raise
+
+
+def test_ensure_server_package_django_is_noop(tmp_path: Path) -> None:
+    project = _make_project(tmp_path, framework="django")
+    _ensure_server_package(project)  # no server package needed beyond Django itself
+
+
+def test_ensure_server_package_raises_with_actionable_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project = _make_project(
+        tmp_path,
+        framework="flask",
+        appModule="app:app",
+        customInterpreter=sys.executable,
+    )
+    monkeypatch.setattr(
+        processes,
+        "_run_blocking",
+        lambda command, cwd, env=None, input_text=None: CommandResult(success=False, error="ImportError"),
+    )
+    with pytest.raises(RuntimeError, match="pip install flask"):
+        _ensure_server_package(project)
+
+
+def test_ensure_uv_runtime_syncs_uv_lock_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\nversion = '0.1.0'\n")
+    (tmp_path / "uv.lock").write_text("")
+    venv_bin = tmp_path / ".venv" / ("Scripts" if sys.platform == "win32" else "bin")
+    venv_bin.mkdir(parents=True)
+    (venv_bin / ("python.exe" if sys.platform == "win32" else "python")).write_text("")
+
+    calls: list[list[str]] = []
+
+    def fake_run(command, cwd, env=None, input_text=None):
+        calls.append([str(part) for part in command])
+        return CommandResult(success=True)
+
+    monkeypatch.setattr(processes, "_run_blocking", fake_run)
+    monkeypatch.setattr(processes, "_find_allowed_executable", lambda name, cwd, env=None: f"/usr/local/bin/{name}")
+
+    project = _make_project(tmp_path, framework="fastapi", appModule="main:app", runtimeMode="uv")
+    result = processes._ensure_uv_runtime(project)
+    assert result.success
+    assert any("sync" in call for call in calls), calls
 
 
 def test_stray_pattern_per_framework(tmp_path: Path) -> None:

@@ -149,6 +149,7 @@ from .processes import (  # noqa: F401 -- some names are re-exported for compati
     _conda_env_prefix,
     _conda_python_from_prefix,
     _ensure_django_settings_override,
+    _ensure_server_package,
     _ensure_uv_runtime,
     _find_manage_py,
     _is_port_open,
@@ -716,6 +717,9 @@ async def start_project(project_id: str) -> Dict[str, Any]:
             raise HTTPException(status_code=500, detail=db_ready.error or "Failed to prepare Postgres database")
 
     try:
+        # Make sure the dev server (uvicorn/flask) exists in the project runtime
+        # before building the command; auto-installed for DJAMP-managed venvs.
+        await asyncio.to_thread(_ensure_server_package, project)
         command, env = await asyncio.to_thread(_build_server_command, project)
     except (RuntimeError, ValueError, FileNotFoundError) as exc:
         project.status = "error"
@@ -1304,7 +1308,14 @@ async def install_dependencies(payload: InstallDependenciesPayload) -> CommandRe
     registry = await read_registry()
     project = _get_project_or_404(registry, payload.projectId)
     req = Path(project.path) / "requirements.txt"
+    uv_lock = Path(project.path) / "uv.lock"
     if not req.exists():
+        if uv_lock.exists() and project.runtimeMode == "uv":
+            # uv-managed project: syncing locked deps is handled by the runtime bootstrap.
+            result = await asyncio.to_thread(_ensure_uv_runtime, project)
+            if result.success and not result.output:
+                result.output = "Dependencies synced from uv.lock"
+            return result
         return CommandResult(success=True, output="No requirements.txt found")
 
     prefix, _env = await asyncio.to_thread(_resolve_runtime, project)

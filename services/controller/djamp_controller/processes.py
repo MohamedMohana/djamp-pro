@@ -345,11 +345,20 @@ def _ensure_uv_runtime(project: Project) -> CommandResult:
             return create
 
     requirements = project_root / "requirements.txt"
+    uv_lock = project_root / "uv.lock"
     if requirements.exists():
         install = _run_blocking(
             [uv_bin, "pip", "install", "--python", str(python_path), "-r", str(requirements)],
             project_root,
         )
+        if not install.success:
+            return install
+    elif uv_lock.exists():
+        # Modern uv-managed projects (pyproject.toml + uv.lock): sync the locked
+        # dependencies into the DJAMP-managed venv instead of requirements.txt.
+        sync_env = os.environ.copy()
+        sync_env["UV_PROJECT_ENVIRONMENT"] = str(python_path.parent.parent)
+        install = _run_blocking([uv_bin, "sync", "--frozen"], project_root, sync_env)
         if not install.success:
             return install
 
@@ -485,10 +494,65 @@ def _build_server_command(project: Project) -> Tuple[List[str], Dict[str, str]]:
             args.append("--debug")
         return _build_python_command(project, args)
 
-    # fastapi / asgi / wsgi all run behind uvicorn.
-    args = ["-m", "uvicorn", app_module, "--host", "127.0.0.1", "--port", str(project.port)]
+    # fastapi / asgi / wsgi all run behind uvicorn. --proxy-headers makes apps
+    # behind the Caddy proxy see the real scheme/client (https://myapp.test),
+    # mirroring what the Django settings override provides for Django projects.
+    args = ["-m", "uvicorn", app_module, "--host", "127.0.0.1", "--port", str(project.port), "--proxy-headers"]
     if framework == "wsgi":
         args += ["--interface", "wsgi"]
     if project.debug:
         args.append("--reload")
     return _build_python_command(project, args)
+
+
+# Dev-server package required per framework. Django's runserver ships with the
+# framework itself, but uvicorn/flask CLIs are often missing from a project's
+# dependency list even though the app imports fine.
+_FRAMEWORK_SERVER_PACKAGES = {
+    "fastapi": "uvicorn",
+    "asgi": "uvicorn",
+    "wsgi": "uvicorn",
+    "flask": "flask",
+}
+
+
+def _ensure_server_package(project: Project) -> None:
+    """Make the dev server available in the project runtime, MAMP-style.
+
+    For the DJAMP-managed uv venv the missing package is installed
+    automatically; for user-managed runtimes (conda/system/custom) we fail
+    with the exact command to run instead of touching their environment.
+    """
+    package = _FRAMEWORK_SERVER_PACKAGES.get(project_framework(project))
+    if not package:
+        return
+
+    project_root = Path(project.path)
+    prefix, env = _resolve_runtime(project)
+    # Use the venv python's explicit path for the check: the subprocess sanitizer
+    # resolves bare names through PATH with symlink resolution, which would escape
+    # the venv (bin/python links to the base interpreter).
+    check_prefix = [str(_platform_python(project))] if project.runtimeMode == "uv" else prefix
+
+    def importable() -> bool:
+        return _run_blocking([*check_prefix, "-c", f"import {package}"], project_root, env).success
+
+    if importable():
+        return
+
+    if project.runtimeMode == "uv":
+        uv_bin = _find_allowed_executable("uv", project_root)
+        python_bin = _platform_python(project)
+        if uv_bin and python_bin.exists():
+            install = _run_blocking(
+                [uv_bin, "pip", "install", "--python", str(python_bin), package],
+                project_root,
+            )
+            if install.success and importable():
+                return
+
+    raise RuntimeError(
+        f"'{package}' is not installed in the project's Python runtime. "
+        f"Add '{package}' to the project's dependencies (or run `pip install {package}` "
+        "in its environment) and start the project again."
+    )
