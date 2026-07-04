@@ -67,17 +67,17 @@ export default function ProjectList({
             onClick={() => onSelect(project)}
             aria-current={isSelected || undefined}
             className={cn(
-              'group flex w-full items-center gap-3 px-3 py-3 text-start transition',
+              'project-row group flex w-full items-center gap-3 px-3 py-3 text-start',
               isSelected
-                ? 'bg-[var(--mamp-accent)] text-white'
-                : 'text-[var(--mamp-text)] hover:bg-white/5',
+                ? 'project-row-selected text-white'
+                : 'text-[var(--mamp-text)] hover:bg-white/[0.04]',
             )}
           >
             <div
               className={cn(
                 'flex h-8 w-8 items-center justify-center rounded-md border text-xs',
                 isSelected
-                  ? 'border-white/15 bg-white/10 text-white'
+                  ? 'border-[rgba(129,140,248,0.35)] bg-[rgba(99,102,241,0.2)] text-[var(--mamp-accent-strong)]'
                   : 'border-white/8 bg-white/5 text-[var(--mamp-text-muted)]',
               )}
             >
@@ -86,18 +86,15 @@ export default function ProjectList({
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-3">
-                <span className="truncate text-sm font-semibold">{project.name}</span>
+                <span className={cn('truncate text-sm', isSelected ? 'font-semibold' : 'font-medium')}>
+                  {project.name}
+                </span>
                 <span
                   className={statusDotClass(project.status)}
                   title={t.common.status[project.status]}
                 />
               </div>
-              <div
-                className={cn(
-                  'mt-0.5 truncate text-xs',
-                  isSelected ? 'text-white/80' : 'text-[var(--mamp-text-muted)]',
-                )}
-              >
+              <div className="mt-0.5 truncate text-xs text-[var(--mamp-text-muted)]">
                 {project.domain}
               </div>
             </div>

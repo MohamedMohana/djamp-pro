@@ -63,16 +63,16 @@ export function formatTimestamp(timestamp: string): string {
 export function getStatusColor(status: string): string {
   switch (status) {
     case 'running':
-      return 'text-green-600';
+      return 'text-emerald-400';
     case 'stopped':
-      return 'text-gray-600';
+      return 'text-gray-400';
     case 'starting':
     case 'stopping':
-      return 'text-yellow-600';
+      return 'text-amber-400';
     case 'error':
-      return 'text-red-600';
+      return 'text-red-400';
     default:
-      return 'text-gray-600';
+      return 'text-gray-400';
   }
 }
 
