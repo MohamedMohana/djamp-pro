@@ -92,6 +92,8 @@ class ProxyStatus(BaseModel):
     standardPortsEnabled: bool
     standardHttpActive: bool
     standardHttpsActive: bool
+    proxyHttpActive: bool
+    proxyHttpsActive: bool
 
 
 class UpdateSettingsPayload(BaseModel):
