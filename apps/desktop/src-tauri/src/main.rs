@@ -62,6 +62,10 @@ async fn main() {
         .build(context)
         .expect("error while building tauri application")
         .run(|_app_handle, event| match event {
+            // Graceful path only: these fire on Cmd+Q / window close but not on
+            // SIGTERM/SIGKILL or a `tauri dev` rebuild. The guarantee that the
+            // controller dies with us is the stdin-pipe watchdog wired up in
+            // sidecar::spawn_sidecar.
             tauri::RunEvent::ExitRequested { .. } => {
                 // Ensure the controller gets a chance to run shutdown handlers (stop processes).
                 sidecar::stop_sidecar_best_effort();

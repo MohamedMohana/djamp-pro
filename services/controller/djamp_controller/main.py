@@ -302,10 +302,25 @@ async def app_lifespan(_app: FastAPI):
         await _shutdown_controller()
 
 
+def _read_controller_version() -> str:
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    try:
+        text = pyproject.read_text(encoding="utf-8")
+    except OSError:
+        return "unknown"
+    match = re.search(r'^version\s*=\s*"([^"]+)"', text, flags=re.MULTILINE)
+    return match.group(1) if match else "unknown"
+
+
+# Reported on /health so the desktop app can tell a current controller from a
+# stale orphan of a previous install and replace it instead of reusing it.
+CONTROLLER_VERSION = _read_controller_version()
+
+
 app = FastAPI(
     title="DJAMP PRO Controller",
     description="Controller service for DJAMP PRO desktop application",
-    version="1.2.3",
+    version=CONTROLLER_VERSION,
     lifespan=app_lifespan,
 )
 
@@ -325,7 +340,7 @@ async def root() -> Dict[str, str]:
 
 @app.get("/health")
 async def health() -> Dict[str, str]:
-    return {"status": "healthy"}
+    return {"status": "healthy", "version": CONTROLLER_VERSION}
 
 
 @app.get("/api/projects", response_model=List[Project])

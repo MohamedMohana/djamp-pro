@@ -9,6 +9,9 @@ use std::time::Instant;
 use tokio::time::{sleep, Duration};
 
 const SIDECAR_BASE: &str = "http://127.0.0.1:8765";
+// The controller reads its version from services/controller/pyproject.toml,
+// which the release process bumps in lockstep with this crate's Cargo.toml.
+const EXPECTED_SIDECAR_VERSION: &str = env!("CARGO_PKG_VERSION");
 static SIDECAR_PROCESS: Lazy<Mutex<Option<Child>>> = Lazy::new(|| Mutex::new(None));
 static HTTP_CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
     reqwest::Client::builder()
@@ -74,12 +77,18 @@ fn spawn_sidecar() -> Result<(), String> {
             cmd.arg("-3");
         }
 
+        // stdin is a pipe whose write end lives in this process for as long as
+        // the Child handle does. If we die without running any exit handler
+        // (SIGKILL, crash, `tauri dev` rebuild), the OS closes the pipe and
+        // run_service.py's watchdog shuts the controller down, so it never
+        // outlives us holding port 8765.
         cmd.arg(script.as_os_str())
             .current_dir(&workdir)
-            .stdin(Stdio::null())
+            .stdin(Stdio::piped())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .env("PYTHONUNBUFFERED", "1");
+            .env("PYTHONUNBUFFERED", "1")
+            .env("DJAMP_PARENT_WATCHDOG", "1");
 
         match cmd.spawn() {
             Ok(child) => {
@@ -99,14 +108,27 @@ fn spawn_sidecar() -> Result<(), String> {
 }
 
 async fn healthcheck() -> bool {
-    match HEALTH_CLIENT
+    sidecar_health_version().await.is_some()
+}
+
+/// `None` when nothing healthy answers on the controller port; otherwise the
+/// `version` reported by `/health` (`None` inside for builds that predate it).
+async fn sidecar_health_version() -> Option<Option<String>> {
+    let resp = HEALTH_CLIENT
         .get(format!("{SIDECAR_BASE}/health"))
         .send()
         .await
-    {
-        Ok(resp) => resp.status().is_success(),
-        Err(_) => false,
+        .ok()?;
+    if !resp.status().is_success() {
+        return None;
     }
+
+    let version = resp
+        .json::<Value>()
+        .await
+        .ok()
+        .and_then(|payload| payload.get("version").and_then(|v| v.as_str()).map(str::to_string));
+    Some(version)
 }
 
 async fn sidecar_supports_required_routes() -> bool {
@@ -132,7 +154,7 @@ async fn sidecar_supports_required_routes() -> bool {
         && paths.contains_key("/api/databases/{project_id}/admin")
 }
 
-fn kill_stale_sidecar_listener_best_effort() {
+fn kill_stale_sidecar_listener_best_effort(force: bool) {
     if cfg!(target_os = "windows") {
         let ps = "Get-NetTCPConnection -LocalPort 8765 -State Listen | Select-Object -ExpandProperty OwningProcess -Unique";
         let output = match Command::new("powershell")
@@ -166,9 +188,10 @@ fn kill_stale_sidecar_listener_best_effort() {
         return;
     }
 
+    let signal = if force { "-KILL" } else { "-TERM" };
     let pids = String::from_utf8_lossy(&output.stdout);
     for pid in pids.split_whitespace() {
-        let _ = Command::new("kill").args(["-TERM", pid]).status();
+        let _ = Command::new("kill").args([signal, pid]).status();
     }
 }
 
@@ -224,17 +247,38 @@ async fn request_json(
 }
 
 pub async fn ensure_sidecar_started() -> Result<(), String> {
-    if healthcheck().await {
-        if sidecar_supports_required_routes().await {
+    if let Some(reported_version) = sidecar_health_version().await {
+        // A controller we spawned this run always serves current source. Any
+        // other listener (an orphan of a previous run, an older install) is
+        // only trusted if it reports the version this app was built against;
+        // we deliberately don't version-gate our own child so a version drift
+        // between Cargo.toml and pyproject.toml can't cause a respawn loop.
+        let owned = sidecar_process_running()?;
+        let version_ok = reported_version.as_deref() == Some(EXPECTED_SIDECAR_VERSION);
+        if (owned || version_ok) && sidecar_supports_required_routes().await {
             return Ok(());
         }
 
-        // A stale controller may still be listening on 8765 from an older run.
-        // Restart it so the desktop app always talks to the current API shape.
-        if sidecar_process_running()? {
+        // Stale controller on 8765: replace it so the desktop app always
+        // talks to the current API.
+        if owned {
             stop_sidecar_best_effort();
         } else {
-            kill_stale_sidecar_listener_best_effort();
+            kill_stale_sidecar_listener_best_effort(false);
+            // Its graceful shutdown can take a few seconds; the port must be
+            // free before a replacement can bind it.
+            let mut released = false;
+            for _ in 0..15 {
+                if !healthcheck().await {
+                    released = true;
+                    break;
+                }
+                sleep(Duration::from_millis(200)).await;
+            }
+            if !released {
+                kill_stale_sidecar_listener_best_effort(true);
+                sleep(Duration::from_millis(500)).await;
+            }
         }
     }
 
@@ -288,6 +332,10 @@ pub fn stop_sidecar_best_effort() {
         Some(c) => c,
         None => return,
     };
+
+    // Closing the watchdog pipe asks run_service.py to exit even on platforms
+    // where we don't send a signal below.
+    drop(child.stdin.take());
 
     let pid = child.id();
     #[cfg(unix)]
