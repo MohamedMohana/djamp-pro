@@ -84,30 +84,30 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
     ]);
   };
 
-  const loadAll = useCallback(async () => {
-    const [ca, currentSettings, proxy, helper] = await Promise.allSettled([
+  const loadAll = useCallback(() => {
+    return Promise.allSettled([
       withTimeout(api.checkRootCAStatus(), 8000, 'CA status request timed out.'),
       withTimeout(api.getSettings(), 8000, 'Settings request timed out.'),
       withTimeout(api.getProxyStatus(), 8000, 'Proxy status request timed out.'),
       withTimeout(api.getHelperStatus(), 8000, 'Helper status request timed out.'),
-    ]);
+    ]).then(([ca, currentSettings, proxy, helper]) => {
+      if (ca.status === 'fulfilled') {
+        setCaStatus(ca.value);
+      }
+      if (currentSettings.status === 'fulfilled') {
+        setSettings(currentSettings.value);
+      }
+      if (proxy.status === 'fulfilled') {
+        setProxyStatus(proxy.value);
+      }
+      if (helper.status === 'fulfilled') {
+        setHelperStatus(helper.value);
+      }
 
-    if (ca.status === 'fulfilled') {
-      setCaStatus(ca.value);
-    }
-    if (currentSettings.status === 'fulfilled') {
-      setSettings(currentSettings.value);
-    }
-    if (proxy.status === 'fulfilled') {
-      setProxyStatus(proxy.value);
-    }
-    if (helper.status === 'fulfilled') {
-      setHelperStatus(helper.value);
-    }
-
-    if ([ca, currentSettings, proxy, helper].some((result) => result.status === 'rejected')) {
-      console.error('Failed to load one or more settings sections', { ca, currentSettings, proxy, helper });
-    }
+      if ([ca, currentSettings, proxy, helper].some((result) => result.status === 'rejected')) {
+        console.error('Failed to load one or more settings sections', { ca, currentSettings, proxy, helper });
+      }
+    });
   }, []);
 
   useEffect(() => {
