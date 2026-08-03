@@ -18,7 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0.0",
-  "ruff>=0.1.8",
+  "ruff>=0.15.6,<0.17",
 ]
 
 [tool.setuptools.packages.find]
@@ -26,3 +26,10 @@ where = ["."]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+# Select the rule set explicitly instead of relying on ruff's default. ruff
+# 0.16 turned on ~350 additional rules by default, so leaving this implicit
+# means a ruff upgrade silently changes what CI enforces and breaks unrelated
+# pull requests. Widen this list deliberately, not by upgrading ruff.
+select = ["E4", "E7", "E9", "F"]
